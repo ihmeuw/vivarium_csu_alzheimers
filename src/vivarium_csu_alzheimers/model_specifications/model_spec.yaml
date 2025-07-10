@@ -23,19 +23,19 @@ configuration:
         random_seed: 0
     time:
         start:
-            year: 2005
-            month: 7
-            day: 2
+            year: 2020
+            month: 1
+            day: 1
         end:
-            year: 2010
-            month: 7
-            day: 2
-        step_size: 1 # Days
+            year: 2020
+            month: 8
+            day: 1
+        step_size: 182  # days 365/2 = 182.5
     population:
-        population_size: 100
-        initialization_age_min: 0
-        initialization_age_max: 100
-        untracking_age: 100
+        population_size: 20_000
+        initialization_age_min: 60
+        initialization_age_max: 125
+        untracking_age: 125
 
     stratification:
         default:
