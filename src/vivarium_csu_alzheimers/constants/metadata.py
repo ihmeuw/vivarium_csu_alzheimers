@@ -16,7 +16,7 @@ MAKE_ARTIFACT_RUNTIME = "3:00:00"
 MAKE_ARTIFACT_SLEEP = 10
 
 LOCATIONS = [
-    "Sweeden",
+    "Sweden",
     "United States of America",
     "United Kingdom",
     "China",
