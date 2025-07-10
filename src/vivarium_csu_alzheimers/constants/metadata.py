@@ -18,8 +18,8 @@ MAKE_ARTIFACT_SLEEP = 10
 LOCATIONS = [
     # TODO: make sure these locations are right
     "Sweeden",
-    "United States",
-    "Great Britain",
+    "United States of America",
+    "United Kingdom",
     "China",
     "Brazil",
     "Japan",
