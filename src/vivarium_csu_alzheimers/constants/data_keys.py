@@ -30,41 +30,43 @@ class __Population(NamedTuple):
 POPULATION = __Population()
 
 
-# TODO - sample key group used to identify keys in model
-# For more information see the tutorial:
-# https://vivarium-inputs.readthedocs.io/en/latest/tutorials/pulling_data.html#entity-measure-data
-class __SomeDisease(NamedTuple):
-
+class __Alzheimers(NamedTuple):
     # Keys that will be loaded into the artifact. must have a colon type declaration
-    SOME_DISEASE_PREVALENCE: TargetString = TargetString("cause.some_disease.prevalence")
-    SOME_DISEASE_INCIDENCE_RATE: TargetString = TargetString(
-        "cause.some_disease.incidence_rate"
+    PREVALENCE: TargetString = TargetString(
+        "cause.alzheimers_disease_and_other_dementias.prevalence"
     )
-    SOME_DISEASE_REMISSION_RATE: TargetString = TargetString(
-        "cause.some_disease.remission_rate"
+    INCIDENCE_RATE: TargetString = TargetString(
+        "cause.alzheimers_disease_and_other_dementias.incidence_rate"
     )
-    DISABILITY_WEIGHT: TargetString = TargetString("cause.some_disease.disability_weight")
-    EMR: TargetString = TargetString("cause.some_disease.excess_mortality_rate")
-    CSMR: TargetString = TargetString("cause.some_disease.cause_specific_mortality_rate")
-    RESTRICTIONS: TargetString = TargetString("cause.some_disease.restrictions")
-
-    # Useful keys not for the artifact - distinguished by not using the colon type declaration
-    RAW_DISEASE_PREVALENCE = TargetString("sequela.raw_disease.prevalence")
-    RAW_DISEASE_INCIDENCE_RATE = TargetString("sequela.raw_disease.incidence_rate")
+    REMISSION_RATE: TargetString = TargetString(
+        "cause.alzheimers_disease_and_other_dementias.remission_rate"
+    )
+    DISABILITY_WEIGHT: TargetString = TargetString(
+        "cause.alzheimers_disease_and_other_dementias.disability_weight"
+    )
+    EMR: TargetString = TargetString(
+        "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
+    )
+    CSMR: TargetString = TargetString(
+        "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
+    )
+    RESTRICTIONS: TargetString = TargetString(
+        "cause.alzheimers_disease_and_other_dementias.restrictions"
+    )
 
     @property
     def name(self):
-        return "some_disease"
+        return "soalzheimers_disease_and_other_dementiasme_disease"
 
     @property
     def log_name(self):
-        return "some disease"
+        return "alzheimers disease and other dementias"
 
 
-SOME_DISEASE = __SomeDisease()
+ALZHEIMERS = __Alzheimers()
 
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     # TODO: list all key groups here
-    # SOME_DISEASE
+    ALZHEIMERS,
 ]
