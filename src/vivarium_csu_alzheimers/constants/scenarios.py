@@ -6,7 +6,6 @@ from typing import NamedTuple
 
 
 class InterventionScenario:
-
     def __init__(
         self,
         name: str,
