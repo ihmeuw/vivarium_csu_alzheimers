@@ -56,7 +56,7 @@ def get_data(
         # TODO - add appropriate mappings
         data_keys.ALZHEIMERS.PREVALENCE: load_standard_data,
         data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
-        data_keys.ALZHEIMERS.REMISSION_RATE: load_standard_data,
+        data_keys.ALZHEIMERS.REMISSION_RATE: load_alzheimers_remission_rate,
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
         data_keys.ALZHEIMERS.DISABILITY_WEIGHT: load_standard_data,
@@ -175,3 +175,9 @@ def get_entity(key: str | EntityKey):
     }
     key = EntityKey(key)
     return type_map[key.type][key.name]
+
+
+def load_alzheimers_remission_rate(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> int:
+    return 0.0
