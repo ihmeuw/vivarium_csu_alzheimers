@@ -3,7 +3,7 @@ components:
     vivarium_csu_alzheimers:
         components:
             - Alzheimers()
-            - TestingForAlzheimersDisease()
+            - TestingForAlzheimers()
             
     vivarium_public_health:
         population:
@@ -15,7 +15,7 @@ components:
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
-            - DiseaseObserver('testing_for_alzheimers')
+            # - DiseaseObserver('testing_for_alzheimers')
 
 configuration:
     input_data:
@@ -44,15 +44,6 @@ configuration:
         initialization_age_min: 0
         initialization_age_max: 125
         untracking_age: 125
-    
-    # Configuration of component data values not in the artifact
-    disease_model.testing_for_alzheimers_disease:
-        data_sources:
-            cause_specific_mortality_rate: 0.0
-    susceptible_state.susceptible_to_testing_for_alzheimers:
-        data_sources:
-            prevalence: 1.0
-            birth_prevalence: 0.0
 
     stratification:
         default:
