@@ -103,11 +103,11 @@ class TestingForAlzheimers(Component):
         )
         testing.add_transition(
             output_state=positive,
-            transition_rate=lambda index: pd.Series(POSTIVE_TEST_RATE, index=index),
+            transition_rate=POSTIVE_TEST_RATE,
         )
         testing.add_transition(
             output_state=negative,
-            transition_rate=lambda index: pd.Series(1 - POSTIVE_TEST_RATE, index=index),
+            transition_rate=1 - POSTIVE_TEST_RATE,
         )
         negative.add_transition(
             output_state=susceptible,

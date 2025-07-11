@@ -67,9 +67,7 @@ ALZHEIMERS = __Alzheimers()
 
 
 class __TestingForAlzheimers(NamedTuple):
-    RESTRICTIONS: TargetString = TargetString(
-        "cause.testing_for_alzheimers_disease.restrictions"
-    )
+    RESTRICTIONS: TargetString = TargetString("cause.testing_for_alzheimers.restrictions")
 
     @property
     def name(self):
