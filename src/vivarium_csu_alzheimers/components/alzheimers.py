@@ -32,26 +32,26 @@ class Alzheimers(Component):
         state_1 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FIRST_STATE,
             prevalence=PREVALENCE,
-            disability_weight=DISABILITY_WEIGHT,
-            excess_mortality_rate=EXCESS_MORTALITY_RATE,
+            disability_weight=0.0,
+            excess_mortality_rate=0.0,
         )
         state_2 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_SECOND_STATE,
             prevalence=PREVALENCE,
-            disability_weight=DISABILITY_WEIGHT,
-            excess_mortality_rate=EXCESS_MORTALITY_RATE,
+            disability_weight=0.0,
+            excess_mortality_rate=0.0,
         )
         state_3 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_THIRD_STATE,
             prevalence=PREVALENCE,
             disability_weight=DISABILITY_WEIGHT,
-            excess_mortality_rate=EXCESS_MORTALITY_RATE,
+            excess_mortality_rate=0.0,
         )
         state_4 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FOURTH_STATE,
             prevalence=PREVALENCE,
             disability_weight=DISABILITY_WEIGHT,
-            excess_mortality_rate=EXCESS_MORTALITY_RATE,
+            excess_mortality_rate=0.0,
         )
         state_5 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FIFTH_STATE,
