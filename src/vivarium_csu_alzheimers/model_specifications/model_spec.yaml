@@ -3,6 +3,7 @@ components:
     vivarium_csu_alzheimers:
         components:
             - Alzheimers()
+            - TestingForAlzheimers()
             
     vivarium_public_health:
         population:
@@ -14,6 +15,7 @@ components:
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
+            - DiseaseObserver('testing_for_alzheimers')
 
 configuration:
     input_data:

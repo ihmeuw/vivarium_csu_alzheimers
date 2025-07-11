@@ -65,8 +65,27 @@ class __Alzheimers(NamedTuple):
 
 ALZHEIMERS = __Alzheimers()
 
+
+class __TestingForAlzheimers(NamedTuple):
+    RESTRICTIONS: TargetString = TargetString(
+        "cause.testing_for_alzheimers_disease.restrictions"
+    )
+
+    @property
+    def name(self):
+        return "testing_for_alzheimers"
+
+    @property
+    def log_name(self):
+        return "testing for alzheimers"
+
+
+TESTING_FOR_ALZHEIMERS = __TestingForAlzheimers()
+
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     # TODO: list all key groups here
     ALZHEIMERS,
+    TESTING_FOR_ALZHEIMERS,
 ]
