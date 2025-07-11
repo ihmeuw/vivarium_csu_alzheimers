@@ -54,13 +54,13 @@ def get_data(
         data_keys.POPULATION.ACMR: load_standard_data,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         # TODO - add appropriate mappings
-        # data_keys.DIARRHEA.PREVALENCE: load_standard_data,
-        # data_keys.DIARRHEA.INCIDENCE_RATE: load_standard_data,
-        # data_keys.DIARRHEA.REMISSION_RATE: load_standard_data,
-        # data_keys.DIARRHEA.CSMR: load_standard_data,
-        # data_keys.DIARRHEA.EMR: load_standard_data,
-        # data_keys.DIARRHEA.DISABILITY_WEIGHT: load_standard_data,
-        # data_keys.DIARRHEA.RESTRICTIONS: load_metadata,
+        data_keys.ALZHEIMERS.PREVALENCE: load_standard_data,
+        data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
+        data_keys.ALZHEIMERS.REMISSION_RATE: make_rate_of_zero,
+        data_keys.ALZHEIMERS.CSMR: load_standard_data,
+        data_keys.ALZHEIMERS.EMR: load_standard_data,
+        data_keys.ALZHEIMERS.DISABILITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
     }
     return mapping[lookup_key](lookup_key, location, years)
 
@@ -175,3 +175,9 @@ def get_entity(key: str | EntityKey):
     }
     key = EntityKey(key)
     return type_map[key.type][key.name]
+
+
+def make_rate_of_zero(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> int:
+    return 0.0

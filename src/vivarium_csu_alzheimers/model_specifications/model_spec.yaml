@@ -1,4 +1,9 @@
 components:
+    # Causes an error if left empty. Uncomment when you have components. 
+    vivarium_csu_alzheimers:
+        components:
+            - Alzheimers()
+            
     vivarium_public_health:
         population:
             - BasePopulation()
@@ -8,9 +13,7 @@ components:
             - ResultsStratifier()
             - DisabilityObserver()
             - MortalityObserver()
-
-    # Causes an error if left empty. Uncomment when you have components. 
-    # vivarium_csu_alzheimers.components:
+            - DiseaseObserver('alzheimers_disease_and_other_dementias')
 
 configuration:
     input_data:
@@ -29,9 +32,9 @@ configuration:
             month: 1
             day: 1
         end:
-            year: 2021
-            month: 8
-            day: 1
+            year: 2025
+            month: 12
+            day: 31
         step_size: 182  # days 365/2 = 182.5
     population:
         population_size: 20_000
