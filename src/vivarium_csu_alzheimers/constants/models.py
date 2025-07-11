@@ -7,7 +7,7 @@ from vivarium_csu_alzheimers.constants import data_keys
 ###########################
 
 
-class __ALZHEIMERS_DISEASE_MODEL(NamedTuple):
+class __AlzheimersDiseaseModel(NamedTuple):
     ALZHEIMERS_MODEL_NAME: str = data_keys.ALZHEIMERS.name
     SUSCEPTIBLE_TO_ALZHEIMERS: str = f"susceptible_to_{ALZHEIMERS_MODEL_NAME}"
     ALZHEIMERS_FIRST_STATE: str = "alzheimers_first_state"
@@ -17,4 +17,4 @@ class __ALZHEIMERS_DISEASE_MODEL(NamedTuple):
     ALZHEIMERS_FIFTH_STATE: str = "alzheimers_fifth_state"
 
 
-ALZHEIMERS_DISEASE_MODEL = __ALZHEIMERS_DISEASE_MODEL()
+ALZHEIMERS_DISEASE_MODEL = __AlzheimersDiseaseModel()
