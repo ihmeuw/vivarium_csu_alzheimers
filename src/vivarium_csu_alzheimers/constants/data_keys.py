@@ -56,7 +56,7 @@ class __Alzheimers(NamedTuple):
 
     @property
     def name(self):
-        return "soalzheimers_disease_and_other_dementiasme_disease"
+        return "alzheimers_disease_and_other_dementias"
 
     @property
     def log_name(self):
