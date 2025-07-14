@@ -10,17 +10,25 @@ components:
             - BasePopulation()
             - Mortality()
             - FertilityCrudeBirthRate()
+        # risks:
+        #     - InterventionEffect("intervention.hypothetic_alzheimer_intervention", "cause.alzheimers_disease_and_other_dementias.transition_rate")
+        treatment:    
+            - Intervention("intervention.hypothetic_alzheimer_intervention")
+            
         results:
             - ResultsStratifier()
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
             - DiseaseObserver('testing_for_alzheimers')
+            # TODO: add risk observer
+            
 
 configuration:
     input_data:
         input_draw_number: 0
-        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/basic_model/united_states_of_america.hdf'
+        artifact_path: /home/albrja/scratch/artifacts/united_states_of_america.hdf
+        # artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/basic_model/united_states_of_america.hdf'
     interpolation:
         order: 0
         extrapolate: True

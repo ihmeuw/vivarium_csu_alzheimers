@@ -26,6 +26,7 @@ from vivarium_inputs import utilities as vi_utils
 from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
+from vivarium_csu_alzheimers.components.testing import POSTIVE_TEST_RATE
 from vivarium_csu_alzheimers.constants import data_keys
 
 
@@ -70,6 +71,11 @@ def get_data(
         data_keys.TESTING_FOR_ALZHEIMERS.EMR: make_rate_of_zero,
         data_keys.TESTING_FOR_ALZHEIMERS.DISABILITY_WEIGHT: make_rate_of_zero,
         data_keys.TESTING_FOR_ALZHEIMERS.RESTRICTIONS: load_testing_restrictions,
+        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.COVERAGE: load_intervention_coverage,
+        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.DISTRIBUTION_TYPE: load_intervention_distribution,
+        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.EXPOSURE_STANDARD_DEVIATION: load_intervention_exposure_standard_deviation,
+        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.RELATIVE_RISK: load_intervention_relative_risk,
+        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.PAF: load_intervention_paf,
     }
     return mapping[lookup_key](lookup_key, location, years)
 
@@ -188,7 +194,7 @@ def get_entity(key: str | EntityKey):
 
 def make_rate_of_zero(
     key: str, location: str, years: int | str | list[int] | None = None
-) -> int:
+) -> float:
     return 0.0
 
 
@@ -208,3 +214,34 @@ def load_testing_incdience_rate(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> float:
     return 0.75
+
+
+def load_intervention_coverage(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> float:
+    # We want coverage to be probability of testing positive
+    return POSTIVE_TEST_RATE
+
+
+def load_intervention_distribution(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> float:
+    return "dichotomous"
+
+
+def load_intervention_exposure_standard_deviation(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> float:
+    return 0.1
+
+
+def load_intervention_relative_risk(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> float:
+    return 1.5
+
+
+def load_intervention_paf(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> float:
+    return 1 - 0.6
