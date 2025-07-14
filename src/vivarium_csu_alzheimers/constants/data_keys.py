@@ -67,6 +67,16 @@ ALZHEIMERS = __Alzheimers()
 
 
 class __TestingForAlzheimers(NamedTuple):
+    PREVALENCE: TargetString = TargetString("cause.testing_for_alzheimers.prevalence")
+    INCIDENCE_RATE: TargetString = TargetString("cause.testing_for_alzheimers.incidence_rate")
+    REMISSION_RATE: TargetString = TargetString("cause.testing_for_alzheimers.remission_rate")
+    DISABILITY_WEIGHT: TargetString = TargetString(
+        "cause.testing_for_alzheimers.disability_weight"
+    )
+    EMR: TargetString = TargetString("cause.testing_for_alzheimers.excess_mortality_rate")
+    CSMR: TargetString = TargetString(
+        "cause.testing_for_alzheimers.cause_specific_mortality_rate"
+    )
     RESTRICTIONS: TargetString = TargetString("cause.testing_for_alzheimers.restrictions")
 
     @property

@@ -63,6 +63,12 @@ def get_data(
         data_keys.ALZHEIMERS.EMR: load_standard_data,
         data_keys.ALZHEIMERS.DISABILITY_WEIGHT: load_standard_data,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
+        data_keys.TESTING_FOR_ALZHEIMERS.PREVALENCE: load_testing_prevalence,
+        data_keys.TESTING_FOR_ALZHEIMERS.INCIDENCE_RATE: load_testing_incdience_rate,
+        data_keys.TESTING_FOR_ALZHEIMERS.REMISSION_RATE: make_rate_of_zero,
+        data_keys.TESTING_FOR_ALZHEIMERS.CSMR: make_rate_of_zero,
+        data_keys.TESTING_FOR_ALZHEIMERS.EMR: make_rate_of_zero,
+        data_keys.TESTING_FOR_ALZHEIMERS.DISABILITY_WEIGHT: make_rate_of_zero,
         data_keys.TESTING_FOR_ALZHEIMERS.RESTRICTIONS: load_testing_restrictions,
     }
     return mapping[lookup_key](lookup_key, location, years)
@@ -190,3 +196,15 @@ def load_testing_restrictions(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> dict[str, Any]:
     return get_data(data_keys.ALZHEIMERS.RESTRICTIONS, location, years)
+
+
+def load_testing_prevalence(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> int:
+    return 0.75
+
+
+def load_testing_incdience_rate(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> int:
+    return 0.75
