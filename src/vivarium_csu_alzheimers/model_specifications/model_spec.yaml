@@ -10,10 +10,10 @@ components:
             - BasePopulation()
             - Mortality()
             - FertilityCrudeBirthRate()
-        # risks:
-        #     - InterventionEffect("intervention.hypothetic_alzheimer_intervention", "cause.alzheimers_disease_and_other_dementias.transition_rate")
+        risks:
+            - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_disease_and_other_dementias.transition_rate")
         treatment:    
-            - Intervention("intervention.hypothetic_alzheimer_intervention")
+            - Intervention("intervention.hypothetical_alzheimers_intervention")
             
         results:
             - ResultsStratifier()
