@@ -1,13 +1,6 @@
-from collections.abc import Callable
-
 import pandas as pd
 from vivarium import Component
-from vivarium_public_health.disease import (
-    SI,
-    DiseaseModel,
-    DiseaseState,
-    SusceptibleState,
-)
+from vivarium_public_health.disease import DiseaseModel, DiseaseState, SusceptibleState
 
 from vivarium_csu_alzheimers.constants.models import TESTING_ALZHEIMERS_DISEASE_MODEL
 
