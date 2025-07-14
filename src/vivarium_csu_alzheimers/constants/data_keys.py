@@ -96,16 +96,16 @@ class __HypotheticAlzheimersIntervention(NamedTuple):
         "intervention.hypothetical_alzheimers_intervention.coverage"
     )
     EXPOSURE_STANDARD_DEVIATION: TargetString = TargetString(
-        "intervention.hypothetic_alzheimers_intervention.exposure_standard_deviation"
+        "intervention.hypothetical_alzheimers_intervention.exposure_standard_deviation"
     )
     DISTRIBUTION_TYPE: TargetString = TargetString(
-        "intervention.hypothetic_alzheimers_intervention.distribution"
+        "intervention.hypothetical_alzheimers_intervention.distribution"
     )
     RELATIVE_RISK: TargetString = TargetString(
-        "intervention.hypothetic_alzheimers_intervention.relative_risk"
+        "intervention.hypothetical_alzheimers_intervention.relative_risk"
     )
     PAF: TargetString = TargetString(
-        "intervention.hypothetic_alzheimers_intervention.population_attributable_fraction"
+        "intervention.hypothetical_alzheimers_intervention.population_attributable_fraction"
     )
 
     @property
