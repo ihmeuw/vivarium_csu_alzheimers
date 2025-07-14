@@ -10,7 +10,7 @@ components:
         population:
             - BasePopulation()
             - Mortality()
-            - FertilityCrudeBirthRate()         
+            - FertilityCrudeBirthRate()
         results:
             - DisabilityObserver()
             - MortalityObserver()
@@ -34,9 +34,9 @@ configuration:
             month: 1
             day: 1
         end:
-            year: 2022
-            month: 1    
-            day: 2
+            year: 2025
+            month: 12
+            day: 31
         step_size: 182  # days 365/2 = 182.5
     population:
         population_size: 20_000
