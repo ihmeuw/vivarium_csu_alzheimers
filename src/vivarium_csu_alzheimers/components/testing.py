@@ -5,8 +5,8 @@ from vivarium_public_health.disease import DiseaseModel, DiseaseState, Susceptib
 from vivarium_csu_alzheimers.constants.models import TESTING_ALZHEIMERS_DISEASE_MODEL
 
 # Placehodler constants for the testing model. These will be replaced by real data later.
-TESTING_RATE = 1.0
-POSTIVE_TEST_RATE = 1.0
+TESTING_RATE = 0.8
+POSTIVE_TEST_RATE = 0.9
 POSTIVE_TEST_TRANSITION_RATE = TESTING_RATE * TESTING_RATE
 
 

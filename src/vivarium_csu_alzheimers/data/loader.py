@@ -200,11 +200,11 @@ def load_testing_restrictions(
 
 def load_testing_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
-) -> int:
+) -> float:
     return 0.75
 
 
 def load_testing_incdience_rate(
     key: str, location: str, years: int | str | list[int] | None = None
-) -> int:
+) -> float:
     return 0.75
