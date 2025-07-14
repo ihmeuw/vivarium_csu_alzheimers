@@ -7,8 +7,8 @@ from vivarium.framework.state_machine import Machine, State, TransientState
 from vivarium_csu_alzheimers.constants.models import TESTING_ALZHEIMERS_DISEASE_MODEL
 
 # Placehodler constants for the testing model. These will be replaced by real data later.
-TESTING_RATE = 0.25
-POSTIVE_TEST_RATE = 0.9
+TESTING_RATE = 1.0
+POSTIVE_TEST_RATE = 1.0
 
 
 class TestingForAlzheimers(Component):
