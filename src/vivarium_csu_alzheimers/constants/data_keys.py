@@ -99,7 +99,7 @@ class __HypotheticAlzheimersIntervention(NamedTuple):
         "intervention.hypothetic_alzheimers_intervention.exposure_standard_deviation"
     )
     DISTRIBUTION_TYPE: TargetString = TargetString(
-        "intervention.hypothetic_alzheimers_intervention.distribution_type"
+        "intervention.hypothetic_alzheimers_intervention.distribution"
     )
     RELATIVE_RISK: TargetString = TargetString(
         "intervention.hypothetic_alzheimers_intervention.relative_risk"
