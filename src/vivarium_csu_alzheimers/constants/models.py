@@ -18,3 +18,14 @@ class __AlzheimersDiseaseModel(NamedTuple):
 
 
 ALZHEIMERS_DISEASE_MODEL = __AlzheimersDiseaseModel()
+
+
+class __TestingAlzheimersDiseaseModel(NamedTuple):
+    TESTING_FOR_ALZHEIMERS_MODEL_NAME: str = "testing_for_alzheimers"
+    SUSCEPTIBLE_TO_TESTING: str = "susceptible_to_testing_for_alzheimers"
+    TESTING_STATE: str = "testing_for_alzheimers"
+    POSITIVE_STATE: str = "positive_test_for_alzheimers"
+    NEGATIVE_STATE: str = "negative_test_for_alzheimers"
+
+
+TESTING_ALZHEIMERS_DISEASE_MODEL = __TestingAlzheimersDiseaseModel()
