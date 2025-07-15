@@ -6,8 +6,8 @@ from vivarium_csu_alzheimers.constants.models import TESTING_ALZHEIMERS_DISEASE_
 
 # Placehodler constants for the testing model. These will be replaced by real data later.
 TESTING_RATE = 0.8
-POSTIVE_TEST_RATE = 0.9
-POSTIVE_TEST_TRANSITION_RATE = TESTING_RATE * TESTING_RATE
+POSITIVE_TEST_RATE = 0.9
+POSITIVE_TEST_TRANSITION_RATE = TESTING_RATE * POSITIVE_TEST_RATE
 
 
 class TestingForAlzheimers(Component):
@@ -17,7 +17,9 @@ class TestingForAlzheimers(Component):
     they could test positive or negative. I did not implement this in a way that makes all tests
     for simulants who are susceptible to Alzheimer's disease to be negative since we likely will
     not have a susceptible state in the final model. I also could not get a TransientState to work
-    within a disease model so I had si
+    within a disease model so I had skip the Transient state and go straight to postive and negative
+    states.
+
     """
 
     @property
@@ -38,7 +40,7 @@ class TestingForAlzheimers(Component):
         #     TESTING_ALZHEIMERS_DISEASE_MODEL.TESTING_STATE,
         # )
         positive = DiseaseState(
-            TESTING_ALZHEIMERS_DISEASE_MODEL.POSIITIVE_STATE,
+            TESTING_ALZHEIMERS_DISEASE_MODEL.POSITIVE_STATE,
             prevalence=0.0,
             disability_weight=0.0,
             excess_mortality_rate=0.0,
@@ -54,13 +56,13 @@ class TestingForAlzheimers(Component):
         susceptible.add_transition(
             output_state=positive,
             probability_function=lambda index: pd.Series(
-                POSTIVE_TEST_TRANSITION_RATE, index=index
+                POSITIVE_TEST_TRANSITION_RATE, index=index
             ),
         )
         susceptible.add_transition(
             output_state=negative,
             probability_function=lambda index: pd.Series(
-                1 - POSTIVE_TEST_TRANSITION_RATE, index=index
+                1 - POSITIVE_TEST_TRANSITION_RATE, index=index
             ),
         )
         # testing.add_transition(
