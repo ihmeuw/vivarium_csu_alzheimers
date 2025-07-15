@@ -34,6 +34,7 @@ class Alzheimers(Component):
         )
         state_1 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FIRST_STATE,
+            allow_self_transition=True,
             prevalence=PREVALENCE,
             disability_weight=0.0,
             excess_mortality_rate=0.0,
