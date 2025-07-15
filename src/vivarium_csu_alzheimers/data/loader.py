@@ -238,10 +238,19 @@ def load_intervention_exposure_standard_deviation(
 def load_intervention_relative_risk(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> float:
-    return 1.5
+    return 0.5
 
 
 def load_intervention_paf(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> float:
     return 1 - 0.6
+
+
+def load_intervention_categories(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> dict[str, str]:
+    return {
+        "covered": "covered by hypothetical alzheimers intervention",
+        "uncovered": "not covered by hypothetical alzheimers intervention",
+    }

@@ -107,6 +107,9 @@ class __HypotheticAlzheimersIntervention(NamedTuple):
     PAF: TargetString = TargetString(
         "intervention.hypothetical_alzheimers_intervention.population_attributable_fraction"
     )
+    CATEGORIES: TargetString = TargetString(
+        "intervention.hypothetical_alzheimers_intervention.categories"
+    )
 
     @property
     def name(self):

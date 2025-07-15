@@ -14,14 +14,13 @@ components:
             - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_disease_and_other_dementias.transition_rate")
         treatment:    
             - Intervention("intervention.hypothetical_alzheimers_intervention")
-            
         results:
             - ResultsStratifier()
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
             - DiseaseObserver('testing_for_alzheimers')
-            # TODO: add risk observer
+            - CategoricalRiskObserver('intervention.hypothetical_alzheimers_intervention')
             
 
 configuration:
