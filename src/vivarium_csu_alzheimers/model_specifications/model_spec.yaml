@@ -20,7 +20,7 @@ components:
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
             - DiseaseObserver('testing_for_alzheimers')
-            - CategoricalRiskObserver('intervention.hypothetical_alzheimers_intervention')
+            - CategoricalInterventionObserver('hypothetical_alzheimers_intervention')
             
 
 configuration:
