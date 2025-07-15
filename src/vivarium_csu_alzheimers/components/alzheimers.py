@@ -28,27 +28,34 @@ class Alzheimers(Component):
         self.disease_model = self._create_disease_model()
 
     def _create_disease_model(self):
-        susceptible = SusceptibleState(ALZHEIMERS_DISEASE_MODEL.SUSCEPTIBLE_TO_ALZHEIMERS)
+        susceptible = SusceptibleState(
+            ALZHEIMERS_DISEASE_MODEL.SUSCEPTIBLE_TO_ALZHEIMERS,
+            allow_self_transition=True,
+        )
         state_1 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FIRST_STATE,
+            allow_self_transition=True,
             prevalence=PREVALENCE,
             disability_weight=0.0,
             excess_mortality_rate=0.0,
         )
         state_2 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_SECOND_STATE,
+            allow_self_transition=True,
             prevalence=PREVALENCE,
             disability_weight=0.0,
             excess_mortality_rate=0.0,
         )
         state_3 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_THIRD_STATE,
+            allow_self_transition=True,
             prevalence=PREVALENCE,
             disability_weight=DISABILITY_WEIGHT,
             excess_mortality_rate=0.0,
         )
         state_4 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FOURTH_STATE,
+            allow_self_transition=True,
             prevalence=PREVALENCE,
             disability_weight=DISABILITY_WEIGHT,
             excess_mortality_rate=0.0,
@@ -61,25 +68,26 @@ class Alzheimers(Component):
         )
 
         # Add transitions between states
-        susceptible.add_transition(
-            output_state=state_1,
-            probability_function=lambda index: pd.Series(TRANSITION_RATE, index=index),
+        susceptible.add_proportion_transition(
+            output=state_1,
+            # TODO: this should be incidence right?
+            proportion=TRANSITION_RATE
         )
-        state_1.add_transition(
-            output_state=state_2,
-            probability_function=lambda index: pd.Series(TRANSITION_RATE, index=index),
+        state_1.add_rate_transition(
+            output=state_2,
+            transition_rate=TRANSITION_RATE,
         )
-        state_2.add_transition(
-            output_state=state_3,
-            probability_function=lambda index: pd.Series(TRANSITION_RATE, index=index),
+        state_2.add_rate_transition(
+            output=state_3,
+            transition_rate=TRANSITION_RATE,
         )
-        state_3.add_transition(
-            output_state=state_4,
-            probability_function=lambda index: pd.Series(TRANSITION_RATE, index=index),
+        state_3.add_rate_transition(
+            output=state_4,
+            transition_rate=TRANSITION_RATE,
         )
-        state_4.add_transition(
-            output_state=state_5,
-            probability_function=lambda index: pd.Series(TRANSITION_RATE, index=index),
+        state_4.add_rate_transition(
+            output=state_5,
+            transition_rate=TRANSITION_RATE,
         )
         # TODO: do we need an "end" state?
 
