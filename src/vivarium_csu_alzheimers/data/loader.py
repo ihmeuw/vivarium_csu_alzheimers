@@ -76,6 +76,7 @@ def get_data(
         data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.EXPOSURE_STANDARD_DEVIATION: load_intervention_exposure_standard_deviation,
         data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.RELATIVE_RISK: load_intervention_relative_risk,
         data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.PAF: load_intervention_paf,
+        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.CATEGORIES: load_intervention_categories,
     }
     return mapping[lookup_key](lookup_key, location, years)
 
