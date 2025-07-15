@@ -5,9 +5,10 @@ from vivarium_public_health.disease import DiseaseModel, DiseaseState, Susceptib
 from vivarium_csu_alzheimers.constants.models import TESTING_ALZHEIMERS_DISEASE_MODEL
 
 # Placehodler constants for the testing model. These will be replaced by real data later.
-TESTING_RATE = 0.8
+TESTING_RATE = 0.4  # per time step
 POSITIVE_TEST_RATE = 0.9
 POSITIVE_TEST_TRANSITION_RATE = TESTING_RATE * POSITIVE_TEST_RATE
+NEGATIVE_TEST_TRANSITION_RATE = TESTING_RATE * (1 - POSITIVE_TEST_RATE)
 
 
 class TestingForAlzheimers(Component):
@@ -62,7 +63,7 @@ class TestingForAlzheimers(Component):
         susceptible.add_transition(
             output_state=negative,
             probability_function=lambda index: pd.Series(
-                1 - POSITIVE_TEST_TRANSITION_RATE, index=index
+                NEGATIVE_TEST_TRANSITION_RATE, index=index
             ),
         )
         # testing.add_transition(

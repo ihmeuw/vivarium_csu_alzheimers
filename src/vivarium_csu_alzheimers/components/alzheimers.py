@@ -8,9 +8,9 @@ from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
 # Constants for the Alzheimer's disease model
 # These values are placeholders and should be replaced with actual data from research later
 PREVALENCE = 1 / 6
-EXCESS_MORTALITY_RATE = 0.01
+EXCESS_MORTALITY_RATE = 0.035
 DISABILITY_WEIGHT = 0.2
-TRANSITION_RATE = 0.75
+TRANSITION_RATE = 0.25
 
 
 class Alzheimers(Component):
@@ -31,6 +31,7 @@ class Alzheimers(Component):
         susceptible = SusceptibleState(ALZHEIMERS_DISEASE_MODEL.SUSCEPTIBLE_TO_ALZHEIMERS)
         state_1 = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FIRST_STATE,
+            # TODO: this should be the incidence
             prevalence=PREVALENCE,
             disability_weight=0.0,
             excess_mortality_rate=0.0,
