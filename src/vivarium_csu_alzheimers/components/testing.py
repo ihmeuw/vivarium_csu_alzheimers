@@ -1,86 +1,99 @@
 import pandas as pd
 from vivarium import Component
-from vivarium_public_health.disease import DiseaseModel, DiseaseState, SusceptibleState
-
-from vivarium_csu_alzheimers.constants.models import TESTING_ALZHEIMERS_DISEASE_MODEL
-
-# Placehodler constants for the testing model. These will be replaced by real data later.
-TESTING_RATE = 0.4  # per time step
-POSITIVE_TEST_RATE = 0.9
-POSITIVE_TEST_TRANSITION_RATE = TESTING_RATE * POSITIVE_TEST_RATE
-NEGATIVE_TEST_TRANSITION_RATE = TESTING_RATE * (1 - POSITIVE_TEST_RATE)
-
+from vivarium_public_health.disease import (
+    BaseDiseaseState,
+    DiseaseModel,
+    DiseaseState,
+    ProportionTransition,
+    RateTransition,
+)
 
 class TestingForAlzheimers(Component):
     """A class to hold the testing model for Alzheimer's disease. This class includes
     the different states of the testing process and how simulants can transition between them.
-    NOTE: This testing model will test simulants that are susceptible to Alzheimer's disease and
-    they could test positive or negative. I did not implement this in a way that makes all tests
-    for simulants who are susceptible to Alzheimer's disease to be negative since we likely will
-    not have a susceptible state in the final model. I also could not get a TransientState to work
-    within a disease model so I had skip the Transient state and go straight to postive and negative
-    states.
-
     """
 
-    @property
-    def sub_components(self) -> list[Component]:
-        return [self.testing_model]
+    def __init__(self, cause: str, underlying_ad_model_name: str):
+        """
+        Initializes the testing model.
 
-    def __init__(self) -> None:
+        Parameters
+        ----------
+        cause
+            The name of the testing model itself (e.g., 'alzheimers_testing').
+        underlying_ad_model_name
+            The name of the main Alzheimer's disease model. This is used to
+            find the simulants' AD status.
+        """
         super().__init__()
-        self.testing_model = self._create_testing_model()
+        self.underlying_ad_model_name = underlying_ad_model_name
 
-    def _create_testing_model(self) -> DiseaseModel:
-        susceptible = SusceptibleState(
-            TESTING_ALZHEIMERS_DISEASE_MODEL.SUSCEPTIBLE_TO_TESTING,
-            allow_self_transition=True,
-        )
-        # TODO: can't get TransientState to work in a DiseaseModel
-        # testing = TransientState(
-        #     TESTING_ALZHEIMERS_DISEASE_MODEL.TESTING_STATE,
-        # )
-        positive = DiseaseState(
-            TESTING_ALZHEIMERS_DISEASE_MODEL.POSITIVE_STATE,
-            prevalence=0.0,
-            disability_weight=0.0,
-            excess_mortality_rate=0.0,
-        )
-        negative = DiseaseState(
-            TESTING_ALZHEIMERS_DISEASE_MODEL.NEGATIVE_STATE,
-            prevalence=0.0,
-            disability_weight=0.0,
-            excess_mortality_rate=0.0,
-        )
+        # Define the states
+        eligible = DiseaseState(f"eligible_for_{self.cause.name}")
+        testing = DiseaseState(f"testing_for_{self.cause.name}", is_transient=True)
+        positive = DiseaseState(f"tested_positive_for_{self.cause.name}")
+        negative = DiseaseState(f"tested_negative_for_{self.cause.name}")
 
-        # Add transitions between states
-        susceptible.add_transition(
-            output_state=positive,
-            probability_function=lambda index: pd.Series(
-                POSITIVE_TEST_TRANSITION_RATE, index=index
-            ),
+        # Define the transitions between states
+        # 1. Eligible simulants get tested at a given rate.
+        eligible.add_transition(
+            RateTransition(
+                input_state=eligible,
+                output_state=testing,
+                get_data_functions={
+                    "transition_rate": self.get_testing_rate,
+                },
+            )
         )
-        susceptible.add_transition(
-            output_state=negative,
-            probability_function=lambda index: pd.Series(
-                NEGATIVE_TEST_TRANSITION_RATE, index=index
-            ),
+        # 2. From the transient 'testing' state, determine the result.
+        testing.add_transition(
+            ProportionTransition(
+                input_state=testing,
+                output_state=positive,
+                probability_func=self._probability_positive,
+            )
         )
-        # testing.add_transition(
-        #     output_state=positive,
-        #     probability_function=lambda index: pd.Series(POSTIVE_TEST_RATE, index=index),
-        # )
-        # testing.add_transition(
-        #     output_state=negative,
-        #     probability_function=lambda index: pd.Series(1 - TESTING_RATE, index=index),
-        # )
-        negative.add_transition(
-            output_state=susceptible,
-            probability_function=lambda index: pd.Series(1.0, index=index),
-        )
+        # 3. The remaining simulants tested receive a negative result.
+        testing.add_transition(negative)
 
-        return DiseaseModel(
-            TESTING_ALZHEIMERS_DISEASE_MODEL.TESTING_FOR_ALZHEIMERS_MODEL_NAME,
-            initial_state=susceptible,
-            states=[susceptible, positive, negative],
-        )
+        self.states = [eligible, testing, positive, negative]
+        self.initial_state = eligible
+
+    def setup(self, builder):
+        """Standard vivarium setup method."""
+        super().setup(builder)
+        self.sensitivity = builder.configuration[self.cause.name].sensitivity
+        self.specificity = builder.configuration[self.cause.name].specificity
+
+        self.ad_state = builder.value.get_value(f"{self.underlying_ad_model_name}")
+
+    def get_testing_rate(self, builder, cause: str):
+        """
+        Gets the rate at which simulants are tested.
+
+        NOTE: This is the location to modify if you want to use an artifact-based
+        age-specific testing rate instead of a single value from the config.
+        """
+        return builder.configuration[self.cause.name].test_rate
+
+    def _probability_positive(self, index: pd.Index) -> pd.Series:
+        """
+        Calculates the probability of a positive test result based on the
+        underlying AD status and the test's sensitivity and specificity.
+        """
+        pop = self.population_view.get(index)
+        ad_status = self.ad_state(index)
+
+        # Default probability is 0
+        prob_positive = pd.Series(0.0, index=index)
+
+        # Simulants with AD test positive based on sensitivity
+        has_ad_mask = ad_status == self.underlying_ad_model_name
+        prob_positive[has_ad_mask] = self.sensitivity
+
+        # Simulants without AD test positive based on (1 - specificity)
+        no_ad_mask = ad_status != self.underlying_ad_model_name
+        prob_positive[no_ad_mask] = 1 - self.specificity
+
+        return prob_positive
+

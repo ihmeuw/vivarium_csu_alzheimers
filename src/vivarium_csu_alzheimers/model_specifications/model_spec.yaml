@@ -3,8 +3,8 @@ components:
     vivarium_csu_alzheimers:
         components:
             - Alzheimers()
-            - TestingForAlzheimers()    
-            
+            - TestingForAlzheimers('alzheimers_pet_scan', 'alzheimers_disease')
+
     vivarium_public_health:
         population:
             - BasePopulation()
@@ -20,7 +20,7 @@ components:
 configuration:
     input_data:
         input_draw_number: 0
-        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/basic_model/united_states_of_america.hdf'
+        artifact_path: './data/united_states_of_america.hdf'
     interpolation:
         order: 0
         extrapolate: True
