@@ -91,9 +91,42 @@ class __TestingForAlzheimers(NamedTuple):
 TESTING_FOR_ALZHEIMERS = __TestingForAlzheimers()
 
 
+class __HypotheticAlzheimersIntervention(NamedTuple):
+    COVERAGE: TargetString = TargetString(
+        "intervention.hypothetical_alzheimers_intervention.coverage"
+    )
+    EXPOSURE_STANDARD_DEVIATION: TargetString = TargetString(
+        "intervention.hypothetical_alzheimers_intervention.exposure_standard_deviation"
+    )
+    DISTRIBUTION_TYPE: TargetString = TargetString(
+        "intervention.hypothetical_alzheimers_intervention.distribution"
+    )
+    RELATIVE_RISK: TargetString = TargetString(
+        "intervention.hypothetical_alzheimers_intervention.relative_risk"
+    )
+    PAF: TargetString = TargetString(
+        "intervention.hypothetical_alzheimers_intervention.population_attributable_fraction"
+    )
+    CATEGORIES: TargetString = TargetString(
+        "intervention.hypothetical_alzheimers_intervention.categories"
+    )
+
+    @property
+    def name(self):
+        return "hypothetical_alzheimers_intervention"
+
+    @property
+    def log_name(self):
+        return "hypothetical alzheimers intervention"
+
+
+HYPOTHETICAL_ALZHEIMERS_INTERVENTION = __HypotheticAlzheimersIntervention()
+
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     # TODO: list all key groups here
     ALZHEIMERS,
     TESTING_FOR_ALZHEIMERS,
+    HYPOTHETICAL_ALZHEIMERS_INTERVENTION,
 ]
