@@ -1,17 +1,15 @@
 import pandas as pd
 from vivarium import Component
-from vivarium_public_health.disease import (
-    BaseDiseaseState,
-    DiseaseModel,
-    DiseaseState,
-    ProportionTransition,
-    RateTransition,
-)
+from vivarium.framework.state_machine import Machine, State, TransientState
 
 class TestingForAlzheimers(Component):
     """A class to hold the testing model for Alzheimer's disease. This class includes
     the different states of the testing process and how simulants can transition between them.
     """
+
+    @property
+    def sub_components(self) -> list[Component]:
+        return [self.machine]
 
     def __init__(self, cause: str, underlying_ad_model_name: str):
         """
@@ -26,55 +24,58 @@ class TestingForAlzheimers(Component):
             find the simulants' AD status.
         """
         super().__init__()
+        self.cause = cause
         self.underlying_ad_model_name = underlying_ad_model_name
+        self.machine = self._create_machine()
 
+    def _create_machine(self):
         # Define the states
-        eligible = DiseaseState(f"eligible_for_{self.cause.name}")
-        testing = DiseaseState(f"testing_for_{self.cause.name}", is_transient=True)
-        positive = DiseaseState(f"tested_positive_for_{self.cause.name}")
-        negative = DiseaseState(f"tested_negative_for_{self.cause.name}")
+        eligible = State(f"eligible_for_{self.cause}")
+        testing = TransientState(f"testing_for_{self.cause}")
+        positive = State(f"tested_positive_for_{self.cause}")
+        negative = State(f"tested_negative_for_{self.cause}")
 
         # Define the transitions between states
         # 1. Eligible simulants get tested at a given rate.
         eligible.add_transition(
-            RateTransition(
-                input_state=eligible,
-                output_state=testing,
-                get_data_functions={
-                    "transition_rate": self.get_testing_rate,
-                },
-            )
+            output_state=testing,
+            probability_function=lambda index: pd.Series(0.1, index=index),  # 10% chance
         )
         # 2. From the transient 'testing' state, determine the result.
         testing.add_transition(
-            ProportionTransition(
-                input_state=testing,
-                output_state=positive,
-                probability_func=self._probability_positive,
-            )
+            output_state=positive,
+            probability_function=lambda index: pd.Series(0.5, index=index),  # 50% positive for now
         )
         # 3. The remaining simulants tested receive a negative result.
-        testing.add_transition(negative)
+        testing.add_transition(
+            output_state=negative,
+            probability_function=lambda index: pd.Series(0.5, index=index),  # 50% negative for now
+        )
 
-        self.states = [eligible, testing, positive, negative]
-        self.initial_state = eligible
+        return Machine(
+            f"testing_for_{self.cause}",
+            states=[eligible, testing, positive, negative],
+            initial_state=eligible,
+        )
 
     def setup(self, builder):
         """Standard vivarium setup method."""
         super().setup(builder)
-        self.sensitivity = builder.configuration[self.cause.name].sensitivity
-        self.specificity = builder.configuration[self.cause.name].specificity
+        self.sensitivity = builder.configuration[self.cause].sensitivity
+        self.specificity = builder.configuration[self.cause].specificity
 
         self.ad_state = builder.value.get_value(f"{self.underlying_ad_model_name}")
 
-    def get_testing_rate(self, builder, cause: str):
+    def _get_testing_probability(self, index: pd.Index) -> pd.Series:
         """
-        Gets the rate at which simulants are tested.
-
-        NOTE: This is the location to modify if you want to use an artifact-based
-        age-specific testing rate instead of a single value from the config.
+        Gets the probability at which simulants are tested.
+        
+        NOTE: This is a simplified implementation. In a real scenario, this might
+        depend on age, risk factors, or other characteristics.
         """
-        return builder.configuration[self.cause.name].test_rate
+        # For now, use a constant probability. In a real model, this would be
+        # more complex and potentially based on data from the builder.
+        return pd.Series(0.1, index=index)  # 10% chance of being tested per time step
 
     def _probability_positive(self, index: pd.Index) -> pd.Series:
         """
@@ -96,4 +97,11 @@ class TestingForAlzheimers(Component):
         prob_positive[no_ad_mask] = 1 - self.specificity
 
         return prob_positive
+
+    def _probability_negative(self, index: pd.Index) -> pd.Series:
+        """
+        Calculates the probability of a negative test result.
+        This is simply 1 - probability_positive.
+        """
+        return 1 - self._probability_positive(index)
 
