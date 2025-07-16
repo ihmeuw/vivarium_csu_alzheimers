@@ -3,7 +3,7 @@ components:
     vivarium_csu_alzheimers:
         components:
             - Alzheimers()
-            - TestingForAlzheimers('alzheimers_pet_scan', 'alzheimers_disease')
+            - TestingForAlzheimers('alzheimers_pet_scan', 'alzheimers_disease_and_other_dementias')
 
     vivarium_public_health:
         population:
@@ -15,7 +15,6 @@ components:
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
-            - DiseaseObserver('testing_for_alzheimers')
 
 configuration:
     input_data:
@@ -49,3 +48,8 @@ configuration:
             - 'age_group'
             - 'sex'
             - 'current_year'
+            
+    alzheimers_pet_scan:
+        sensitivity: 0.85  # 85% sensitivity
+        specificity: 0.90  # 90% specificity
+        test_rate: 0.1     # 10% of eligible population tested per time step

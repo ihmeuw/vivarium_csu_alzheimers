@@ -44,12 +44,12 @@ class TestingForAlzheimers(Component):
         # 2. From the transient 'testing' state, determine the result.
         testing.add_transition(
             output_state=positive,
-            probability_function=lambda index: pd.Series(0.5, index=index),  # 50% positive for now
+            probability_function=self._probability_positive,
         )
         # 3. The remaining simulants tested receive a negative result.
         testing.add_transition(
             output_state=negative,
-            probability_function=lambda index: pd.Series(0.5, index=index),  # 50% negative for now
+            probability_function=self._probability_negative,
         )
 
         return Machine(
@@ -64,7 +64,8 @@ class TestingForAlzheimers(Component):
         self.sensitivity = builder.configuration[self.cause].sensitivity
         self.specificity = builder.configuration[self.cause].specificity
 
-        self.ad_state = builder.value.get_value(f"{self.underlying_ad_model_name}")
+        # Access the AD state column - DiseaseModel creates a state column
+        self.ad_population_view = builder.population.get_view([self.underlying_ad_model_name])
 
     def _get_testing_probability(self, index: pd.Index) -> pd.Series:
         """
@@ -82,18 +83,22 @@ class TestingForAlzheimers(Component):
         Calculates the probability of a positive test result based on the
         underlying AD status and the test's sensitivity and specificity.
         """
-        pop = self.population_view.get(index)
-        ad_status = self.ad_state(index)
+        # Get the AD status from the population view
+        pop_data = self.ad_population_view.get(index)
+        ad_status = pop_data[self.underlying_ad_model_name]
 
+        print(ad_status.value_counts())
+        breakpoint()
         # Default probability is 0
         prob_positive = pd.Series(0.0, index=index)
 
-        # Simulants with AD test positive based on sensitivity
-        has_ad_mask = ad_status == self.underlying_ad_model_name
+        # Simulants with AD (any state other than susceptible) test positive based on sensitivity
+        susceptible_state = f"susceptible_to_{self.underlying_ad_model_name}"
+        has_ad_mask = ad_status != susceptible_state
         prob_positive[has_ad_mask] = self.sensitivity
 
-        # Simulants without AD test positive based on (1 - specificity)
-        no_ad_mask = ad_status != self.underlying_ad_model_name
+        # Simulants without AD (susceptible state) test positive based on (1 - specificity)
+        no_ad_mask = ad_status == susceptible_state
         prob_positive[no_ad_mask] = 1 - self.specificity
 
         return prob_positive
