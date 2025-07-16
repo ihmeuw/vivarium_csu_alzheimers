@@ -2,6 +2,7 @@ import pandas as pd
 from vivarium import Component
 from vivarium.framework.state_machine import Machine, State, TransientState
 
+
 class TestingForAlzheimers(Component):
     """A class to hold the testing model for Alzheimer's disease. This class includes
     the different states of the testing process and how simulants can transition between them.
@@ -70,7 +71,7 @@ class TestingForAlzheimers(Component):
     def _get_testing_probability(self, index: pd.Index) -> pd.Series:
         """
         Gets the probability at which simulants are tested.
-        
+
         NOTE: This is a simplified implementation. In a real scenario, this might
         depend on age, risk factors, or other characteristics.
         """
@@ -109,4 +110,3 @@ class TestingForAlzheimers(Component):
         This is simply 1 - probability_positive.
         """
         return 1 - self._probability_positive(index)
-
