@@ -3,19 +3,27 @@ components:
     vivarium_csu_alzheimers:
         components:
             - Alzheimers()
-            - TestingForAlzheimers()    
+            - TestingForAlzheimers()
+            - ResultsStratifier()
             
     vivarium_public_health:
         population:
             - BasePopulation()
             - Mortality()
             - FertilityCrudeBirthRate()
+        risks:
+            - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_first_state_to_alzheimers_second_state.transition_rate")
+            - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_second_state_to_alzheimers_third_state.transition_rate")
+            - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_third_state_to_alzheimers_fourth_state.transition_rate")
+            - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_fourth_state_to_alzheimers_fifth_state.transition_rate")
+        treatment:
+            - Intervention("intervention.hypothetical_alzheimers_intervention")
         results:
-            - ResultsStratifier()
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
             - DiseaseObserver('testing_for_alzheimers')
+            - CategoricalInterventionObserver('hypothetical_alzheimers_intervention')
 
 configuration:
     input_data:
@@ -27,22 +35,22 @@ configuration:
     randomness:
         map_size: 1_000_000
         key_columns: ['entrance_time', 'age']
-        random_seed: 0
     time:
         start:
             year: 2021
             month: 1
             day: 1
         end:
-            year: 2025
+            year: 2100
             month: 12
             day: 31
         step_size: 182  # days 365/2 = 182.5
     population:
         population_size: 20_000
         initialization_age_min: 0
-        initialization_age_max: 125
-        untracking_age: 125
+        # This is to work around an issue where simulants will age past age_max/untracking_age
+        initialization_age_max: 100
+        untracking_age: 150
 
     stratification:
         default:
