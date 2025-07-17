@@ -1,6 +1,7 @@
 import pandas as pd
 from vivarium.framework.engine import Builder
 from vivarium_public_health import ResultsStratifier as ResultsStratifier_
+from vivarium_public_health.results import DiseaseObserver
 
 
 class ResultsStratifier(ResultsStratifier_):
@@ -35,3 +36,7 @@ class ResultsStratifier(ResultsStratifier_):
         )
 
         return age_bins
+
+
+class TestingObserver(DiseaseObserver):
+    pass
