@@ -1,4 +1,4 @@
-import pandas as pd
+import numpy as np, pandas as pd
 from vivarium import Component
 from vivarium.framework.state_machine import Machine, State, TransientState
 
@@ -88,8 +88,8 @@ class TestingForAlzheimers(Component):
         pop_data = self.ad_population_view.get(index)
         ad_status = pop_data[self.underlying_ad_model_name]
 
-        print(ad_status.value_counts())
-        breakpoint()
+        # print(ad_status.value_counts())
+        # breakpoint()
         # Default probability is 0
         prob_positive = pd.Series(0.0, index=index)
 
@@ -102,6 +102,7 @@ class TestingForAlzheimers(Component):
         no_ad_mask = ad_status == susceptible_state
         prob_positive[no_ad_mask] = 1 - self.specificity
 
+        assert np.allclose(has_ad_mask, ~no_ad_mask), 'bit masks not logical complements'
         return prob_positive
 
     def _probability_negative(self, index: pd.Index) -> pd.Series:
