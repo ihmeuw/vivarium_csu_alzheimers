@@ -14,9 +14,7 @@ NEGATIVE_TEST_TRANSITION_RATE = TESTING_RATE * (1 - POSITIVE_TEST_RATE)
 
 
 class TestingState(TransientState):
-    """A transient state that will be compatible with the vivarium public health disease model.
-    
-    """
+    """A transient state that will be compatible with the vivarium public health disease model."""
 
     def get_transition_names(self) -> list[str]:
         transitions = []
@@ -60,21 +58,19 @@ class TestingForAlzheimers(Component):
             disability_weight=0.0,
             excess_mortality_rate=0.0,
         )
-        duration = pd.Timedelta(days=(365 * 4))  # 4 years
+        duration = pd.Timedelta(days=(365 * 2))  # 2 years
         negative = DiseaseState(
             TESTING_ALZHEIMERS_DISEASE_MODEL.NEGATIVE_STATE,
             prevalence=0.0,
             disability_weight=0.0,
             excess_mortality_rate=0.0,
-            get_data_functions={"dwell_time": lambda _, __: duration}
+            get_data_functions={"dwell_time": lambda _, __: duration},
         )
 
         # Add transitions between states
         susceptible.add_transition(
             output_state=testing,
-            probability_function=lambda index: pd.Series(
-                TESTING_RATE, index=index
-            ),
+            probability_function=lambda index: pd.Series(TESTING_RATE, index=index),
         )
         testing.add_transition(
             output_state=positive,

@@ -5,6 +5,7 @@ components:
             - Alzheimers()
             - TestingForAlzheimers()
             - ResultsStratifier()
+            - TestingDiseaseObserver()
             
     vivarium_public_health:
         population:
@@ -22,14 +23,13 @@ components:
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
-            - DiseaseObserver('testing_for_alzheimers')
+            # - DiseaseObserver('testing_for_alzheimers')
             - CategoricalInterventionObserver('hypothetical_alzheimers_intervention')
 
 configuration:
     input_data:
         input_draw_number: 0
-        artifact_path: /home/albrja/scratch/artifacts/united_states_of_america.hdf
-        # artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/basic_model/united_states_of_america.hdf'
+        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/basic_model/united_states_of_america.hdf'
     interpolation:
         order: 0
         extrapolate: True
