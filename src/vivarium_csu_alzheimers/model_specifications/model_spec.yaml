@@ -51,7 +51,7 @@ configuration:
         initialization_age_min: 0
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
-        untracking_age: 150
+        untracking_age: 200
     
     # Data values not in artifact:
     susceptible_state.susceptible_to_testing_for_alzheimers:
