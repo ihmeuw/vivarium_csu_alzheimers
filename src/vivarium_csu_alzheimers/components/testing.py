@@ -31,9 +31,7 @@ class TestingForAlzheimers(Component):
     NOTE: This testing model will test simulants that are susceptible to Alzheimer's disease and
     they could test positive or negative. I did not implement this in a way that makes all tests
     for simulants who are susceptible to Alzheimer's disease to be negative since we likely will
-    not have a susceptible state in the final model. I also could not get a TransientState to work
-    within a disease model so I had skip the Transient state and go straight to postive and negative
-    states.
+    not have a susceptible state in the final model.
 
     """
 
@@ -50,7 +48,6 @@ class TestingForAlzheimers(Component):
             TESTING_ALZHEIMERS_DISEASE_MODEL.SUSCEPTIBLE_TO_TESTING,
             allow_self_transition=True,
         )
-        # TODO: can't get TransientState to work in a DiseaseModel
         testing = TestingState(TESTING_ALZHEIMERS_DISEASE_MODEL.TESTING_STATE)
         positive = DiseaseState(
             TESTING_ALZHEIMERS_DISEASE_MODEL.POSITIVE_STATE,
