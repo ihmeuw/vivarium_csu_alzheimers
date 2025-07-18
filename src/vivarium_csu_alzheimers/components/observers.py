@@ -15,12 +15,12 @@ class ResultsStratifier(ResultsStratifier_):
         builder.results.register_stratification(
             "alzheimers_state",
             [
-                ALZHEIMERS_DISEASE_MODEL.SUSCEPTIBLE_TO_ALZHEIMERS,
-                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FIRST_STATE,
-                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_SECOND_STATE,
-                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_THIRD_STATE,
-                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FOURTH_STATE,
-                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FIFTH_STATE,
+                state
+                for state in ALZHEIMERS_DISEASE_MODEL
+                if state
+                not in [
+                    ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME,
+                ]
             ],
             is_vectorized=True,
             requires_columns=[ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME],
@@ -28,9 +28,9 @@ class ResultsStratifier(ResultsStratifier_):
         builder.results.register_stratification(
             "testing_state",
             [
-                TESTING_ALZHEIMERS_DISEASE_MODEL.SUSCEPTIBLE_TO_TESTING,
-                TESTING_ALZHEIMERS_DISEASE_MODEL.POSITIVE_STATE,
-                TESTING_ALZHEIMERS_DISEASE_MODEL.NEGATIVE_STATE,
+                state
+                for state in TESTING_ALZHEIMERS_DISEASE_MODEL
+                if state != TESTING_ALZHEIMERS_DISEASE_MODEL.TESTING_FOR_ALZHEIMERS_MODEL_NAME
             ],
             is_vectorized=True,
             requires_columns=[

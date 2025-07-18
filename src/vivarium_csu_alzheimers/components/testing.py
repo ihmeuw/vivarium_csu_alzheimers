@@ -1,10 +1,14 @@
 import pandas as pd
 from vivarium import Component
+from vivarium.framework.engine import Builder
 from vivarium.framework.state_machine import State, TransientState
 from vivarium_public_health.disease import DiseaseModel, DiseaseState, SusceptibleState
 from vivarium_public_health.disease.transition import TransitionString
 
-from vivarium_csu_alzheimers.constants.models import TESTING_ALZHEIMERS_DISEASE_MODEL
+from vivarium_csu_alzheimers.constants.models import (
+    ALZHEIMERS_DISEASE_MODEL,
+    TESTING_ALZHEIMERS_DISEASE_MODEL,
+)
 
 # Placehodler constants for the testing model. These will be replaced by real data later.
 TESTING_RATE = 0.4  # per time step
@@ -39,6 +43,10 @@ class TestingForAlzheimers(Component):
     def sub_components(self) -> list[Component]:
         return [self.testing_model]
 
+    @property
+    def columns_required(self) -> list[str]:
+        return [ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME]
+
     def __init__(self) -> None:
         super().__init__()
         self.testing_model = self._create_testing_model()
@@ -67,7 +75,7 @@ class TestingForAlzheimers(Component):
         # Add transitions between states
         susceptible.add_transition(
             output_state=testing,
-            probability_function=lambda index: pd.Series(TESTING_RATE, index=index),
+            probability_function=self._get_testing_probability,
         )
         testing.add_transition(
             output_state=positive,
@@ -84,3 +92,26 @@ class TestingForAlzheimers(Component):
             initial_state=susceptible,
             states=[susceptible, testing, positive, negative],
         )
+
+    def _get_testing_probability(self, index):
+        """Return testing probability only for simulants in Alzheimer's disease states 1-5."""
+        population = self.population_view.get(index)
+        alzheimers_states = population[ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME]
+
+        eligible_states = [
+            state
+            for state in ALZHEIMERS_DISEASE_MODEL
+            if state
+            not in [
+                ALZHEIMERS_DISEASE_MODEL.SUSCEPTIBLE_TO_ALZHEIMERS,
+                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME,
+            ]
+        ]
+
+        eligible_mask = alzheimers_states.isin(eligible_states)
+
+        # Return testing rate for eligible simulants, 0 for others
+        probabilities = pd.Series(0.0, index=index)
+        probabilities.loc[eligible_mask] = TESTING_RATE
+
+        return probabilities

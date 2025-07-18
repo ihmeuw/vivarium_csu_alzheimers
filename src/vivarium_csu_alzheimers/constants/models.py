@@ -16,6 +16,11 @@ class __AlzheimersDiseaseModel(NamedTuple):
     ALZHEIMERS_FOURTH_STATE: str = "alzheimers_fourth_state"
     ALZHEIMERS_FIFTH_STATE: str = "alzheimers_fifth_state"
 
+    def __iter__(self):
+        """Allow iteration over the named tuple field values."""
+        for field in self._fields:
+            yield getattr(self, field)
+
 
 ALZHEIMERS_DISEASE_MODEL = __AlzheimersDiseaseModel()
 
@@ -26,6 +31,11 @@ class __TestingAlzheimersDiseaseModel(NamedTuple):
     TESTING_STATE: str = "testing_for_alzheimers"
     POSITIVE_STATE: str = "positive_test_for_alzheimers"
     NEGATIVE_STATE: str = "negative_test_for_alzheimers"
+
+    def __iter__(self):
+        """Allow iteration over the named tuple field values."""
+        for field in self._fields:
+            yield getattr(self, field)
 
 
 TESTING_ALZHEIMERS_DISEASE_MODEL = __TestingAlzheimersDiseaseModel()
