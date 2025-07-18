@@ -3,8 +3,41 @@ from vivarium.framework.engine import Builder
 from vivarium_public_health import ResultsStratifier as ResultsStratifier_
 from vivarium_public_health.results import DiseaseObserver
 
+from vivarium_csu_alzheimers.constants.models import (
+    ALZHEIMERS_DISEASE_MODEL,
+    TESTING_ALZHEIMERS_DISEASE_MODEL,
+)
+
 
 class ResultsStratifier(ResultsStratifier_):
+    def register_stratifications(self, builder: Builder) -> None:
+        super().register_stratifications(builder)
+        builder.results.register_stratification(
+            "alzheimers_state",
+            [
+                ALZHEIMERS_DISEASE_MODEL.SUSCEPTIBLE_TO_ALZHEIMERS,
+                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FIRST_STATE,
+                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_SECOND_STATE,
+                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_THIRD_STATE,
+                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FOURTH_STATE,
+                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_FIFTH_STATE,
+            ],
+            is_vectorized=True,
+            requires_columns=[ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME],
+        )
+        builder.results.register_stratification(
+            "testing_state",
+            [
+                TESTING_ALZHEIMERS_DISEASE_MODEL.SUSCEPTIBLE_TO_TESTING,
+                TESTING_ALZHEIMERS_DISEASE_MODEL.POSITIVE_STATE,
+                TESTING_ALZHEIMERS_DISEASE_MODEL.NEGATIVE_STATE,
+            ],
+            is_vectorized=True,
+            requires_columns=[
+                TESTING_ALZHEIMERS_DISEASE_MODEL.TESTING_FOR_ALZHEIMERS_MODEL_NAME
+            ],
+        )
+
     @staticmethod
     def get_age_bins(builder: Builder) -> pd.DataFrame:
         """Get the age bins for stratifying by age.

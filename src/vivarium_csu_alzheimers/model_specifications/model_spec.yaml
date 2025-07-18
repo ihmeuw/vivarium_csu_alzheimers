@@ -12,18 +12,16 @@ components:
             - BasePopulation()
             - Mortality()
             - FertilityCrudeBirthRate()
-        risks:
+        treatment:
+            - Intervention("intervention.hypothetical_alzheimers_intervention")
             - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_first_state_to_alzheimers_second_state.transition_rate")
             - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_second_state_to_alzheimers_third_state.transition_rate")
             - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_third_state_to_alzheimers_fourth_state.transition_rate")
             - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_fourth_state_to_alzheimers_fifth_state.transition_rate")
-        treatment:
-            - Intervention("intervention.hypothetical_alzheimers_intervention")
         results:
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
-            # - DiseaseObserver('testing_for_alzheimers')
             - CategoricalInterventionObserver('hypothetical_alzheimers_intervention')
 
 configuration:
@@ -68,3 +66,10 @@ configuration:
             - 'age_group'
             - 'sex'
             - 'current_year'
+        testing_for_alzheimers:
+            include:
+                - 'alzheimers_state'
+        hypothetical_alzheimers_intervention:
+            include:
+                - 'alzheimers_state'
+                - 'testing_state'    
