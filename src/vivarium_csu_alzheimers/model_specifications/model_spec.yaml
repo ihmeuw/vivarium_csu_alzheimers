@@ -5,6 +5,7 @@ components:
             - Alzheimers()
             - TestingForAlzheimers()
             - ResultsStratifier()
+            - TestingDiseaseObserver()
             
     vivarium_public_health:
         population:
@@ -22,7 +23,7 @@ components:
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
-            - DiseaseObserver('testing_for_alzheimers')
+            # - DiseaseObserver('testing_for_alzheimers')
             - CategoricalInterventionObserver('hypothetical_alzheimers_intervention')
 
 configuration:
@@ -50,7 +51,17 @@ configuration:
         initialization_age_min: 0
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
-        untracking_age: 150
+        untracking_age: 200
+    
+    # Data values not in artifact:
+    susceptible_state.susceptible_to_testing_for_alzheimers:
+        data_sources:
+            prevalence: 0.25
+            birth_prevalence: 0.25
+    testing_state.testing_for_alzheimers.0.0:
+        data_sources:
+            prevalence: 0.0
+            birth_prevalence: 0.0
 
     stratification:
         default:
