@@ -1,7 +1,6 @@
 import pandas as pd
 from vivarium import Component
-from vivarium.framework.engine import Builder
-from vivarium.framework.state_machine import State, TransientState
+from vivarium.framework.state_machine import TransientState
 from vivarium_public_health.disease import DiseaseModel, DiseaseState, SusceptibleState
 from vivarium_public_health.disease.transition import TransitionString
 
