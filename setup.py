@@ -61,8 +61,7 @@ if __name__ == "__main__":
         "vivarium_dependencies[pytest]",
     ]
     lint_requirements = [
-        "vivarium_dependencies[black]",
-        "isort",
+        "vivarium_dependencies[lint]",
     ]
     interactive_requirements = [
         "vivarium_dependencies[interactive]",
