@@ -36,21 +36,8 @@ class __Alzheimers(NamedTuple):
     INCIDENCE_RATE: str = "cause.alzheimers_disease_and_other_dementias.incidence_rate"
     CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
     EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
-    DISABLIITY_WEIGHT_MILD: str = (
-        "sequela.mild_alzheimers_disease_and_other_dementias.disability_weight"
-    )
-    DISABLIITY_WEIGHT_MODERATE: str = (
-        "sequela.moderate_alzheimers_disease_and_other_dementias.disability_weight"
-    )
-    DISABLIITY_WEIGHT_SEVERE: str = (
-        "sequela.severe_alzheimers_disease_and_other_dementias.disability_weight"
-    )
-    PREVALENCE_MILD: str = "sequela.mild_alzheimers_disease_and_other_dementias.prevalence"
-    PREVALENCE_MODERATE: str = (
-        "sequela.moderate_alzheimers_disease_and_other_dementias.prevalence"
-    )
-    PREVALENCE_SEVERE: str = (
-        "sequela.severe_alzheimers_disease_and_other_dementias.prevalence"
+    DISABLIITY_WEIGHT: str = (
+        "cause.alzheimers_disease_and_other_dementias.disability_weight"
     )
 
     @property
