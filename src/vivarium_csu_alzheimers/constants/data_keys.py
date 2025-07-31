@@ -32,9 +32,10 @@ POPULATION = __Population()
 
 class __Alzheimers(NamedTuple):
     PREVALENCE: str = "cause.alzheimers_disease_and_other_dementias.prevalence"
-    DEATHS: str = "cause.alzheimers_disease_and_other_dementias.deaths"
     INCIDENCE_RATE: str = "cause.alzheimers_disease_and_other_dementias.incidence_rate"
-    CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
+    CSMR: str = (
+        "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
+    )
     EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
     DISABLIITY_WEIGHT: str = (
         "cause.alzheimers_disease_and_other_dementias.disability_weight"

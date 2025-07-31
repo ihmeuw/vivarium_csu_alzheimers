@@ -57,7 +57,6 @@ def get_data(
         # TODO - confirm population data with nathaniel
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         data_keys.ALZHEIMERS.PREVALENCE: load_standard_data,
-        data_keys.ALZHEIMERS.DEATHS: load_standard_data,
         data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
