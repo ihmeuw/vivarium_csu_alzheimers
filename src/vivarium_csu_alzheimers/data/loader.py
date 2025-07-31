@@ -26,7 +26,6 @@ from vivarium_inputs import utilities as vi_utils
 from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
-from vivarium_csu_alzheimers.components.testing import POSTIVE_TEST_RATE
 from vivarium_csu_alzheimers.constants import data_keys
 
 
