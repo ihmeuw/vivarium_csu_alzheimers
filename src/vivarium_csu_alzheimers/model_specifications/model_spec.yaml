@@ -12,12 +12,14 @@ components:
             - BasePopulation()
             - Mortality()
             - FertilityCrudeBirthRate()
+                disease:
+            - SI('alzheimers_disease_and_other_dementias')
+        disease:
+            - SI('alzheimers_disease_and_other_dementias')
         results:
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
-        disease:
-            - SI('cause.alzheimers_disease_and_other_dementias')
 
 configuration:
     input_data:
