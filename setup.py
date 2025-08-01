@@ -43,26 +43,28 @@ if __name__ == "__main__":
         long_description = f.read()
 
     install_requirements = [
+        "vivarium_dependencies[pandas,numpy,scipy,click,tables,loguru]",
         "vivarium_build_utils>=2.0.1,<3.0.0",
         "gbd_mapping>=4.1.3",
         "vivarium>=3.4.5",
         "vivarium_public_health>=4.2.2",
-        "click",
         "jinja2",
-        "loguru",
-        "numpy",
-        "pandas",
         "pyyaml",
-        "scipy",
-        "tables",
     ]
 
     setup_requires = ["setuptools_scm"]
 
     data_requirements = ["vivarium_inputs>=6.0.1"]
     cluster_requirements = ["vivarium_cluster_tools>=2.1.14"]
-    test_requirements = ["pytest", "pytest-cov"]
-    lint_requirements = ["black==22.3.0", "isort"]
+    test_requirements = [
+        "vivarium_dependencies[pytest]",
+    ]
+    lint_requirements = [
+        "vivarium_dependencies[lint]",
+    ]
+    interactive_requirements = [
+        "vivarium_dependencies[interactive]",
+    ]
 
     setup(
         name=about["__title__"],
@@ -80,7 +82,11 @@ if __name__ == "__main__":
             "test": test_requirements,
             "cluster": cluster_requirements,
             "data": data_requirements + cluster_requirements,
-            "dev": test_requirements + cluster_requirements + lint_requirements,
+            "interactive": interactive_requirements,
+            "dev": interactive_requirements
+            + test_requirements
+            + cluster_requirements
+            + lint_requirements,
         },
         zip_safe=False,
         use_scm_version={
