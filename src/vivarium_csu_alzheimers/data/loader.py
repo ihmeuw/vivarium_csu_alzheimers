@@ -26,7 +26,6 @@ from vivarium_inputs import utilities as vi_utils
 from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
-from vivarium_csu_alzheimers.components.testing import POSTIVE_TEST_RATE
 from vivarium_csu_alzheimers.constants import data_keys
 
 
@@ -55,28 +54,13 @@ def get_data(
         data_keys.POPULATION.DEMOGRAPHY: load_demographic_dimensions,
         data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
         data_keys.POPULATION.ACMR: load_standard_data,
+        # TODO - confirm population data with nathaniel
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
-        # TODO - add appropriate mappings
         data_keys.ALZHEIMERS.PREVALENCE: load_standard_data,
         data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
-        data_keys.ALZHEIMERS.REMISSION_RATE: make_rate_of_zero,
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
-        data_keys.ALZHEIMERS.DISABILITY_WEIGHT: load_standard_data,
-        data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
-        data_keys.TESTING_FOR_ALZHEIMERS.PREVALENCE: load_testing_prevalence,
-        data_keys.TESTING_FOR_ALZHEIMERS.INCIDENCE_RATE: load_testing_incidence_rate,
-        data_keys.TESTING_FOR_ALZHEIMERS.REMISSION_RATE: make_rate_of_zero,
-        data_keys.TESTING_FOR_ALZHEIMERS.CSMR: make_rate_of_zero,
-        data_keys.TESTING_FOR_ALZHEIMERS.EMR: make_rate_of_zero,
-        data_keys.TESTING_FOR_ALZHEIMERS.DISABILITY_WEIGHT: make_rate_of_zero,
-        data_keys.TESTING_FOR_ALZHEIMERS.RESTRICTIONS: load_testing_restrictions,
-        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.COVERAGE: load_intervention_coverage,
-        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.DISTRIBUTION_TYPE: load_intervention_distribution,
-        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.EXPOSURE_STANDARD_DEVIATION: load_intervention_exposure_standard_deviation,
-        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.RELATIVE_RISK: load_intervention_relative_risk,
-        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.PAF: load_intervention_paf,
-        data_keys.HYPOTHETICAL_ALZHEIMERS_INTERVENTION.CATEGORIES: load_intervention_categories,
+        data_keys.ALZHEIMERS.DISABLIITY_WEIGHT: load_standard_data,
     }
     return mapping[lookup_key](lookup_key, location, years)
 
@@ -191,67 +175,3 @@ def get_entity(key: str | EntityKey):
     }
     key = EntityKey(key)
     return type_map[key.type][key.name]
-
-
-def make_rate_of_zero(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> float:
-    return 0.0
-
-
-def load_testing_restrictions(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> dict[str, Any]:
-    return get_data(data_keys.ALZHEIMERS.RESTRICTIONS, location, years)
-
-
-def load_testing_prevalence(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> float:
-    return 0.75
-
-
-def load_testing_incidence_rate(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> float:
-    return 0.75
-
-
-def load_intervention_coverage(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> float:
-    # We want coverage to be probability of testing positive
-    return POSTIVE_TEST_RATE
-
-
-def load_intervention_distribution(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> float:
-    return "dichotomous"
-
-
-def load_intervention_exposure_standard_deviation(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> float:
-    return 0.1
-
-
-def load_intervention_relative_risk(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> float:
-    return 0.5
-
-
-def load_intervention_paf(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> float:
-    return 1 - 0.6
-
-
-def load_intervention_categories(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> dict[str, str]:
-    return {
-        "covered": "covered by hypothetical alzheimers intervention",
-        "uncovered": "not covered by hypothetical alzheimers intervention",
-    }
