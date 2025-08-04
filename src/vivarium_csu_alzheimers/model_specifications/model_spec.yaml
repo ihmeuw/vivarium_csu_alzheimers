@@ -1,11 +1,8 @@
 components:
     # Causes an error if left empty. Uncomment when you have components. 
-    # vivarium_csu_alzheimers:
-    #   components:
-    #       - Alzheimers()
-    #       - TestingForAlzheimers()
-    #       - ResultsStratifier()
-    #       - TestingDiseaseObserver()
+    vivarium_csu_alzheimers:
+      components:
+          - ResultsStratifier()
             
     vivarium_public_health:
         population:
@@ -18,7 +15,7 @@ components:
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
-            - ResultsStratifier()
+            # - ResultsStratifier()
 
 configuration:
     input_data:
@@ -46,26 +43,9 @@ configuration:
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
         untracking_age: 200
-    
-    # Data values not in artifact:
-    susceptible_state.susceptible_to_testing_for_alzheimers:
-        data_sources:
-            prevalence: 0.25
-            birth_prevalence: 0.25
-    testing_state.testing_for_alzheimers.0.0:
-        data_sources:
-            prevalence: 0.0
-            birth_prevalence: 0.0
 
     stratification:
         default:
             - 'age_group'
             - 'sex'
-            - 'current_year'
-        testing_for_alzheimers:
-            include:
-                - 'alzheimers_state'
-        hypothetical_alzheimers_intervention:
-            include:
-                - 'alzheimers_state'
-                - 'testing_state'    
+            - 'current_year'  
