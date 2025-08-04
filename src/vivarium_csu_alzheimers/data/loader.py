@@ -61,6 +61,7 @@ def get_data(
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
         data_keys.ALZHEIMERS.DISABLIITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
     }
     return mapping[lookup_key](lookup_key, location, years)
 
@@ -103,7 +104,9 @@ def load_standard_data(
 ) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
-    return interface.get_measure(entity, key.measure, location, years).droplevel("location")
+    return interface.get_measure(entity, key.measure, location, years).droplevel(
+        "location"
+    )
 
 
 def load_metadata(key: str, location: str, years: int | str | list[int] | None = None):
@@ -157,8 +160,12 @@ def _load_em_from_meid(location, meid, measure):
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
     data = vi_utils.reshape(data)
     data = vi_utils.scrub_gbd_conventions(data, location)
-    data = vi_utils.split_interval(data, interval_column="age", split_column_prefix="age")
-    data = vi_utils.split_interval(data, interval_column="year", split_column_prefix="year")
+    data = vi_utils.split_interval(
+        data, interval_column="age", split_column_prefix="age"
+    )
+    data = vi_utils.split_interval(
+        data, interval_column="year", split_column_prefix="year"
+    )
     return vi_utils.sort_hierarchical_data(data).droplevel("location")
 
 

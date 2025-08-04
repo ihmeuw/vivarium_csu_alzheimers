@@ -1,25 +1,24 @@
 components:
     # Causes an error if left empty. Uncomment when you have components. 
     # vivarium_csu_alzheimers:
-    #     components:
-    #         - Alzheimers()
-    #         - TestingForAlzheimers()
-    #         - ResultsStratifier()
-    #         - TestingDiseaseObserver()
+    #   components:
+    #       - Alzheimers()
+    #       - TestingForAlzheimers()
+    #       - ResultsStratifier()
+    #       - TestingDiseaseObserver()
             
     vivarium_public_health:
         population:
             - BasePopulation()
             - Mortality()
             - FertilityCrudeBirthRate()
-                disease:
-            - SI('alzheimers_disease_and_other_dementias')
         disease:
             - SI('alzheimers_disease_and_other_dementias')
         results:
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
+            - ResultsStratifier()
 
 configuration:
     input_data:
@@ -31,9 +30,9 @@ configuration:
     randomness:
         map_size: 1_000_000
         key_columns: ['entrance_time', 'age']
-    time:
+    time: 
         start:
-            year: 2021
+            year: 2025
             month: 1
             day: 1
         end:
