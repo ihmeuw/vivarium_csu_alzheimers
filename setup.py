@@ -14,7 +14,9 @@ python_versions = [parse(v) for v in supported_python_versions]
 min_version = min(python_versions)
 max_version = max(python_versions)
 if not (
-    min_version <= parse(".".join([str(v) for v in sys.version_info[:2]])) <= max_version
+    min_version
+    <= parse(".".join([str(v) for v in sys.version_info[:2]]))
+    <= max_version
 ):
     py_version = ".".join([str(v) for v in sys.version_info[:3]])
     # Python 3.5 does not support f-strings
@@ -44,7 +46,7 @@ if __name__ == "__main__":
 
     install_requirements = [
         "vivarium_dependencies[pandas,numpy,scipy,click,tables,loguru]",
-        "vivarium_build_utils>=2.0.1,<3.0.0",
+        "vivarium_build_utils==2.0.1",
         "gbd_mapping>=4.1.3",
         "vivarium>=3.4.5",
         "vivarium_public_health>=4.2.2",
