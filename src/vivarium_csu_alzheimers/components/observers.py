@@ -10,33 +10,21 @@ from vivarium_csu_alzheimers.constants.models import (
 
 
 class ResultsStratifier(ResultsStratifier_):
-    def register_stratifications(self, builder: Builder) -> None:
-        super().register_stratifications(builder)
-        builder.results.register_stratification(
-            "alzheimers_state",
-            [
-                state
-                for state in ALZHEIMERS_DISEASE_MODEL
-                if state
-                not in [
-                    ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME,
-                ]
-            ],
-            is_vectorized=True,
-            requires_columns=[ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME],
-        )
-        builder.results.register_stratification(
-            "testing_state",
-            [
-                state
-                for state in TESTING_ALZHEIMERS_DISEASE_MODEL
-                if state != TESTING_ALZHEIMERS_DISEASE_MODEL.TESTING_FOR_ALZHEIMERS_MODEL_NAME
-            ],
-            is_vectorized=True,
-            requires_columns=[
-                TESTING_ALZHEIMERS_DISEASE_MODEL.TESTING_FOR_ALZHEIMERS_MODEL_NAME
-            ],
-        )
+    # def register_stratifications(self, builder: Builder) -> None:
+    #     super().register_stratifications(builder)
+    #     builder.results.register_stratification(
+    #         "alzheimers_state",
+    #         [
+    #             state
+    #             for state in ALZHEIMERS_DISEASE_MODEL
+    #             if state
+    #             not in [
+    #                 ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME,
+    #             ]
+    #         ],
+    #         is_vectorized=True,
+    #         requires_columns=[ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME],
+    #     )
 
     @staticmethod
     def get_age_bins(builder: Builder) -> pd.DataFrame:
@@ -64,9 +52,7 @@ class ResultsStratifier(ResultsStratifier_):
         )
         # FIXME: MIC-4083 simulants can age past 125
         max_age = age_bins["age_end"].max()
-        age_bins.loc[age_bins["age_end"] == max_age, "age_end"] += (
-            builder.configuration.time.step_size / 365.25
-        )
+        age_bins.loc[age_bins["age_end"] == max_age, "age_end"] = 200
 
         return age_bins
 

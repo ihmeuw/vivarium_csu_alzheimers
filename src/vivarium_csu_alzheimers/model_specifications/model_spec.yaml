@@ -1,28 +1,21 @@
 components:
     # Causes an error if left empty. Uncomment when you have components. 
     vivarium_csu_alzheimers:
-        components:
-            - Alzheimers()
-            - TestingForAlzheimers()
-            - ResultsStratifier()
-            - TestingDiseaseObserver()
+      components:
+          - ResultsStratifier()
             
     vivarium_public_health:
         population:
             - BasePopulation()
             - Mortality()
             - FertilityCrudeBirthRate()
-        treatment:
-            - Intervention("intervention.hypothetical_alzheimers_intervention")
-            - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_first_state_to_alzheimers_second_state.transition_rate")
-            - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_second_state_to_alzheimers_third_state.transition_rate")
-            - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_third_state_to_alzheimers_fourth_state.transition_rate")
-            - InterventionEffect("intervention.hypothetical_alzheimers_intervention", "cause.alzheimers_fourth_state_to_alzheimers_fifth_state.transition_rate")
+        disease:
+            - SI('alzheimers_disease_and_other_dementias')
         results:
             - DisabilityObserver()
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
-            - CategoricalInterventionObserver('hypothetical_alzheimers_intervention')
+            # - ResultsStratifier()
 
 configuration:
     input_data:
@@ -34,9 +27,9 @@ configuration:
     randomness:
         map_size: 1_000_000
         key_columns: ['entrance_time', 'age']
-    time:
+    time: 
         start:
-            year: 2021
+            year: 2025
             month: 1
             day: 1
         end:
@@ -50,26 +43,9 @@ configuration:
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
         untracking_age: 200
-    
-    # Data values not in artifact:
-    susceptible_state.susceptible_to_testing_for_alzheimers:
-        data_sources:
-            prevalence: 0.25
-            birth_prevalence: 0.25
-    testing_state.testing_for_alzheimers.0.0:
-        data_sources:
-            prevalence: 0.0
-            birth_prevalence: 0.0
 
     stratification:
         default:
             - 'age_group'
             - 'sex'
-            - 'current_year'
-        testing_for_alzheimers:
-            include:
-                - 'alzheimers_state'
-        hypothetical_alzheimers_intervention:
-            include:
-                - 'alzheimers_state'
-                - 'testing_state'    
+            - 'current_year'  

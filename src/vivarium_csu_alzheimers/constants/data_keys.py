@@ -16,7 +16,7 @@ class __Population(NamedTuple):
     DEMOGRAPHY: str = "population.demographic_dimensions"
     TMRLE: str = "population.theoretical_minimum_risk_life_expectancy"
     ACMR: str = "cause.all_causes.cause_specific_mortality_rate"
-    LIVE_BIRTH_RATE: str = "covariate.age_specific_fertility_rate.estimate"
+    LIVE_BIRTH_RATE: str = "covariate.live_births_by_sex.estimate"
 
     @property
     def name(self):
@@ -36,6 +36,7 @@ class __Alzheimers(NamedTuple):
     CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
     EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
     DISABLIITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"
+    RESTRICTIONS: str = "cause.alzheimers_disease_and_other_dementias.restrictions"
 
     @property
     def name(self):

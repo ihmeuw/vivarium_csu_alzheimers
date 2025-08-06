@@ -61,6 +61,7 @@ def get_data(
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
         data_keys.ALZHEIMERS.DISABLIITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
     }
     return mapping[lookup_key](lookup_key, location, years)
 
