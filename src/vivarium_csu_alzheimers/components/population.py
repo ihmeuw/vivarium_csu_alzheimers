@@ -7,8 +7,15 @@ from vivarium.framework.population import SimulantData
 from vivarium_public_health import utilities
 from vivarium_public_health.population import ScaledPopulation
 
+from vivarium_csu_alzheimers.constants import data_keys
+from vivarium_csu_alzheimers.constants.metadata import ARTIFACT_INDEX_COLUMNS
+
 
 class AlzheimersPopulation(ScaledPopulation):
+    def setup(self, builder: Builder) -> None:
+        super().setup(builder)
+        self.key_columns = builder.configuration.randomness.key_columns
+
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         if pop_data.user_data.get("sim_state") != "time_step":
             super().on_initialize_simulants(pop_data)
@@ -40,21 +47,24 @@ class AlzheimersPopulation(ScaledPopulation):
             sex, age_lower, age_upper = idx
             value = row
             group_idx = pd.Index(list(range(start, start + value)))
-            # This will not work, but it is a placeholder for now
+            # This will always happen in the order of female then male and youngest to oldest
             new_simulants.loc[group_idx, "sex"] = sex
             age_draws = self.randomness["age_smoothing_age_bounds"].get_draw(
                 group_idx, additional_key=f"{sex}_{age_lower}_{age_upper}"
             )
-            new_simulants.loc[group_idx, "age"] = (age_lower + age_upper) * age_draws
+            new_simulants.loc[group_idx, "age"] = age_lower + age_draws * (
+                age_upper - age_lower
+            )
             start = group_idx.max() + 1
 
         # Update additional population columns
         new_simulants["alive"] = "alive"
         new_simulants["entrance_time"] = pop_data.creation_time
         new_simulants["exit_time"] = pd.NaT
-        breakpoint()
 
         self.population_view.update(new_simulants)
+        # NOTE: This only works with key_columns because this component creates age and entrance_time
+        self.register_simulants(new_simulants[self.key_columns])
 
 
 class AlzheimersIncidence(Component):
@@ -65,15 +75,15 @@ class AlzheimersIncidence(Component):
     #####################
 
     def setup(self, builder: Builder) -> None:
-        # todo: do we want this key to be configurable? probably not right now
-        self.incidence_rate = builder.data.load(
-            "cause.alzheimers_disease_and_other_dementias.incidence_rate"
-        )
         self.clock = builder.time.clock()
-        self.randomness = builder.randomness
-        # TODO: compute model scale (population_size / (pop_structure * prevalence).sum())
+        self.randomness = builder.randomness  # Manager
+        # NOTE: All three of these methods are capping the upper age bound at 100
+        self.incidence_rate = self.load_incidence_rate(builder)
+        self.pop_structure = self.load_population_structure(builder)
+        prevalence = self.load_prevalence(builder)
+        # Model scale = (population_size / (pop_structure * prevalence).sum())
         self.model_scale = builder.configuration.population.population_size / (
-            builder.configuration.population.population_size * 0.25
+            (self.pop_structure * prevalence).sum()
         )
         self.simulant_creator = builder.population.get_simulant_creator()
         self.age_start = builder.configuration.population.initialization_age_min
@@ -94,22 +104,21 @@ class AlzheimersIncidence(Component):
         """
 
         step_size = utilities.to_years(event.step_size)
-        # TODO: get incidence rates for this year - currently dropping year_start and year_end
-        incidence_rate = self.incidence_rate[
-            ["sex", "age_start", "age_end", "value"]
-        ].set_index(["sex", "age_start", "age_end"])
-        mean_incident_cases = incidence_rate * step_size * self.model_scale
+        # TODO: get incidence rates and population for year in forecasted data if necessary
+        pop_structure = self.pop_structure.copy()
+        pop_structure.index = pop_structure.index.droplevel(["year_start", "year_end"])
+        mean_incident_cases = (
+            self.incidence_rate * pop_structure * step_size * self.model_scale
+        )
         simulants_to_add = pd.Series(0, index=mean_incident_cases.index)
 
-        # Assume births occur as a Poisson process
-        for idx, row in mean_incident_cases.iterrows():
+        # Determine number of simulants to add for each demographic group
+        for idx, value in mean_incident_cases.items():
             sex, age_lower, age_upper = idx
-            value = row["value"]
             r = np.random.RandomState(
                 seed=self.randomness.get_seed(f"f{age_lower}_{sex}_alz_incidence")
             )
             simulants_to_add[(sex, age_lower, age_upper)] = r.poisson(value)
-
         total_simulants_to_add = simulants_to_add.sum()
 
         if total_simulants_to_add > 0:
@@ -120,3 +129,29 @@ class AlzheimersIncidence(Component):
                     "demographic_counts": simulants_to_add,
                 },
             )
+
+    ##################
+    # Helper methods #
+    ##################
+
+    def load_incidence_rate(self, builder: Builder) -> pd.Series:
+        incidence_rate = builder.data.load(data_keys.ALZHEIMERS.INCIDENCE_RATE)
+        incidence_rate.loc[incidence_rate["age_end"] == 125, "age_end"] = 100
+        incidence_rate = (
+            incidence_rate[["sex", "age_start", "age_end", "value"]]
+            .set_index(["sex", "age_start", "age_end"])
+            .squeeze()
+        )
+        return incidence_rate
+
+    def load_population_structure(self, builder: Builder) -> pd.Series:
+        pop_structure = builder.data.load(data_keys.POPULATION.STRUCTURE)
+        pop_structure.loc[pop_structure["age_end"] == 125, "age_end"] = 100
+        pop_structure = pop_structure.set_index(ARTIFACT_INDEX_COLUMNS)["value"]
+        return pop_structure
+
+    def load_prevalence(self, builder: Builder) -> pd.Series:
+        prevalence = builder.data.load(data_keys.ALZHEIMERS.PREVALENCE)
+        prevalence.loc[prevalence["age_end"] == 125, "age_end"] = 100
+        prevalence = prevalence.set_index(ARTIFACT_INDEX_COLUMNS).squeeze()
+        return prevalence
