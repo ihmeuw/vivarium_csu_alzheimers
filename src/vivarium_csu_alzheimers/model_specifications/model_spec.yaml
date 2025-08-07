@@ -1,13 +1,13 @@
 components:
     vivarium_csu_alzheimers:
       components:
-          - AlzheimersPopulation("cause.alzheimers_disease_and_other_dementias.prevalence")
-          - AlzheimersIncidence()
           - ResultsStratifier()
             
     vivarium_public_health:
         population:
+            - BasePopulation()
             - Mortality()
+            - FertilityCrudeBirthRate()
         disease:
             - SI('alzheimers_disease_and_other_dementias')
         results:
