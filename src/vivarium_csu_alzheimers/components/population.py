@@ -21,12 +21,10 @@ class AlzheimersPopulation(ScaledPopulation):
             super().on_initialize_simulants(pop_data)
             return
 
-        # get pop_data.user_data["demographic_counts"] if it exists
         if "demographic_counts" in pop_data.user_data:
-            # demographic_counts will be a pd.Series
-            demographic_counts = pop_data.user_data["demographic_counts"]
+            # demographic_counts will be a pd.Series with demographic group index
+            demographic_counts: pd.Series = pop_data.user_data["demographic_counts"]
         else:
-            # throw an error if it does not exist
             raise ValueError(
                 "AlzPop requires demographic_counts in pop_data.user_data. "
                 "Please provide it in the user_data dictionary."
@@ -43,9 +41,8 @@ class AlzheimersPopulation(ScaledPopulation):
         new_simulants = pd.DataFrame(index=pop_data.index)
         groups_to_add = demographic_counts[demographic_counts > 0]
         start = pop_data.index.min()
-        for idx, row in groups_to_add.items():
+        for idx, value in groups_to_add.items():
             sex, age_lower, age_upper = idx
-            value = row
             group_idx = pd.Index(list(range(start, start + value)))
             # This will always happen in the order of female then male and youngest to oldest
             new_simulants.loc[group_idx, "sex"] = sex
@@ -55,7 +52,7 @@ class AlzheimersPopulation(ScaledPopulation):
             new_simulants.loc[group_idx, "age"] = age_lower + age_draws * (
                 age_upper - age_lower
             )
-            start = group_idx.max() + 1
+            start += value
 
         # Update additional population columns
         new_simulants["alive"] = "alive"
@@ -75,6 +72,8 @@ class AlzheimersIncidence(Component):
     #####################
 
     def setup(self, builder: Builder) -> None:
+        self.age_start = builder.configuration.population.initialization_age_min
+        self.age_end = builder.configuration.population.initialization_age_max
         self.randomness = builder.randomness  # Manager
         # NOTE: All three of these methods are capping the upper age bound at 100
         self.incidence_rate = self.load_incidence_rate(builder)
@@ -85,8 +84,6 @@ class AlzheimersIncidence(Component):
             (self.pop_structure * prevalence).sum()
         )
         self.simulant_creator = builder.population.get_simulant_creator()
-        self.age_start = builder.configuration.population.initialization_age_min
-        self.age_end = builder.configuration.population.initialization_age_max
 
     ########################
     # Event-driven methods #
@@ -135,7 +132,7 @@ class AlzheimersIncidence(Component):
 
     def load_incidence_rate(self, builder: Builder) -> pd.Series:
         incidence_rate = builder.data.load(data_keys.ALZHEIMERS.INCIDENCE_RATE)
-        incidence_rate.loc[incidence_rate["age_end"] == 125, "age_end"] = 100
+        incidence_rate.loc[incidence_rate["age_end"] == 125, "age_end"] = self.age_end
         incidence_rate = (
             incidence_rate[["sex", "age_start", "age_end", "value"]]
             .set_index(["sex", "age_start", "age_end"])
@@ -145,12 +142,12 @@ class AlzheimersIncidence(Component):
 
     def load_population_structure(self, builder: Builder) -> pd.Series:
         pop_structure = builder.data.load(data_keys.POPULATION.STRUCTURE)
-        pop_structure.loc[pop_structure["age_end"] == 125, "age_end"] = 100
+        pop_structure.loc[pop_structure["age_end"] == 125, "age_end"] = self.age_end
         pop_structure = pop_structure.set_index(ARTIFACT_INDEX_COLUMNS)["value"]
         return pop_structure
 
     def load_prevalence(self, builder: Builder) -> pd.Series:
         prevalence = builder.data.load(data_keys.ALZHEIMERS.PREVALENCE)
-        prevalence.loc[prevalence["age_end"] == 125, "age_end"] = 100
+        prevalence.loc[prevalence["age_end"] == 125, "age_end"] = self.age_end
         prevalence = prevalence.set_index(ARTIFACT_INDEX_COLUMNS).squeeze()
         return prevalence
