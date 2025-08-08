@@ -1,5 +1,6 @@
 import pandas as pd
 from vivarium.framework.engine import Builder
+from vivarium.framework.results import Observer
 from vivarium_public_health import ResultsStratifier as ResultsStratifier_
 from vivarium_public_health.results import DiseaseObserver
 
@@ -91,3 +92,25 @@ class TestingDiseaseObserver(DiseaseObserver):
             requires_columns=[self.disease, self.previous_state_column_name],
             is_vectorized=True,
         )
+
+
+class NewSimulantsObserver(Observer):
+    """Observer to count the number of new simulants added to the population"""
+
+    def setup(self, builder: Builder) -> None:
+        """Set up the observer component."""
+        self.clock = builder.time.clock()
+
+    def register_observations(self, builder: Builder) -> None:
+        builder.results.register_adding_observation(
+            name="new_simulants",
+            requires_columns=["entrance_time"],
+            additional_stratifications=self.configuration.include,
+            excluded_stratifications=self.configuration.exclude,
+            aggregator=self.count_new_simulants,
+        )
+
+    def count_new_simulants(self, sims: pd.DataFrame) -> float:
+        """Counts the number of new simulants added to the population this time step."""
+        new = sims["entrance_time"] == self.clock()
+        return new.sum()
