@@ -75,7 +75,6 @@ class AlzheimersIncidence(Component):
     #####################
 
     def setup(self, builder: Builder) -> None:
-        self.clock = builder.time.clock()
         self.randomness = builder.randomness  # Manager
         # NOTE: All three of these methods are capping the upper age bound at 100
         self.incidence_rate = self.load_incidence_rate(builder)
