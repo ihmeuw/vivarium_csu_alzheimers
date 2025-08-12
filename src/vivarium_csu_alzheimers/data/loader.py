@@ -170,7 +170,7 @@ def _load_em_from_meid(location, meid, measure):
 def load_alzheimers_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    """We want to return the "opposite" prevalence key we are trying to write to the artifact.
+    """Need to return the "opposite" prevalence key we are trying to write to the artifact.
     Meaning, we want the prevalence scale factor, to be the normal GBD prevalence of Alzheimers to properly
     scale the population and "fertility" components of the model. We want the Alzheimers SI model to really
     only be an I model, so we will set the prevalence to 1, so all simulants are created with the disease."""
