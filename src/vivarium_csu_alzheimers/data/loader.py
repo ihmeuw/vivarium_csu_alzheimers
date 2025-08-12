@@ -56,7 +56,8 @@ def get_data(
         data_keys.POPULATION.ACMR: load_standard_data,
         # TODO - confirm population data with nathaniel
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
-        data_keys.ALZHEIMERS.PREVALENCE: load_standard_data,
+        data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR: load_alzheimers_prevalence,
+        data_keys.ALZHEIMERS.PREVALENCE: load_alzheimers_prevalence,
         data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
@@ -164,6 +165,22 @@ def _load_em_from_meid(location, meid, measure):
 
 
 # TODO - add project-specific data functions here
+
+
+def load_alzheimers_prevalence(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    """We want to return the "opposite" prevalence key we are trying to write to the artifact.
+    Meaning, we want the prevalence scale factor, to be the normal GBD prevalence of Alzheimers to properly
+    scale the population and "fertility" components of the model. We want the Alzheimers SI model to really
+    only be an I model, so we will set the prevalence to 1, so all simulants are created with the disease."""
+    prevalence = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
+    if key == data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR:
+        return prevalence
+
+    # Set prevalence to 1
+    prevalence.loc[:, :] = 1.0
+    return prevalence
 
 
 def get_entity(key: str | EntityKey):
