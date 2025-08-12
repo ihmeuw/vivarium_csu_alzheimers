@@ -174,7 +174,7 @@ def load_alzheimers_prevalence(
     Meaning, we want the prevalence scale factor, to be the normal GBD prevalence of Alzheimers to properly
     scale the population and "fertility" components of the model. We want the Alzheimers SI model to really
     only be an I model, so we will set the prevalence to 1, so all simulants are created with the disease."""
-    prevalence = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
+    prevalence = load_standard_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
     if key == data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR:
         return prevalence
 
