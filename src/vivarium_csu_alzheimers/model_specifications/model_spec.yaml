@@ -2,12 +2,13 @@ components:
     vivarium_csu_alzheimers:
       components:
           - ResultsStratifier()
+          - NewSimulantsObserver()
+          - AlzheimersIncidence()
+          - AlzheimersPopulation('cause.alzheimers_disease_and_other_dementias.prevalence')
             
     vivarium_public_health:
         population:
-            - BasePopulation()
             - Mortality()
-            - FertilityCrudeBirthRate()
         disease:
             - SI('alzheimers_disease_and_other_dementias')
         results:
@@ -34,10 +35,11 @@ configuration:
             year: 2100
             month: 12
             day: 31
-        step_size: 182  # days 365/2 = 182.5
+        step_size: 183  # days 365/2 = 182.5. 183 days gaurantees 2 steps per year for the 
+                        # 76 year simulation period including leap years
     population:
         population_size: 20_000
-        initialization_age_min: 0
+        initialization_age_min: 30
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
         untracking_age: 200
