@@ -23,8 +23,8 @@ LOCATIONS = [
     "Brazil",
     "Japan",
     "Germany",
-    "France",
-    "Italy",
+    "Israel",
+    "Taiwan",
     "Spain",
 ]
 

@@ -31,6 +31,11 @@ POPULATION = __Population()
 
 
 class __Alzheimers(NamedTuple):
+    # Prevalence scale factor will scale the population and "fertility" of the model
+    PREVALENCE_SCALE_FACTOR: str = (
+        "cause.alzheimers_disease_and_other_dementias.prevalence_scale_factor"
+    )
+    # Prevalence will just be set to 1 so all simulants are created with the disease
     PREVALENCE: str = "cause.alzheimers_disease_and_other_dementias.prevalence"
     INCIDENCE_RATE: str = "cause.alzheimers_disease_and_other_dementias.incidence_rate"
     CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"

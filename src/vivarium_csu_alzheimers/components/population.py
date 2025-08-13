@@ -147,7 +147,7 @@ class AlzheimersIncidence(Component):
         return pop_structure
 
     def load_prevalence(self, builder: Builder) -> pd.Series:
-        prevalence = builder.data.load(data_keys.ALZHEIMERS.PREVALENCE)
+        prevalence = builder.data.load(data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR)
         prevalence.loc[prevalence["age_end"] == 125, "age_end"] = self.age_end
         prevalence = prevalence.set_index(ARTIFACT_INDEX_COLUMNS).squeeze()
         return prevalence

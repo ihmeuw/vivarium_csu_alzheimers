@@ -4,7 +4,7 @@ components:
           - ResultsStratifier()
           - NewSimulantsObserver()
           - AlzheimersIncidence()
-          - AlzheimersPopulation('cause.alzheimers_disease_and_other_dementias.prevalence')
+          - AlzheimersPopulation('cause.alzheimers_disease_and_other_dementias.prevalence_scale_factor')
             
     vivarium_public_health:
         population:
@@ -19,7 +19,7 @@ components:
 configuration:
     input_data:
         input_draw_number: 0
-        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model1.0/united_states_of_america.hdf'
+        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model2.0/united_states_of_america.hdf'
     interpolation:
         order: 0
         extrapolate: True
