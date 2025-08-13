@@ -102,10 +102,21 @@ class AlzheimersIncidence(Component):
         step_size = utilities.to_years(event.step_size)
         # TODO: get incidence rates and population for year in forecasted data if necessary
         pop_structure = self.pop_structure.copy()
+
+        # select data for most appropriate year
+        lvl = pop_structure.index.get_level_values('year_start')
+        if event.time.year in lvl:
+            target_year = event.time.year
+        else:
+            target_year = max(lvl)
+        pop_structure = pop_structure[lvl == target_year]
         pop_structure.index = pop_structure.index.droplevel(["year_start", "year_end"])
+        
         mean_incident_cases = (
             self.incidence_rate * pop_structure * step_size * self.model_scale
         )
+        mean_incident_cases = mean_incident_cases.dropna() # Abie hacked around the youngest ages, which left some nans
+        
         simulants_to_add = pd.Series(0, index=mean_incident_cases.index)
 
         # Determine number of simulants to add for each demographic group
