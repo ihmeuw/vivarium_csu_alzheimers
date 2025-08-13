@@ -5,7 +5,6 @@ from vivarium_inputs import globals as vi_globals
 from vivarium_inputs import utility_data
 
 
-
 @vi_utils.cache
 def load_raw_incidence(entity, location: str) -> pd.DataFrame:
     location_id = utility_data.get_location_id(location)
