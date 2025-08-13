@@ -27,6 +27,7 @@ from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
 from vivarium_csu_alzheimers.constants import data_keys
+from vivarium_csu_alzheimers.constants.metadata import ARTIFACT_INDEX_COLUMNS
 from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
 
 
@@ -194,7 +195,7 @@ def load_alzheimers_raw_incidence(
     raw_incidence = load_raw_incidence(entity, location)
     incidence = reshape_to_vivarium_format(raw_incidence, location)
 
-    return incidence
+    return incidence.set_index(ARTIFACT_INDEX_COLUMNS, inplace=True)
 
 
 def get_entity(key: str | EntityKey):
