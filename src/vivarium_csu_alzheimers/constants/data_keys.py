@@ -38,6 +38,7 @@ class __Alzheimers(NamedTuple):
     # Prevalence will just be set to 1 so all simulants are created with the disease
     PREVALENCE: str = "cause.alzheimers_disease_and_other_dementias.prevalence"
     INCIDENCE_RATE: str = "cause.alzheimers_disease_and_other_dementias.incidence_rate"
+    RAW_INCIDENCE: str = "cause.alzheimers_disease_and_other_dementias.raw_incidence"
     CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
     EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
     DISABLIITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"

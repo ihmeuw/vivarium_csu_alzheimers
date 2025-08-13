@@ -131,7 +131,7 @@ class AlzheimersIncidence(Component):
     ##################
 
     def load_incidence_rate(self, builder: Builder) -> pd.Series:
-        incidence_rate = builder.data.load(data_keys.ALZHEIMERS.INCIDENCE_RATE)
+        incidence_rate = builder.data.load(data_keys.ALZHEIMERS.RAW_INCIDENCE)
         incidence_rate.loc[incidence_rate["age_end"] == 125, "age_end"] = self.age_end
         incidence_rate = (
             incidence_rate[["sex", "age_start", "age_end", "value"]]
