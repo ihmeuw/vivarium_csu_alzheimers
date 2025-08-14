@@ -132,13 +132,10 @@ else
       echo "  - $pkg"
     done
 
-    # FIXME: need to check artifactory - not github - for vivarium_gbd_access and vivarium_cluster_tools!
-
-
     # Iterate through each return of the grep output
     for ((i = 1; i <= $num_packages; i++)); do
       line=$(echo "$framework_packages" | sed -n "${i}p")
-      # Check if the line contains '@'
+      # Check if the line contains '@' indicating a specific branch
       if [[ "$line" == *"@"* ]]; then
           repo_info=(${line//@/ })
           repo=${repo_info[0]}
@@ -152,6 +149,13 @@ else
           last_update_time=$(echo "$curl_response" | jq -r '.[0].commit.committer.date // empty' 2>/dev/null)
       else
           repo=$(echo "$line" | cut -d '>' -f1)
+          # Check if this is an artifactory-hosted package
+          if [[ "$repo" == "vivarium_gbd_access" || "$repo" == "vivarium_cluster_tools" ]]; then
+              # FIXME: need to check artifactory - not github - for vivarium_gbd_access and vivarium_cluster_tools!
+              echo
+              echo "WARNING: $repo is hosted on artifactory. Cannot check for updates automatically. Skipping update check."
+              continue
+          fi
           curl_response=$(curl -s https://pypi.org/pypi/$repo/json 2>/dev/null)
           if [[ -z "$curl_response" || "$curl_response" == "null" ]]; then
               echo
