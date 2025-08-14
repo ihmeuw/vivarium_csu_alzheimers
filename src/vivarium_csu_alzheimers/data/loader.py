@@ -64,7 +64,7 @@ def get_data(
         data_keys.ALZHEIMERS.EMR: load_standard_data,
         data_keys.ALZHEIMERS.DISABLIITY_WEIGHT: load_standard_data,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
-        data_keys.ALZHEIMERS.RAW_INCIDENCE: load_alzheimers_raw_incidence,
+        data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE: load_alzheimers_total_population_incidence,
     }
     return mapping[lookup_key](lookup_key, location, years)
 
@@ -185,7 +185,7 @@ def load_alzheimers_prevalence(
     return prevalence
 
 
-def load_alzheimers_raw_incidence(
+def load_alzheimers_total_population_incidence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     """Load raw Alzheimers incidence rates from GBD. The incidence rate we pull through vivarium framework
