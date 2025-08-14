@@ -83,17 +83,17 @@ class AlzheimersIncidence(Component):
         # Model scale = (population_size / (pop_structure * prevalence).sum())
         # but use only one year of self.pop_structure * prevalence
 
-        lvl = self.pop_structure.index.get_level_values('year_start')
+        lvl = self.pop_structure.index.get_level_values("year_start")
         pop_2025 = self.pop_structure[lvl == 2025]
 
-        lvl = prevalence.index.get_level_values('year_start')
+        lvl = prevalence.index.get_level_values("year_start")
         prev_2025 = prevalence[lvl == 2025]
-        
+
         self.model_scale = builder.configuration.population.population_size / (
             (pop_2025 * prev_2025).sum()
         )
         assert self.model_scale > 0.0
-        
+
         self.simulant_creator = builder.population.get_simulant_creator()
 
     ########################
@@ -114,19 +114,21 @@ class AlzheimersIncidence(Component):
         pop_structure = self.pop_structure.copy()
 
         # select data for most appropriate year
-        lvl = pop_structure.index.get_level_values('year_start')
+        lvl = pop_structure.index.get_level_values("year_start")
         if event.time.year in lvl:
             target_year = event.time.year
         else:
             target_year = max(lvl)
         pop_structure = pop_structure[lvl == target_year]
         pop_structure.index = pop_structure.index.droplevel(["year_start", "year_end"])
-        
+
         mean_incident_cases = (
             self.incidence_rate * pop_structure * step_size * self.model_scale
         )
-        mean_incident_cases = mean_incident_cases.dropna() # Abie hacked around the youngest ages, which left some nans
-        
+        mean_incident_cases = (
+            mean_incident_cases.dropna()
+        )  # Abie hacked around the youngest ages, which left some nans
+
         simulants_to_add = pd.Series(0, index=mean_incident_cases.index)
 
         # Determine number of simulants to add for each demographic group
@@ -155,7 +157,7 @@ class AlzheimersIncidence(Component):
         incidence_rate = builder.data.load(data_keys.ALZHEIMERS.INCIDENCE_RATE)
         # FIXME: use "total-population incidence rate" here, i.e. incidence count / total population
         # not the "susceptible-population incidence rate" which is stored in the artifact
-        
+
         incidence_rate.loc[incidence_rate["age_end"] == 125, "age_end"] = self.age_end
         incidence_rate = (
             incidence_rate[["sex", "age_start", "age_end", "value"]]
