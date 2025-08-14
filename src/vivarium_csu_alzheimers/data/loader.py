@@ -27,6 +27,7 @@ from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
 from vivarium_csu_alzheimers.constants import data_keys
+from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
 
 
 def get_data(
@@ -63,6 +64,7 @@ def get_data(
         data_keys.ALZHEIMERS.EMR: load_standard_data,
         data_keys.ALZHEIMERS.DISABLIITY_WEIGHT: load_standard_data,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
+        data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE: load_alzheimers_total_population_incidence,
     }
     return mapping[lookup_key](lookup_key, location, years)
 
@@ -183,6 +185,21 @@ def load_alzheimers_prevalence(
     return prevalence
 
 
+def load_alzheimers_total_population_incidence(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    """Load raw Alzheimers incidence rates from GBD. The incidence rate we pull through vivarium framework
+    is the incidence rate / the susceptible population. We want incidence rate / total population."""
+    entity = get_entity(key)
+    raw_incidence = load_raw_incidence(entity, location)
+    incidence = reshape_to_vivarium_format(raw_incidence, location)
+    incidence.index = incidence.index.droplevel(
+        ["cause_id", "measure_id", "metric_id", "version_id"]
+    )
+
+    return incidence
+
+
 def get_entity(key: str | EntityKey):
     # Map of entity types to their gbd mappings.
     type_map = {
@@ -193,3 +210,13 @@ def get_entity(key: str | EntityKey):
     }
     key = EntityKey(key)
     return type_map[key.type][key.name]
+
+
+def reshape_to_vivarium_format(df, location):
+    df = vi_utils.reshape(df, value_cols=vi_globals.DRAW_COLUMNS)
+    df = vi_utils.scrub_gbd_conventions(df, location)
+    df = vi_utils.split_interval(df, interval_column="age", split_column_prefix="age")
+    df = vi_utils.split_interval(df, interval_column="year", split_column_prefix="year")
+    df = vi_utils.sort_hierarchical_data(df)
+    df.index = df.index.droplevel("location")
+    return df
