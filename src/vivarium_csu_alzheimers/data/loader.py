@@ -31,7 +31,6 @@ from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
 
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
 from vivarium_csu_alzheimers.constants.metadata import FORECAST_NC_FNAME_DICT
-from vivarium_inputs import utility_data
 
 
 def get_data(
@@ -108,7 +107,7 @@ def load_forecasted_mortality(
 def load_age_bins(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    return interface.get_age_bins().query("age_start >= 5.0")
+    return utility_data.get_age_bins().query("age_start >= 5.0")
 
 
 def load_demographic_dimensions(
