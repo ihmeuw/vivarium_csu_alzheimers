@@ -1,5 +1,7 @@
+import numpy as np
+import pandas as pd
 import vivarium
-import xarray as xr, numpy as np, pandas as pd
+import xarray as xr
 
 
 def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
