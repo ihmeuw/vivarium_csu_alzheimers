@@ -19,3 +19,5 @@ def load_raw_incidence(entity, location: str) -> pd.DataFrame:
         metric_id=vi_globals.METRICS["Rate"],
     )
     return data
+
+
