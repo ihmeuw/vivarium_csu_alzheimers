@@ -106,7 +106,9 @@ def load_forecasted_mortality(
 def load_age_bins(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    return utility_data.get_age_bins().query("age_start >= 5.0")
+    df = pd.DataFrame()
+    df.index = utility_data.get_age_bins().query("age_start >= 5.0")
+    return df
 
 
 def load_demographic_dimensions(

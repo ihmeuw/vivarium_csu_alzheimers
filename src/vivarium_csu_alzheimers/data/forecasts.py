@@ -3,6 +3,8 @@ import pandas as pd
 import vivarium
 import xarray as xr
 
+import pdb
+
 
 def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
     ds = xr.open_dataset(
@@ -42,7 +44,12 @@ def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
 
     # 3. Convert age_group_id to age intervals
     if param != "births":
-        age_bins = age_mapping.set_index("age_group_id")
+        pdb.set_trace()
+        # not working attempt
+        df = age_mapping.index.to_frame()
+        df.columns = ["age_group_id", "age_group_name", "age_start", "age_end"]
+
+        age_bins = df.set_index("age_group_id")
         df["age_start"] = np.round(df["age_group_id"].map(age_bins["age_start"]), 3)
         df["age_end"] = np.round(df["age_group_id"].map(age_bins["age_end"]), 3)
         age_cols = ["age_start", "age_end"]
