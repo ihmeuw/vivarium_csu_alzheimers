@@ -56,12 +56,12 @@ def get_data(
         data_keys.POPULATION.AGE_BINS: load_age_bins,
         data_keys.POPULATION.DEMOGRAPHY: load_demographic_dimensions,
         data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
-        data_keys.POPULATION.ACMR: load_standard_data,
+        data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR: load_alzheimers_prevalence,
         data_keys.ALZHEIMERS.PREVALENCE: load_alzheimers_prevalence,
         data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
-        data_keys.ALZHEIMERS.CSMR: load_forecasted_mortality,
+        data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
         data_keys.ALZHEIMERS.DISABLIITY_WEIGHT: load_standard_data,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
@@ -79,10 +79,14 @@ def load_population_location(
     return location
 
 
-def load_forecast(param: str, location: str, years: int | str | list[int]) -> pd.DataFrame:
+def load_forecast(
+    param: str, location: str, years: int | str | list[int]
+) -> pd.DataFrame:
     loc_id = utility_data.get_location_id(location)
     age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
-    return table_from_nc(FORECAST_NC_FNAME_DICT, "population", loc_id, location, age_mapping)
+    return table_from_nc(
+        FORECAST_NC_FNAME_DICT, "population", loc_id, location, age_mapping
+    )
 
 
 def load_forecasted_population_structure(
@@ -122,7 +126,9 @@ def load_standard_data(
 ) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
-    return interface.get_measure(entity, key.measure, location, years).droplevel("location")
+    return interface.get_measure(entity, key.measure, location, years).droplevel(
+        "location"
+    )
 
 
 def load_metadata(key: str, location: str, years: int | str | list[int] | None = None):
@@ -176,8 +182,12 @@ def _load_em_from_meid(location, meid, measure):
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
     data = vi_utils.reshape(data)
     data = vi_utils.scrub_gbd_conventions(data, location)
-    data = vi_utils.split_interval(data, interval_column="age", split_column_prefix="age")
-    data = vi_utils.split_interval(data, interval_column="year", split_column_prefix="year")
+    data = vi_utils.split_interval(
+        data, interval_column="age", split_column_prefix="age"
+    )
+    data = vi_utils.split_interval(
+        data, interval_column="year", split_column_prefix="year"
+    )
     return vi_utils.sort_hierarchical_data(data).droplevel("location")
 
 
