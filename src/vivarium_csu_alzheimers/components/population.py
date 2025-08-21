@@ -100,9 +100,17 @@ class AlzheimersIncidence(Component):
         """
 
         step_size = utilities.to_years(event.step_size)
-        # TODO: get incidence rates and population for year in forecasted data if necessary
         pop_structure = self.pop_structure.copy()
+
+        # Filter pop_structure by year_start based on event.time.year
+        query_year = min(
+            event.time.year, pop_structure.index.get_level_values("year_start").max()
+        )
+        pop_structure = pop_structure.loc[
+            pop_structure.index.get_level_values("year_start") == query_year
+        ]
         pop_structure.index = pop_structure.index.droplevel(["year_start", "year_end"])
+        # Need to remove age bins below 5 years old to match population structure
         mean_incident_cases = (
             self.incidence_rate * pop_structure * step_size * self.model_scale
         )
@@ -135,6 +143,8 @@ class AlzheimersIncidence(Component):
             data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE
         )
         incidence_rate.loc[incidence_rate["age_end"] == 125, "age_end"] = self.age_end
+        # Match population structure by removing under 5 age groups
+        incidence_rate = incidence_rate.loc[incidence_rate["age_start"] >= 5.0]
         incidence_rate = (
             incidence_rate[["sex", "age_start", "age_end", "value"]]
             .set_index(["sex", "age_start", "age_end"])
@@ -151,5 +161,7 @@ class AlzheimersIncidence(Component):
     def load_prevalence(self, builder: Builder) -> pd.Series:
         prevalence = builder.data.load(data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR)
         prevalence.loc[prevalence["age_end"] == 125, "age_end"] = self.age_end
+        # Match population structure by removing under 5 age groups
+        prevalence = prevalence.loc[prevalence["age_start"] >= 5.0]
         prevalence = prevalence.set_index(ARTIFACT_INDEX_COLUMNS).squeeze()
         return prevalence
