@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import vivarium
 import xarray as xr
-from vivarium_inputs import utilities as vi_utils
 from vivarium_inputs import globals as vi_globals
+from vivarium_inputs import utilities as vi_utils
 
 
 def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
@@ -45,9 +45,7 @@ def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
     # 3. Convert age_group_id to age intervals
     if param != "births":
         age_bins = (
-            age_mapping.index.to_frame()
-            .reset_index(drop=True)
-            .set_index("age_group_id")
+            age_mapping.index.to_frame().reset_index(drop=True).set_index("age_group_id")
         )
 
         df["age_start"] = df["age_group_id"].map(age_bins["age_start"])
