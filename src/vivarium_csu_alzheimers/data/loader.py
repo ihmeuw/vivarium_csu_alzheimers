@@ -27,7 +27,9 @@ from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
 from vivarium_csu_alzheimers.constants import data_keys
+from vivarium_csu_alzheimers.constants.paths import FORECAST_NC_DATA_FILEPATHS_DICT
 from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
+from vivarium_csu_alzheimers.data.forecasts import table_from_nc
 
 
 def get_data(
@@ -50,12 +52,11 @@ def get_data(
     """
     mapping = {
         data_keys.POPULATION.LOCATION: load_population_location,
-        data_keys.POPULATION.STRUCTURE: load_population_structure,
+        data_keys.POPULATION.STRUCTURE: load_forecasted_population_structure,
         data_keys.POPULATION.AGE_BINS: load_age_bins,
         data_keys.POPULATION.DEMOGRAPHY: load_demographic_dimensions,
         data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
-        data_keys.POPULATION.ACMR: load_standard_data,
-        # TODO - confirm population data with nathaniel
+        data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR: load_alzheimers_prevalence,
         data_keys.ALZHEIMERS.PREVALENCE: load_alzheimers_prevalence,
@@ -78,16 +79,32 @@ def load_population_location(
     return location
 
 
-def load_population_structure(
+def load_forecast(param: str, location: str, years: int | str | list[int]) -> pd.DataFrame:
+    loc_id = utility_data.get_location_id(location)
+    age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
+    return table_from_nc(
+        FORECAST_NC_DATA_FILEPATHS_DICT, param, loc_id, location, age_mapping
+    )
+
+
+def load_forecasted_population_structure(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    return interface.get_population_structure(location, years)
+    return load_forecast("population", location, years)
+
+
+def load_forecasted_mortality(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    return load_forecast("mortality", location, years)
 
 
 def load_age_bins(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    return interface.get_age_bins()
+    df = pd.DataFrame()
+    df.index = pd.MultiIndex.from_frame(utility_data.get_age_bins().query("age_start >= 5.0"))
+    return df
 
 
 def load_demographic_dimensions(
@@ -175,8 +192,10 @@ def load_alzheimers_prevalence(
     """Need to return the "opposite" prevalence key we are trying to write to the artifact.
     Meaning, we want the prevalence scale factor, to be the normal GBD prevalence of Alzheimers to properly
     scale the population and "fertility" components of the model. We want the Alzheimers SI model to really
-    only be an I model, so we will set the prevalence to 1, so all simulants are created with the disease."""
+    only be an I model, so we will set the prevalence to 1, so all simulants are created with the disease.
+    """
     prevalence = load_standard_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
+
     if key == data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR:
         return prevalence
 
@@ -189,7 +208,8 @@ def load_alzheimers_total_population_incidence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     """Load raw Alzheimers incidence rates from GBD. The incidence rate we pull through vivarium framework
-    is the incidence rate / the susceptible population. We want incidence rate / total population."""
+    is the incidence rate / the susceptible population. We want incidence rate / total population.
+    """
     entity = get_entity(key)
     raw_incidence = load_raw_incidence(entity, location)
     incidence = reshape_to_vivarium_format(raw_incidence, location)
