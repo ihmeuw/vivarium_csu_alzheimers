@@ -74,7 +74,8 @@ def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
     # 6. Rename columns to draw_x format
     df_wide.columns = [f"draw_{col}" for col in df_wide.columns]
 
-    df_wide = df_wide.droplevel("location")
+    if param == "mortality":
+        df_wide = df_wide.droplevel("location")
 
     if param == "population":
         df_wide["value"] = df_wide.mean(axis=1)
