@@ -32,7 +32,7 @@ def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
     df = pop_ts.to_dataframe(name="value").reset_index()
 
     # Transform to vivarium format
-    # 1. Convert location_id to location name
+    # 1. Add location name column
     df["location"] = loc_name
 
     # 2. Convert sex_id to sex names
