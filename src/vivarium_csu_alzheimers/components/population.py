@@ -6,6 +6,9 @@ from vivarium.framework.event import Event
 from vivarium.framework.population import SimulantData
 from vivarium_public_health import utilities
 from vivarium_public_health.population import ScaledPopulation
+from vivarium_public_health.population.data_transformations import (
+    load_population_structure,
+)
 
 from vivarium_csu_alzheimers.constants import data_keys
 from vivarium_csu_alzheimers.constants.metadata import ARTIFACT_INDEX_COLUMNS
@@ -63,6 +66,35 @@ class AlzheimersPopulation(ScaledPopulation):
         # NOTE: This only works with key_columns because this component creates age and entrance_time
         self.register_simulants(new_simulants[self.key_columns])
 
+    def _load_population_structure(self, builder: Builder) -> pd.DataFrame:
+        """Overwriting this method to deal with multi-year population structure and custom age groups."""
+        scaling_factor = self.get_data(builder, self.scaling_factor)
+        # Population does not have under 5 age groups
+        scaling_factor = scaling_factor[scaling_factor["age_start"] >= 5]
+        population_structure = load_population_structure(builder)
+        if not isinstance(scaling_factor, pd.DataFrame):
+            raise ValueError(
+                f"Scaling factor must be a pandas DataFrame. Provided value: {scaling_factor}"
+            )
+        # Coerce scaling factor to have same index as population structure
+        scale_years = []
+        scale_years.append(scaling_factor)
+        for year in range(2022, 2051):
+            tmp = scaling_factor.copy()
+            tmp["year_start"] = year
+            tmp["year_end"] = year + 1
+            scale_years.append(tmp)
+        scaling_factor = pd.concat(scale_years)
+        scaling_factor = scaling_factor.set_index(
+            [col for col in scaling_factor.columns if col != "value"]
+        )
+        population_structure = population_structure.set_index(
+            [col for col in population_structure.columns if col != "value"]
+        )
+        scaled_population_structure = (population_structure * scaling_factor).reset_index()
+
+        return scaled_population_structure
+
 
 class AlzheimersIncidence(Component):
     """This is using FertilityCrudeBirthRate from Vivarium Public Health as a template."""
@@ -74,14 +106,21 @@ class AlzheimersIncidence(Component):
     def setup(self, builder: Builder) -> None:
         self.age_start = builder.configuration.population.initialization_age_min
         self.age_end = builder.configuration.population.initialization_age_max
+        year_start = builder.configuration.time.start.year
         self.randomness = builder.randomness  # Manager
         # NOTE: All three of these methods are capping the upper age bound at 100
         self.incidence_rate = self.load_incidence_rate(builder)
         self.pop_structure = self.load_population_structure(builder)
         prevalence = self.load_prevalence(builder)
+        start_year = builder.configuration.time.start.year
+        sub_pop = self.pop_structure.loc[
+            self.pop_structure.index.get_level_values("year_start") == start_year
+        ]
+        # NOTE: we only have prevalence for 2021-2022 so the year_start/year_end will be difference
+        # in the index levels but their structure is the same
         # Model scale = (population_size / (pop_structure * prevalence).sum())
         self.model_scale = builder.configuration.population.population_size / (
-            (self.pop_structure * prevalence).sum()
+            (sub_pop.values * prevalence.values).sum()
         )
         self.simulant_creator = builder.population.get_simulant_creator()
 
