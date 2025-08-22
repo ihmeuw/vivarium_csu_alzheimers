@@ -77,14 +77,7 @@ class AlzheimersPopulation(ScaledPopulation):
                 f"Scaling factor must be a pandas DataFrame. Provided value: {scaling_factor}"
             )
         # Coerce scaling factor to have same index as population structure
-        scale_years = []
-        scale_years.append(scaling_factor)
-        for year in range(2022, 2051):
-            tmp = scaling_factor.copy()
-            tmp["year_start"] = year
-            tmp["year_end"] = year + 1
-            scale_years.append(tmp)
-        scaling_factor = pd.concat(scale_years)
+        scaling_factor = scaling_factor.drop(columns=["year_start", "year_end"])
         scaling_factor = scaling_factor.set_index(
             [col for col in scaling_factor.columns if col != "value"]
         )
@@ -149,7 +142,6 @@ class AlzheimersIncidence(Component):
             pop_structure.index.get_level_values("year_start") == query_year
         ]
         pop_structure.index = pop_structure.index.droplevel(["year_start", "year_end"])
-        # Need to remove age bins below 5 years old to match population structure
         mean_incident_cases = (
             self.incidence_rate * pop_structure * step_size * self.model_scale
         )
