@@ -27,7 +27,7 @@ from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
 from vivarium_csu_alzheimers.constants import data_keys
-from vivarium_csu_alzheimers.constants.metadata import FORECAST_NC_FNAME_DICT
+from vivarium_csu_alzheimers.constants.paths import FORECAST_NC_DATA_FILEPATHS_DICT
 from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
 
@@ -85,29 +85,30 @@ def load_forecast(
     loc_id = utility_data.get_location_id(location)
     age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
     return table_from_nc(
-        FORECAST_NC_FNAME_DICT, "population", loc_id, location, age_mapping
+        FORECAST_NC_DATA_FILEPATHS_DICT, param, loc_id, location, age_mapping
     )
 
 
 def load_forecasted_population_structure(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    population_df = load_forecast("population", location, years)
-    population_df["value"] = population_df.mean(axis=1)
-    return population_df.filter(like="value")
+    return load_forecast("population", location, years)
 
 
 def load_forecasted_mortality(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    return load_forecast("mortality", location, years).loc[location]
+    # TBD check, ACMR should be rates (FHS data is deaths)
+    return load_forecast("mortality", location, years)
 
 
 def load_age_bins(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     df = pd.DataFrame()
-    df.index = utility_data.get_age_bins().query("age_start >= 5.0")
+    df.index = pd.MultiIndex.from_frame(
+        utility_data.get_age_bins().query("age_start >= 5.0")
+    )
     return df
 
 
@@ -205,18 +206,6 @@ def load_alzheimers_prevalence(
     only be an I model, so we will set the prevalence to 1, so all simulants are created with the disease.
     """
     prevalence = load_standard_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
-    index_cols = list(prevalence.index.names)
-    prevalence = prevalence.reset_index()
-
-    df_list = []
-
-    for y in range(2022, 2051):
-        df_y = prevalence.copy()
-        df_y["year_start"] = y
-        df_y["year_end"] = y + 1
-        df_list.append(df_y)
-
-    prevalence = pd.concat(df_list).set_index(index_cols)
 
     if key == data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR:
         return prevalence

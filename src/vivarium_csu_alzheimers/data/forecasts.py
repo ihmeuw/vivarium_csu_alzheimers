@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import vivarium
 import xarray as xr
-
-import pdb
+from vivarium_inputs import utilities as vi_utils
+from vivarium_inputs import globals as vi_globals
 
 
 def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
@@ -44,14 +44,14 @@ def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
 
     # 3. Convert age_group_id to age intervals
     if param != "births":
-        pdb.set_trace()
-        # not working attempt
-        df = age_mapping.index.to_frame()
-        df.columns = ["age_group_id", "age_group_name", "age_start", "age_end"]
+        age_bins = (
+            age_mapping.index.to_frame()
+            .reset_index(drop=True)
+            .set_index("age_group_id")
+        )
 
-        age_bins = df.set_index("age_group_id")
-        df["age_start"] = np.round(df["age_group_id"].map(age_bins["age_start"]), 3)
-        df["age_end"] = np.round(df["age_group_id"].map(age_bins["age_end"]), 3)
+        df["age_start"] = df["age_group_id"].map(age_bins["age_start"])
+        df["age_end"] = df["age_group_id"].map(age_bins["age_end"])
         age_cols = ["age_start", "age_end"]
     else:
         age_cols = []
@@ -75,5 +75,11 @@ def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
 
     # 6. Rename columns to draw_x format
     df_wide.columns = [f"draw_{col}" for col in df_wide.columns]
+
+    df_wide = df_wide.droplevel("location")
+
+    if param == "population":
+        df_wide["value"] = df_wide.mean(axis=1)
+        df_wide = df_wide.filter(like="value")
 
     return df_wide
