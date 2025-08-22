@@ -96,7 +96,6 @@ def load_forecasted_population_structure(
 def load_forecasted_mortality(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    # TBD check, ACMR should be rates (FHS data is deaths)
     return load_forecast("mortality", location, years)
 
 
