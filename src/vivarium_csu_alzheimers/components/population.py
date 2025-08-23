@@ -6,6 +6,9 @@ from vivarium.framework.event import Event
 from vivarium.framework.population import SimulantData
 from vivarium_public_health import utilities
 from vivarium_public_health.population import ScaledPopulation
+from vivarium_public_health.population.data_transformations import (
+    load_population_structure,
+)
 
 from vivarium_csu_alzheimers.constants import data_keys
 from vivarium_csu_alzheimers.constants.metadata import ARTIFACT_INDEX_COLUMNS
@@ -63,6 +66,28 @@ class AlzheimersPopulation(ScaledPopulation):
         # NOTE: This only works with key_columns because this component creates age and entrance_time
         self.register_simulants(new_simulants[self.key_columns])
 
+    def _load_population_structure(self, builder: Builder) -> pd.DataFrame:
+        """Overwriting this method to deal with multi-year population structure and custom age groups."""
+        scaling_factor = self.get_data(builder, self.scaling_factor)
+        # Population does not have under 5 age groups
+        scaling_factor = scaling_factor[scaling_factor["age_start"] >= 5]
+        population_structure = load_population_structure(builder)
+        if not isinstance(scaling_factor, pd.DataFrame):
+            raise ValueError(
+                f"Scaling factor must be a pandas DataFrame. Provided value: {scaling_factor}"
+            )
+        # Coerce scaling factor to have same index as population structure
+        scaling_factor = scaling_factor.drop(columns=["year_start", "year_end"])
+        scaling_factor = scaling_factor.set_index(
+            [col for col in scaling_factor.columns if col != "value"]
+        )
+        population_structure = population_structure.set_index(
+            [col for col in population_structure.columns if col != "value"]
+        )
+        scaled_population_structure = (population_structure * scaling_factor).reset_index()
+
+        return scaled_population_structure
+
 
 class AlzheimersIncidence(Component):
     """This is using FertilityCrudeBirthRate from Vivarium Public Health as a template."""
@@ -74,14 +99,21 @@ class AlzheimersIncidence(Component):
     def setup(self, builder: Builder) -> None:
         self.age_start = builder.configuration.population.initialization_age_min
         self.age_end = builder.configuration.population.initialization_age_max
+        year_start = builder.configuration.time.start.year
         self.randomness = builder.randomness  # Manager
         # NOTE: All three of these methods are capping the upper age bound at 100
         self.incidence_rate = self.load_incidence_rate(builder)
         self.pop_structure = self.load_population_structure(builder)
         prevalence = self.load_prevalence(builder)
+        start_year = builder.configuration.time.start.year
+        sub_pop = self.pop_structure.loc[
+            self.pop_structure.index.get_level_values("year_start") == start_year
+        ]
+        # NOTE: we only have prevalence for 2021-2022 so the year_start/year_end will be difference
+        # in the index levels but their structure is the same
         # Model scale = (population_size / (pop_structure * prevalence).sum())
         self.model_scale = builder.configuration.population.population_size / (
-            (self.pop_structure * prevalence).sum()
+            (sub_pop.values * prevalence.values).sum()
         )
         self.simulant_creator = builder.population.get_simulant_creator()
 
@@ -100,8 +132,15 @@ class AlzheimersIncidence(Component):
         """
 
         step_size = utilities.to_years(event.step_size)
-        # TODO: get incidence rates and population for year in forecasted data if necessary
         pop_structure = self.pop_structure.copy()
+
+        # Filter pop_structure by year_start based on event.time.year
+        query_year = min(
+            event.time.year, pop_structure.index.get_level_values("year_start").max()
+        )
+        pop_structure = pop_structure.loc[
+            pop_structure.index.get_level_values("year_start") == query_year
+        ]
         pop_structure.index = pop_structure.index.droplevel(["year_start", "year_end"])
         mean_incident_cases = (
             self.incidence_rate * pop_structure * step_size * self.model_scale
@@ -135,6 +174,8 @@ class AlzheimersIncidence(Component):
             data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE
         )
         incidence_rate.loc[incidence_rate["age_end"] == 125, "age_end"] = self.age_end
+        # Match population structure by removing under 5 age groups
+        incidence_rate = incidence_rate.loc[incidence_rate["age_start"] >= 5.0]
         incidence_rate = (
             incidence_rate[["sex", "age_start", "age_end", "value"]]
             .set_index(["sex", "age_start", "age_end"])
@@ -151,5 +192,7 @@ class AlzheimersIncidence(Component):
     def load_prevalence(self, builder: Builder) -> pd.Series:
         prevalence = builder.data.load(data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR)
         prevalence.loc[prevalence["age_end"] == 125, "age_end"] = self.age_end
+        # Match population structure by removing under 5 age groups
+        prevalence = prevalence.loc[prevalence["age_start"] >= 5.0]
         prevalence = prevalence.set_index(ARTIFACT_INDEX_COLUMNS).squeeze()
         return prevalence
