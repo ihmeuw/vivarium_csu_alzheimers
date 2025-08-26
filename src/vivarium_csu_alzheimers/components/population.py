@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from loguru import logger
 from vivarium import Component
 from vivarium.framework.engine import Builder
 from vivarium.framework.event import Event
@@ -20,6 +21,9 @@ class AlzheimersPopulation(ScaledPopulation):
         self.key_columns = builder.configuration.randomness.key_columns
 
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
+        logger.info(
+            "Starting method on_initialize_simulants for component AlzheimersPopulation"
+        )
         if pop_data.user_data.get("sim_state") != "time_step":
             super().on_initialize_simulants(pop_data)
             return
@@ -65,6 +69,9 @@ class AlzheimersPopulation(ScaledPopulation):
         self.population_view.update(new_simulants)
         # NOTE: This only works with key_columns because this component creates age and entrance_time
         self.register_simulants(new_simulants[self.key_columns])
+        logger.info(
+            "Finished method on_initialize_simulants for component AlzheimersPopulation"
+        )
 
     def _load_population_structure(self, builder: Builder) -> pd.DataFrame:
         """Overwriting this method to deal with multi-year population structure and custom age groups."""
@@ -131,6 +138,7 @@ class AlzheimersIncidence(Component):
             The event that triggered the function call.
         """
 
+        logger.info("Starting method on_time_step for component AlzheimersIncidence")
         step_size = utilities.to_years(event.step_size)
         pop_structure = self.pop_structure.copy()
 
@@ -164,6 +172,7 @@ class AlzheimersIncidence(Component):
                     "demographic_counts": simulants_to_add,
                 },
             )
+        logger.info("Finished method on_time_step for component AlzheimersIncidence")
 
     ##################
     # Helper methods #

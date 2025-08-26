@@ -19,7 +19,7 @@ components:
 configuration:
     input_data:
         input_draw_number: 0
-        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model3.0/united_states_of_america.hdf'
+        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model3.0/china.hdf'
     interpolation:
         order: 0
         extrapolate: True
@@ -38,7 +38,7 @@ configuration:
         step_size: 183  # days 365/2 = 182.5. 183 days gaurantees 2 steps per year for the 
                         # 76 year simulation period including leap years
     population:
-        population_size: 20_000
+        population_size: 10_000
         initialization_age_min: 30
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
