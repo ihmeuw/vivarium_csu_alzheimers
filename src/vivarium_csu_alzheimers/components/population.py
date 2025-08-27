@@ -21,9 +21,7 @@ class AlzheimersPopulation(ScaledPopulation):
         self.key_columns = builder.configuration.randomness.key_columns
 
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
-        logger.info(
-            "Starting method on_initialize_simulants for component AlzheimersPopulation"
-        )
+
         if pop_data.user_data.get("sim_state") != "time_step":
             super().on_initialize_simulants(pop_data)
             return
@@ -47,6 +45,9 @@ class AlzheimersPopulation(ScaledPopulation):
         # Update metadata for each demographic group
         new_simulants = pd.DataFrame(index=pop_data.index)
         groups_to_add = demographic_counts[demographic_counts > 0]
+        logger.info(
+            f"Adding {len(pop_data.index)} total new simulants across {len(groups_to_add)} demographic groups."
+        )
         start = pop_data.index.min()
         for idx, value in groups_to_add.items():
             sex, age_lower, age_upper = idx
@@ -60,6 +61,7 @@ class AlzheimersPopulation(ScaledPopulation):
                 age_upper - age_lower
             )
             start += value
+        logger.info("Finished for loop for adding new demographic groups.")
 
         # Update additional population columns
         new_simulants["alive"] = "alive"
@@ -67,11 +69,10 @@ class AlzheimersPopulation(ScaledPopulation):
         new_simulants["exit_time"] = pd.NaT
 
         self.population_view.update(new_simulants)
+        logger.info("Updated population state table.")
         # NOTE: This only works with key_columns because this component creates age and entrance_time
         self.register_simulants(new_simulants[self.key_columns])
-        logger.info(
-            "Finished method on_initialize_simulants for component AlzheimersPopulation"
-        )
+        logger.info("Registered new simulants.")
 
     def _load_population_structure(self, builder: Builder) -> pd.DataFrame:
         """Overwriting this method to deal with multi-year population structure and custom age groups."""
@@ -138,7 +139,6 @@ class AlzheimersIncidence(Component):
             The event that triggered the function call.
         """
 
-        logger.info("Starting method on_time_step for component AlzheimersIncidence")
         step_size = utilities.to_years(event.step_size)
         pop_structure = self.pop_structure.copy()
 
@@ -172,7 +172,6 @@ class AlzheimersIncidence(Component):
                     "demographic_counts": simulants_to_add,
                 },
             )
-        logger.info("Finished method on_time_step for component AlzheimersIncidence")
 
     ##################
     # Helper methods #
