@@ -24,7 +24,7 @@ configuration:
         order: 0
         extrapolate: True
     randomness:
-        map_size: 1_000_000
+        map_size: 10_000_000
         key_columns: ['entrance_time', 'age']
     time: 
         start:
