@@ -17,6 +17,7 @@ class __Population(NamedTuple):
     TMRLE: str = "population.theoretical_minimum_risk_life_expectancy"
     ACMR: str = "cause.all_causes.cause_specific_mortality_rate"
     LIVE_BIRTH_RATE: str = "covariate.live_births_by_sex.estimate"
+    SCALING_FACTOR = str = "population.scaling_factor"
 
     @property
     def name(self):
@@ -31,24 +32,22 @@ POPULATION = __Population()
 
 
 class __Alzheimers(NamedTuple):
-    # Prevalence scale factor will scale the population and "fertility" of the model
-    PREVALENCE_SCALE_FACTOR: str = (
-        "cause.alzheimers_disease_and_other_dementias.prevalence_scale_factor"
-    )
-    # Prevalence will just be set to 1 so all simulants are created with the disease
     PREVALENCE: str = "cause.alzheimers_disease_and_other_dementias.prevalence"
-    PREVALENCE_ALL_STATES: str = "cause.alzheimers_all_states.prevalence"
-    BBBM_PREVALANCE: str = "cause.bbbm.prevalence"
-    MCI_PREVALENCE: str = "cause.mci.prevalence"
+    BBBM_CONDITIONAL_PREVALANCE: str = "cause.bbbm.prevalence"
+    MCI_CONDITIONAL_PREVALENCE: str = "cause.mci.prevalence"
     INCIDENCE_RATE: str = "cause.alzheimers_disease_and_other_dementias.incidence_rate"
     BBBM_INCIDENCE_RATE: str = "cause.bbbm.incidence_rate"
     # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
     TOTAL_POPULATION_INCIDENCE_RATE: str = (
         "cause.alzheimers_disease_and_other_dementias.population_incidence_rate"
     )
-    CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
+    CSMR: str = (
+        "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
+    )
     EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
-    DISABLIITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"
+    DISABLIITY_WEIGHT: str = (
+        "cause.alzheimers_disease_and_other_dementias.disability_weight"
+    )
     MCI_DISABILITY_WEIGHT: str = "caues.mci.disability_weight"
     RESTRICTIONS: str = "cause.alzheimers_disease_and_other_dementias.restrictions"
 

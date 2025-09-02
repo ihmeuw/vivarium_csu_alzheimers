@@ -61,11 +61,10 @@ def get_data(
         data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
         data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
-        data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR: load_alzheimers_prevalence,
+        data_keys.POPULATION.SCALING_FACTOR: load_alzheimers_all_states_prevalence,
         data_keys.ALZHEIMERS.PREVALENCE: load_alzheimers_prevalence,
-        data_keys.ALZHEIMERS.PREVALENCE_ALL_STATES: load_alzheimers_prevalence_all_states,
-        data_keys.ALZHEIMERS.BBBM_PREVALANCE: load_bbbm_prevalence,
-        data_keys.ALZHEIMERS.MCI_PREVALENCE: load_mci_prevalence,
+        data_keys.ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE: load_bbbm_conditional_prevalence,
+        data_keys.ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE: load_mci_conditional_prevalence,
         data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
         data_keys.ALZHEIMERS.BBBM_INCIDENCE_RATE: load_bbbm_incidence_rate,
         # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
@@ -208,19 +207,7 @@ def _load_em_from_meid(location, meid, measure):
 def load_alzheimers_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    """Need to return the "opposite" prevalence key we are trying to write to the artifact.
-    Meaning, we want the prevalence scale factor, to be the normal GBD prevalence of Alzheimers to properly
-    scale the population and "fertility" components of the model. We want the Alzheimers SI model to really
-    only be an I model, so we will set the prevalence to 1, so all simulants are created with the disease.
-    """
-    prevalence = load_standard_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
-
-    if key == data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR:
-        return prevalence
-
-    # Set prevalence to 1
-    prevalence.loc[:, :] = 1.0
-    return prevalence
+    return load_standard_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
 
 
 def load_alzheimers_total_population_incidence(
@@ -261,14 +248,25 @@ def reshape_to_vivarium_format(df, location):
     return df
 
 
+def load_alzheimers_all_states_prevalence(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    all_state_dur = load_alzheimers_duration_all_states(None, location, years)
+    alz_dur = load_alzheimers_duration(None, location, years)
+    alz_prev = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
+    pdb.set_trace()
+    return all_state_dur / alz_dur * alz_prev
+
+
 def load_alzheimers_duration(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     prev = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
     total_pop_inc = get_data(
-        data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE, location, years
+        data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE,
+        location,
+        years,
     )
-    pdb.set_trace()
     return prev / total_pop_inc
 
 
@@ -276,41 +274,31 @@ def load_alzheimers_duration_all_states(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     alz_dur = load_alzheimers_duration(None, location, years)
-    pdb.set_trace()
     return alz_dur + data_values.BBBM_AVG_DURATION + data_values.MCI_AVG_DURATION
 
 
-def load_alzheimers_prevalence_all_states(
+def load_bbbm_conditional_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    bbbm_prev = get_data(data_keys.ALZHEIMERS.BBBM_PREVALANCE, location, years)
-    mci_prev = get_data(data_keys.ALZHEIMERS.MCI_PREVALENCE, location, years)
-    alz_prev = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
-    pdb.set_trace()
-    return bbbm_prev + mci_prev + alz_prev
+    # Prevalence of BBBM state among simulants in any state
+    all_state_dur = load_alzheimers_duration_all_states(None, location, years)
+    return data_values.BBBM_AVG_DURATION / all_state_dur
 
 
-def load_bbbm_prevalence(
+def load_mci_conditional_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    total_dur = load_alzheimers_duration_all_states(None, location, years)
-    pdb.set_trace()
-    return data_values.BBBM_AVG_DURATION / total_dur
-
-
-def load_mci_prevalence(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> pd.DataFrame:
-    total_dur = load_alzheimers_duration_all_states(None, location, years)
-    pdb.set_trace()
-    return data_values.MCI_AVG_DURATION / total_dur
+    # Prevalence of MCI state among simulants in any state
+    all_state_dur = load_alzheimers_duration_all_states(None, location, years)
+    return data_values.MCI_AVG_DURATION / all_state_dur
 
 
 def load_bbbm_incidence_rate(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     # calculation TBD from Nathaniel - uses ALZHEIMERS.INCIDENCE_RATE
-    return
+    inc = get_data(data_keys.ALZHEIMERS.INCIDENCE_RATE, location, years)
+    return inc
 
 
 def load_mci_disability_weight(
@@ -324,4 +312,10 @@ def load_mci_disability_weight(
     )
     motor_mild = motor_data.loc["motor_mild"]
     motor_cog_mild = motor_data.loc["motor_cog_mild"]
-    return (motor_cog_mild - motor_mild) / (1 - motor_mild)
+    df_dw_mci = (motor_cog_mild - motor_mild) / (1 - motor_mild)
+
+    # use demography to cast draws to all ages/sexes
+    demography = get_data(data_keys.POPULATION.DEMOGRAPHY, location)
+    data = pd.DataFrame([df_dw_mci], index=demography.index)
+    data.index = data.index.droplevel("location")
+    return data

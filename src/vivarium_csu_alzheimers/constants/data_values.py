@@ -49,5 +49,5 @@ GAMMA_SCALE = 1 / rate
 GAMMA_DIST = scipy.stats.gamma(GAMMA_SHAPE, scale=GAMMA_SCALE)
 
 BBBM_AVG_DURATION = GAMMA_SHAPE / rate
-MCI_AVG_DURATION = 3.75  # from client
+MCI_AVG_DURATION = 3.25  # from client
 MCI_TO_AD_HAZARD = 0.25  # TBD, this is made up
