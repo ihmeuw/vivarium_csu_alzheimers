@@ -17,7 +17,7 @@ class __Population(NamedTuple):
     TMRLE: str = "population.theoretical_minimum_risk_life_expectancy"
     ACMR: str = "cause.all_causes.cause_specific_mortality_rate"
     LIVE_BIRTH_RATE: str = "covariate.live_births_by_sex.estimate"
-    SCALING_FACTOR = str = "population.scaling_factor"
+    SCALING_FACTOR: str = "population.scaling_factor"
 
     @property
     def name(self):
@@ -61,6 +61,7 @@ class __Alzheimers(NamedTuple):
 
 
 ALZHEIMERS = __Alzheimers()
+
 
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,

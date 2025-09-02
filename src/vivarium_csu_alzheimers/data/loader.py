@@ -32,8 +32,6 @@ from vivarium_csu_alzheimers.constants.paths import FORECAST_NC_DATA_FILEPATHS_D
 from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
 
-import pdb
-
 
 def get_data(
     lookup_key: str, location: str, years: int | str | list[int] | None = None
@@ -254,8 +252,7 @@ def load_alzheimers_all_states_prevalence(
     all_state_dur = load_alzheimers_duration_all_states(None, location, years)
     alz_dur = load_alzheimers_duration(None, location, years)
     alz_prev = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
-    pdb.set_trace()
-    return all_state_dur / alz_dur * alz_prev
+    return (all_state_dur * alz_prev) / alz_dur
 
 
 def load_alzheimers_duration(
