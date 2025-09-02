@@ -27,9 +27,12 @@ from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
 from vivarium_csu_alzheimers.constants import data_keys
+from vivarium_csu_alzheimers.constants import data_values
 from vivarium_csu_alzheimers.constants.paths import FORECAST_NC_DATA_FILEPATHS_DICT
 from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
+
+import pdb
 
 
 def get_data(
@@ -60,10 +63,16 @@ def get_data(
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR: load_alzheimers_prevalence,
         data_keys.ALZHEIMERS.PREVALENCE: load_alzheimers_prevalence,
+        data_keys.ALZHEIMERS.PREVALENCE_ALL_STATES: load_alzheimers_prevalence_all_states,
+        data_keys.ALZHEIMERS.BBBM_PREVALANCE: load_bbbm_prevalence,
+        data_keys.ALZHEIMERS.MCI_PREVALENCE: load_mci_prevalence,
         data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
+        data_keys.ALZHEIMERS.BBBM_INCIDENCE_RATE: load_bbbm_incidence_rate,
+        # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
         data_keys.ALZHEIMERS.DISABLIITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
         data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE: load_alzheimers_total_population_incidence,
     }
@@ -79,7 +88,9 @@ def load_population_location(
     return location
 
 
-def load_forecast(param: str, location: str, years: int | str | list[int]) -> pd.DataFrame:
+def load_forecast(
+    param: str, location: str, years: int | str | list[int]
+) -> pd.DataFrame:
     loc_id = utility_data.get_location_id(location)
     age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
     return table_from_nc(
@@ -103,7 +114,9 @@ def load_age_bins(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     df = pd.DataFrame()
-    df.index = pd.MultiIndex.from_frame(utility_data.get_age_bins().query("age_start >= 5.0"))
+    df.index = pd.MultiIndex.from_frame(
+        utility_data.get_age_bins().query("age_start >= 5.0")
+    )
     return df
 
 
@@ -124,7 +137,9 @@ def load_standard_data(
 ) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
-    return interface.get_measure(entity, key.measure, location, years).droplevel("location")
+    return interface.get_measure(entity, key.measure, location, years).droplevel(
+        "location"
+    )
 
 
 def load_metadata(key: str, location: str, years: int | str | list[int] | None = None):
@@ -178,8 +193,12 @@ def _load_em_from_meid(location, meid, measure):
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
     data = vi_utils.reshape(data)
     data = vi_utils.scrub_gbd_conventions(data, location)
-    data = vi_utils.split_interval(data, interval_column="age", split_column_prefix="age")
-    data = vi_utils.split_interval(data, interval_column="year", split_column_prefix="year")
+    data = vi_utils.split_interval(
+        data, interval_column="age", split_column_prefix="age"
+    )
+    data = vi_utils.split_interval(
+        data, interval_column="year", split_column_prefix="year"
+    )
     return vi_utils.sort_hierarchical_data(data).droplevel("location")
 
 
@@ -240,3 +259,69 @@ def reshape_to_vivarium_format(df, location):
     df = vi_utils.sort_hierarchical_data(df)
     df.index = df.index.droplevel("location")
     return df
+
+
+def load_alzheimers_duration(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    prev = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
+    total_pop_inc = get_data(
+        data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE, location, years
+    )
+    pdb.set_trace()
+    return prev / total_pop_inc
+
+
+def load_alzheimers_duration_all_states(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    alz_dur = load_alzheimers_duration(None, location, years)
+    pdb.set_trace()
+    return alz_dur + data_values.BBBM_AVG_DURATION + data_values.MCI_AVG_DURATION
+
+
+def load_alzheimers_prevalence_all_states(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    bbbm_prev = get_data(data_keys.ALZHEIMERS.BBBM_PREVALANCE, location, years)
+    mci_prev = get_data(data_keys.ALZHEIMERS.MCI_PREVALENCE, location, years)
+    alz_prev = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
+    pdb.set_trace()
+    return bbbm_prev + mci_prev + alz_prev
+
+
+def load_bbbm_prevalence(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    total_dur = load_alzheimers_duration_all_states(None, location, years)
+    pdb.set_trace()
+    return data_values.BBBM_AVG_DURATION / total_dur
+
+
+def load_mci_prevalence(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    total_dur = load_alzheimers_duration_all_states(None, location, years)
+    pdb.set_trace()
+    return data_values.MCI_AVG_DURATION / total_dur
+
+
+def load_bbbm_incidence_rate(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    # calculation TBD from Nathaniel - uses ALZHEIMERS.INCIDENCE_RATE
+    return
+
+
+def load_mci_disability_weight(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    data = pd.read_csv("/ihme/epi/disability_weights/standard/dw_full.csv")
+    motor_data = (
+        data[data.healthstate.notnull() & data.healthstate.str.contains("motor")]
+        .set_index("healthstate")
+        .filter(like="draw")
+    )
+    motor_mild = motor_data.loc["motor_mild"]
+    motor_cog_mild = motor_data.loc["motor_cog_mild"]
+    return (motor_cog_mild - motor_mild) / (1 - motor_mild)

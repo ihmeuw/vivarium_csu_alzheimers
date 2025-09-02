@@ -1,4 +1,5 @@
 from datetime import datetime
+import scipy
 
 ############################
 # Disease Model Parameters #
@@ -32,3 +33,21 @@ SCREENING_SCALE_UP_GOAL_COVERAGE = 0.50
 SCREENING_SCALE_UP_DIFFERENCE = (
     SCREENING_SCALE_UP_GOAL_COVERAGE - PROBABILITY_ATTENDING_SCREENING_START_MEAN
 )
+
+
+# Gamma distribution parameters from Abie's nb
+mean = 3.75  # Fix mean at midpoint of interval [3.5, 4]
+variance = 0.03  # Adjust variance until about 90% of probability lies in interval
+
+# Use method of moments to get shape and rate parameters
+GAMMA_SHAPE = mean**2 / variance  # shape parameter alpha
+rate = mean / variance  # rate parameter lambda
+
+# Convert rate to scale for scipy
+GAMMA_SCALE = 1 / rate
+
+GAMMA_DIST = scipy.stats.gamma(GAMMA_SHAPE, scale=GAMMA_SCALE)
+
+BBBM_AVG_DURATION = GAMMA_SHAPE / rate
+MCI_AVG_DURATION = 3.75  # from client
+MCI_TO_AD_HAZARD = 0.25  # TBD, this is made up
