@@ -63,7 +63,8 @@ def get_data(
         data_keys.ALZHEIMERS.PREVALENCE: load_alzheimers_prevalence,
         data_keys.ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE: load_bbbm_conditional_prevalence,
         data_keys.ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE: load_mci_conditional_prevalence,
-        data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
+        data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,  # GBD cause incidence
+        data_keys.ALZHEIMERS.STATE_INCIDENCE_RATE: load_ad_dementia_state_incidence_rate,  # state incidence for transition from MCI
         data_keys.ALZHEIMERS.BBBM_INCIDENCE_RATE: load_bbbm_incidence_rate,
         # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
@@ -316,3 +317,17 @@ def load_mci_disability_weight(
     data = pd.DataFrame([df_dw_mci], index=demography.index)
     data.index = data.index.droplevel("location")
     return data
+
+
+def load_ad_dementia_state_incidence_rate(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    acmr = get_data(data_keys.POPULATION.ACMR, location, years)
+    csmr = get_data(data_keys.ALZHEIMERS.CSMR, location, years).droplevel(
+        ["year_start", "year_end"]
+    )
+
+    # for now, assume csmr is the same for all years based on docs
+    csmr_all_years = pd.DataFrame(csmr, index=acmr.index)
+    mort_MCI = acmr - csmr_all_years  # note that emr_MCI is 0
+    return (1 / data_values.MCI_AVG_DURATION) - mort_MCI
