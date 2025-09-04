@@ -37,10 +37,10 @@ class Alzheimers(Component):
         self.mci_disability_weight = builder.data.load(ALZHEIMERS.MCI_DISABILITY_WEIGHT)
         self.alzheimers_disability_weight = builder.data.load(ALZHEIMERS.DISABILIITY_WEIGHT)
         self.alzheimers_emr = builder.data.load(ALZHEIMERS.EMR)
-        # TODO: load bbbm excess mortality rate
-        # TODO: load mci excess mortality rate
+        # TODO: load bbbm excess mortality rate = 0.0
+        # TODO: load mci excess mortality rate = 0.0
         # TODO: load transition rates
-        self.csmr = builder.data.load(ALZHEIMERS.CSMR)
+        self.csmr = builder.data.load(ALZHEIMERS.CSMR)  
 
     def _create_disease_model(self):
         bbbm_state = DiseaseState(
