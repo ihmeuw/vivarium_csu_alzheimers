@@ -99,7 +99,6 @@ class AlzheimersIncidence(Component):
     def setup(self, builder: Builder) -> None:
         self.age_start = builder.configuration.population.initialization_age_min
         self.age_end = builder.configuration.population.initialization_age_max
-        year_start = builder.configuration.time.start.year
         self.randomness = builder.randomness  # Manager
         # NOTE: All three of these methods are capping the upper age bound at 100
         self.incidence_rate = self.load_incidence_rate(builder)
@@ -115,6 +114,7 @@ class AlzheimersIncidence(Component):
         self.model_scale = builder.configuration.population.population_size / (
             (sub_pop.values * prevalence.values).sum()
         )
+        breakpoint()
         self.simulant_creator = builder.population.get_simulant_creator()
 
     ########################
@@ -141,6 +141,7 @@ class AlzheimersIncidence(Component):
         pop_structure = pop_structure.loc[
             pop_structure.index.get_level_values("year_start") == query_year
         ]
+        breakpoint()
         pop_structure.index = pop_structure.index.droplevel(["year_start", "year_end"])
         mean_incident_cases = (
             self.incidence_rate * pop_structure * step_size * self.model_scale
@@ -170,9 +171,7 @@ class AlzheimersIncidence(Component):
     ##################
 
     def load_incidence_rate(self, builder: Builder) -> pd.Series:
-        incidence_rate = builder.data.load(
-            data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE
-        )
+        incidence_rate = builder.data.load(data_keys.ALZHEIMERS.BBBM_INCIDENCE_RATE)
         incidence_rate.loc[incidence_rate["age_end"] == 125, "age_end"] = self.age_end
         # Match population structure by removing under 5 age groups
         incidence_rate = incidence_rate.loc[incidence_rate["age_start"] >= 5.0]
@@ -190,7 +189,7 @@ class AlzheimersIncidence(Component):
         return pop_structure
 
     def load_prevalence(self, builder: Builder) -> pd.Series:
-        prevalence = builder.data.load(data_keys.ALZHEIMERS.PREVALENCE_SCALE_FACTOR)
+        prevalence = builder.data.load(data_keys.POPULATION.SCALING_FACTOR)
         prevalence.loc[prevalence["age_end"] == 125, "age_end"] = self.age_end
         # Match population structure by removing under 5 age groups
         prevalence = prevalence.loc[prevalence["age_start"] >= 5.0]

@@ -68,7 +68,7 @@ def get_data(
         # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
-        data_keys.ALZHEIMERS.DISABLIITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.DISABILIITY_WEIGHT: load_standard_data,
         data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
         data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE: load_alzheimers_total_population_incidence,
@@ -85,9 +85,7 @@ def load_population_location(
     return location
 
 
-def load_forecast(
-    param: str, location: str, years: int | str | list[int]
-) -> pd.DataFrame:
+def load_forecast(param: str, location: str, years: int | str | list[int]) -> pd.DataFrame:
     loc_id = utility_data.get_location_id(location)
     age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
     return table_from_nc(
@@ -111,9 +109,7 @@ def load_age_bins(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     df = pd.DataFrame()
-    df.index = pd.MultiIndex.from_frame(
-        utility_data.get_age_bins().query("age_start >= 5.0")
-    )
+    df.index = pd.MultiIndex.from_frame(utility_data.get_age_bins().query("age_start >= 5.0"))
     return df
 
 
@@ -134,9 +130,7 @@ def load_standard_data(
 ) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
-    return interface.get_measure(entity, key.measure, location, years).droplevel(
-        "location"
-    )
+    return interface.get_measure(entity, key.measure, location, years).droplevel("location")
 
 
 def load_metadata(key: str, location: str, years: int | str | list[int] | None = None):
@@ -190,12 +184,8 @@ def _load_em_from_meid(location, meid, measure):
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
     data = vi_utils.reshape(data)
     data = vi_utils.scrub_gbd_conventions(data, location)
-    data = vi_utils.split_interval(
-        data, interval_column="age", split_column_prefix="age"
-    )
-    data = vi_utils.split_interval(
-        data, interval_column="year", split_column_prefix="year"
-    )
+    data = vi_utils.split_interval(data, interval_column="age", split_column_prefix="age")
+    data = vi_utils.split_interval(data, interval_column="year", split_column_prefix="year")
     return vi_utils.sort_hierarchical_data(data).droplevel("location")
 
 

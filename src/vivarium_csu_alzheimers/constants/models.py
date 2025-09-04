@@ -9,12 +9,9 @@ from vivarium_csu_alzheimers.constants import data_keys
 
 class __AlzheimersDiseaseModel(NamedTuple):
     ALZHEIMERS_MODEL_NAME: str = data_keys.ALZHEIMERS.name
-    SUSCEPTIBLE_TO_ALZHEIMERS: str = f"susceptible_to_{ALZHEIMERS_MODEL_NAME}"
-    ALZHEIMERS_FIRST_STATE: str = "alzheimers_first_state"
-    ALZHEIMERS_SECOND_STATE: str = "alzheimers_second_state"
-    ALZHEIMERS_THIRD_STATE: str = "alzheimers_third_state"
-    ALZHEIMERS_FOURTH_STATE: str = "alzheimers_fourth_state"
-    ALZHEIMERS_FIFTH_STATE: str = "alzheimers_fifth_state"
+    BBBM_STATE: str = "alzheimers_blood_based_biomarker_state"
+    MCI_STATE: str = "alzheimers_mild_cognitive_impairment_state"
+    ALZHEIMERS_DISEASE_STATE: str = "alzheimers_disease_state"
 
     def __iter__(self):
         """Allow iteration over the named tuple field values."""
