@@ -32,6 +32,10 @@ from vivarium_csu_alzheimers.constants.paths import FORECAST_NC_DATA_FILEPATHS_D
 from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
 
+from operator import add
+
+import pdb
+
 
 def get_data(
     lookup_key: str, location: str, years: int | str | list[int] | None = None
@@ -294,9 +298,48 @@ def load_mci_conditional_prevalence(
 def load_bbbm_incidence_rate(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    # calculation TBD from Nathaniel - uses ALZHEIMERS.INCIDENCE_RATE
+    DUR = 7  # total duration of pre-dementia AD
+    W = 5  # width of age groups
+    R = 2  # remainder (DUR = nw + r)
+
     inc = get_data(data_keys.ALZHEIMERS.INCIDENCE_RATE, location, years)
-    return inc
+    pop = get_data(data_keys.POPULATION.STRUCTURE, location, years)
+    new_bbbm_people = pd.DataFrame(0, index=pop.index, columns=pop.columns)
+    for index, row in new_bbbm_people.iterrows():
+        # create tuples to index population for future age groups and year
+        next_group_future_year = tuple(map(add, list(index), ["", "", W, W, DUR, DUR]))
+        scnd_group_future_year = tuple(
+            map(add, list(index), ["", "", 2 * W, 2 * W, DUR, DUR])
+        )
+        # cap age and year
+        age_end = min(100, next_group_future_year[3])
+        next_group_future_year = next_group_future_year[:2] + (
+            min(95, next_group_future_year[2]),
+            age_end if age_end < 100 else 125,
+            min(2050, next_group_future_year[4]),
+            min(2051, next_group_future_year[5]),
+        )
+        age_end = min(100, scnd_group_future_year[3])
+        scnd_group_future_year = scnd_group_future_year[:2] + (
+            min(95, scnd_group_future_year[2]),
+            age_end if age_end < 100 else 125,
+            min(2050, scnd_group_future_year[4]),
+            min(2051, scnd_group_future_year[5]),
+        )
+        # get age group incidences
+        # TBD should new_bbbm_people use inc draws? currently single value
+        next_group_inc = inc.loc[next_group_future_year[1:4] + (2021, 2022)].mean()
+        scnd_group_inc = inc.loc[scnd_group_future_year[1:4] + (2021, 2022)].mean()
+
+        # set value
+        # pdb.set_trace()
+        # print([next_group_inc, pop.loc[next_group_future_year].value, scnd_group_inc, pop.loc[scnd_group_future_year].value])
+        new_bbbm_people.loc[index] = (
+            (1 - (R / W)) * next_group_inc * pop.loc[next_group_future_year].value
+        ) + ((R / W) * scnd_group_inc * pop.loc[scnd_group_future_year].value)
+    # TBD add deaths and scale
+    # pdb.set_trace()
+    return new_bbbm_people
 
 
 def load_mci_disability_weight(
