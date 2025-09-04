@@ -39,7 +39,7 @@ class __Alzheimers(NamedTuple):
     STATE_INCIDENCE_RATE: str = (
         "cause.alzheimers_disease_and_other_dementias.state_incidence_rate"
     )
-    BBBM_INCIDENCE_RATE: str = "cause.bbbm.incidence_rate"
+    BBBM_INCIDENCE_COUNT: str = "cause.bbbm.incidence_count"
     # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
     TOTAL_POPULATION_INCIDENCE_RATE: str = (
         "cause.alzheimers_disease_and_other_dementias.population_incidence_rate"

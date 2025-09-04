@@ -69,7 +69,7 @@ def get_data(
         data_keys.ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE: load_mci_conditional_prevalence,
         data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,  # GBD cause incidence
         data_keys.ALZHEIMERS.STATE_INCIDENCE_RATE: load_ad_dementia_state_incidence_rate,  # state incidence for transition from MCI
-        data_keys.ALZHEIMERS.BBBM_INCIDENCE_RATE: load_bbbm_incidence_rate,
+        data_keys.ALZHEIMERS.BBBM_INCIDENCE_COUNT: load_bbbm_incidence_count,
         # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
@@ -78,7 +78,15 @@ def get_data(
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
         data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE: load_alzheimers_total_population_incidence,
     }
-    return mapping[lookup_key](lookup_key, location, years)
+    mapped_value = mapping[lookup_key](lookup_key, location, years)
+    # drop age_groups under 5
+    if isinstance(mapped_value, pd.DataFrame):
+        df = mapped_value
+        if "age_start" in df.index.names:
+            df = df.query("age_start >= 5.0")
+        return df
+    else:
+        return mapped_value
 
 
 def load_population_location(
@@ -117,7 +125,7 @@ def load_age_bins(
 ) -> pd.DataFrame:
     df = pd.DataFrame()
     df.index = pd.MultiIndex.from_frame(
-        utility_data.get_age_bins().query("age_start >= 5.0")
+        utility_data.get_age_bins()  # .query("age_start >= 5.0")
     )
     return df
 
@@ -257,7 +265,7 @@ def load_alzheimers_all_states_prevalence(
     all_state_dur = load_alzheimers_duration_all_states(None, location, years)
     alz_dur = load_alzheimers_duration(None, location, years)
     alz_prev = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
-    return (all_state_dur * alz_prev) / alz_dur
+    return ((all_state_dur * alz_prev) / alz_dur).bfill(limit=2).fillna(0)
 
 
 def load_alzheimers_duration(
@@ -269,7 +277,7 @@ def load_alzheimers_duration(
         location,
         years,
     )
-    return prev / total_pop_inc
+    return (prev / total_pop_inc).fillna(0)
 
 
 def load_alzheimers_duration_all_states(
@@ -295,7 +303,7 @@ def load_mci_conditional_prevalence(
     return data_values.MCI_AVG_DURATION / all_state_dur
 
 
-def load_bbbm_incidence_rate(
+def load_bbbm_incidence_count(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     DUR = 7  # total duration of pre-dementia AD
