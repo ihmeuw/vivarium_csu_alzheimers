@@ -45,7 +45,9 @@ def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
     # 3. Convert age_group_id to age intervals
     if param != "births":
         age_bins = (
-            age_mapping.index.to_frame().reset_index(drop=True).set_index("age_group_id")
+            age_mapping.index.to_frame()
+            .reset_index(drop=True)
+            .set_index("age_group_id")
         )
 
         df["age_start"] = df["age_group_id"].map(age_bins["age_start"])
@@ -77,8 +79,9 @@ def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
     if param == "mortality":
         df_wide = df_wide.droplevel("location")
 
-    if param == "population":
-        df_wide["value"] = df_wide.mean(axis=1)
-        df_wide = df_wide.filter(like="value")
+    # keep draws for forecasted population value
+    # if param == "population":
+    #    df_wide["value"] = df_wide.mean(axis=1)
+    #    df_wide = df_wide.filter(like="value")
 
     return df_wide
