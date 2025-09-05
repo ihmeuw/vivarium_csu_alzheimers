@@ -13,6 +13,7 @@ for an example.
    No logging is done here. Logging is done in vivarium inputs itself and forwarded.
 """
 
+from operator import add
 from typing import Any
 
 import numpy as np
@@ -26,15 +27,10 @@ from vivarium_inputs import utilities as vi_utils
 from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
-from vivarium_csu_alzheimers.constants import data_keys
-from vivarium_csu_alzheimers.constants import data_values
+from vivarium_csu_alzheimers.constants import data_keys, data_values
 from vivarium_csu_alzheimers.constants.paths import FORECAST_NC_DATA_FILEPATHS_DICT
 from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
-
-from operator import add
-
-import pdb
 
 
 def get_data(
@@ -98,9 +94,7 @@ def load_population_location(
     return location
 
 
-def load_forecast(
-    param: str, location: str, years: int | str | list[int]
-) -> pd.DataFrame:
+def load_forecast(param: str, location: str, years: int | str | list[int]) -> pd.DataFrame:
     loc_id = utility_data.get_location_id(location)
     age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
     return table_from_nc(
@@ -147,9 +141,7 @@ def load_standard_data(
 ) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
-    return interface.get_measure(entity, key.measure, location, years).droplevel(
-        "location"
-    )
+    return interface.get_measure(entity, key.measure, location, years).droplevel("location")
 
 
 def load_metadata(key: str, location: str, years: int | str | list[int] | None = None):
@@ -203,12 +195,8 @@ def _load_em_from_meid(location, meid, measure):
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
     data = vi_utils.reshape(data)
     data = vi_utils.scrub_gbd_conventions(data, location)
-    data = vi_utils.split_interval(
-        data, interval_column="age", split_column_prefix="age"
-    )
-    data = vi_utils.split_interval(
-        data, interval_column="year", split_column_prefix="year"
-    )
+    data = vi_utils.split_interval(data, interval_column="age", split_column_prefix="age")
+    data = vi_utils.split_interval(data, interval_column="year", split_column_prefix="year")
     return vi_utils.sort_hierarchical_data(data).droplevel("location")
 
 
