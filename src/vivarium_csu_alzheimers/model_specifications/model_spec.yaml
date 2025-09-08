@@ -5,12 +5,13 @@ components:
           - NewSimulantsObserver()
           - AlzheimersIncidence()
           - AlzheimersPopulation('population.scaling_factor')
+          - Alzheimers()
             
     vivarium_public_health:
         population:
             - Mortality()
         disease:
-            - SI('alzheimers_disease_and_other_dementias')
+           # - SI('alzheimers_disease_and_other_dementias')
         results:
             - DisabilityObserver()
             - MortalityObserver()

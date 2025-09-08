@@ -103,6 +103,8 @@ class AlzheimersIncidence(Component):
         # NOTE: All three of these methods are capping the upper age bound at 100
         self.bbbm_incidence_counts = self.load_bbbm_incidence_counts(builder)
         self.pop_structure = self.load_population_structure(builder)
+        # TODO: load from artifact when ready
+        self.preclinical_deaths = 0.0
         prevalence = self.load_prevalence(builder)
         start_year = builder.configuration.time.start.year
         sub_pop = self.pop_structure.loc[
@@ -145,7 +147,8 @@ class AlzheimersIncidence(Component):
             self.bbbm_incidence_counts.index.get_level_values("year_start") == query_year
         ]
         incident_cases = incident_cases.droplevel(["year_start", "year_end"])
-        mean_incident_cases = incident_cases * self.model_scale
+        # TODO: this needs to be updated
+        mean_incident_cases = self.model_scale * (incident_cases + self.preclinical_deaths)
         simulants_to_add = pd.Series(0, index=mean_incident_cases.index)
 
         # Determine number of simulants to add for each demographic group
