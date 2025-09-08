@@ -101,7 +101,7 @@ class AlzheimersIncidence(Component):
         self.age_end = builder.configuration.population.initialization_age_max
         self.randomness = builder.randomness  # Manager
         # NOTE: All three of these methods are capping the upper age bound at 100
-        self.incidence_rate = self.load_incidence_rate(builder)
+        self.bbbm_incidence_counts = self.load_bbbm_incidence_counts(builder)
         self.pop_structure = self.load_population_structure(builder)
         prevalence = self.load_prevalence(builder)
         start_year = builder.configuration.time.start.year
@@ -114,7 +114,6 @@ class AlzheimersIncidence(Component):
         self.model_scale = builder.configuration.population.population_size / (
             (sub_pop.values * prevalence.values).sum()
         )
-        breakpoint()
         self.simulant_creator = builder.population.get_simulant_creator()
 
     ########################
@@ -141,11 +140,12 @@ class AlzheimersIncidence(Component):
         pop_structure = pop_structure.loc[
             pop_structure.index.get_level_values("year_start") == query_year
         ]
-        breakpoint()
         pop_structure.index = pop_structure.index.droplevel(["year_start", "year_end"])
-        mean_incident_cases = (
-            self.incidence_rate * pop_structure * step_size * self.model_scale
-        )
+        incident_cases = self.bbbm_incidence_counts.loc[
+            self.bbbm_incidence_counts.index.get_level_values("year_start") == query_year
+        ]
+        incident_cases = incident_cases.droplevel(["year_start", "year_end"])
+        mean_incident_cases = incident_cases * self.model_scale
         simulants_to_add = pd.Series(0, index=mean_incident_cases.index)
 
         # Determine number of simulants to add for each demographic group
@@ -170,17 +170,13 @@ class AlzheimersIncidence(Component):
     # Helper methods #
     ##################
 
-    def load_incidence_rate(self, builder: Builder) -> pd.Series:
-        incidence_rate = builder.data.load(data_keys.ALZHEIMERS.BBBM_INCIDENCE_RATE)
-        incidence_rate.loc[incidence_rate["age_end"] == 125, "age_end"] = self.age_end
-        # Match population structure by removing under 5 age groups
-        incidence_rate = incidence_rate.loc[incidence_rate["age_start"] >= 5.0]
-        incidence_rate = (
-            incidence_rate[["sex", "age_start", "age_end", "value"]]
-            .set_index(["sex", "age_start", "age_end"])
-            .squeeze()
-        )
-        return incidence_rate
+    def load_bbbm_incidence_counts(self, builder: Builder) -> pd.Series:
+        incidence_counts = builder.data.load(data_keys.ALZHEIMERS.BBBM_INCIDENCE_COUNT)
+        # Updating age_end to match configuration since some simulants are living past 125
+        incidence_counts.loc[incidence_counts["age_end"] == 125, "age_end"] = self.age_end
+        incidence_counts = incidence_counts.set_index(ARTIFACT_INDEX_COLUMNS)
+        incidence_counts = incidence_counts[["value"]].squeeze()
+        return incidence_counts
 
     def load_population_structure(self, builder: Builder) -> pd.Series:
         pop_structure = builder.data.load(data_keys.POPULATION.STRUCTURE)
@@ -190,8 +186,7 @@ class AlzheimersIncidence(Component):
 
     def load_prevalence(self, builder: Builder) -> pd.Series:
         prevalence = builder.data.load(data_keys.POPULATION.SCALING_FACTOR)
+        # Updating age_end to match configuration since some simulants are living past 125
         prevalence.loc[prevalence["age_end"] == 125, "age_end"] = self.age_end
-        # Match population structure by removing under 5 age groups
-        prevalence = prevalence.loc[prevalence["age_start"] >= 5.0]
         prevalence = prevalence.set_index(ARTIFACT_INDEX_COLUMNS).squeeze()
         return prevalence
