@@ -77,8 +77,9 @@ def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
     if param == "mortality":
         df_wide = df_wide.droplevel("location")
 
-    if param == "population":
-        df_wide["value"] = df_wide.mean(axis=1)
-        df_wide = df_wide.filter(like="value")
+    # uncomment code block below to save mean of forecasted population instead of draws
+    # if param == "population":
+    #    df_wide["value"] = df_wide.mean(axis=1)
+    #    df_wide = df_wide.filter(like="value")
 
     return df_wide
