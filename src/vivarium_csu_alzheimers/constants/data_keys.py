@@ -36,15 +36,18 @@ class __Alzheimers(NamedTuple):
     BBBM_CONDITIONAL_PREVALANCE: str = "cause.bbbm.prevalence"
     MCI_CONDITIONAL_PREVALENCE: str = "cause.mci.prevalence"
     INCIDENCE_RATE: str = "cause.alzheimers_disease_and_other_dementias.incidence_rate"
-    BBBM_INCIDENCE_RATE: str = "cause.bbbm.incidence_rate"
+    STATE_INCIDENCE_RATE: str = (
+        "cause.alzheimers_disease_and_other_dementias.state_incidence_rate"
+    )
+    BBBM_INCIDENCE_COUNT: str = "cause.bbbm.incidence_count"
     # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
     TOTAL_POPULATION_INCIDENCE_RATE: str = (
         "cause.alzheimers_disease_and_other_dementias.population_incidence_rate"
     )
     CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
     EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
-    DISABILIITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"
-    MCI_DISABILITY_WEIGHT: str = "caues.mci.disability_weight"
+    DISABLIITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"
+    MCI_DISABILITY_WEIGHT: str = "cause.mci.disability_weight"
     RESTRICTIONS: str = "cause.alzheimers_disease_and_other_dementias.restrictions"
 
     @property

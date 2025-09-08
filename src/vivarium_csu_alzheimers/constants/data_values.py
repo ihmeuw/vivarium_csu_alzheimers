@@ -1,4 +1,5 @@
 from datetime import datetime
+
 import scipy
 
 ############################
@@ -35,19 +36,22 @@ SCREENING_SCALE_UP_DIFFERENCE = (
 )
 
 
-# Gamma distribution parameters from Abie's nb
-mean = 3.75  # Fix mean at midpoint of interval [3.5, 4]
-variance = 0.03  # Adjust variance until about 90% of probability lies in interval
+# Gamma distribution parameters from Nathaniel's nb
+# Fix mean at midpoint of interval [3.5, 4]
+# Adjust variance until about 90% of probability lies in interval (variance = .03)
 
 # Use method of moments to get shape and rate parameters
-GAMMA_SHAPE = mean**2 / variance  # shape parameter alpha
-rate = mean / variance  # rate parameter lambda
+GAMMA_SHAPE = 3.75**2 / 0.03  # shape parameter alpha
+RATE = 3.75 / 0.03  # rate parameter lambda
 
 # Convert rate to scale for scipy
-GAMMA_SCALE = 1 / rate
+GAMMA_SCALE = 1 / RATE
 
-GAMMA_DIST = scipy.stats.gamma(GAMMA_SHAPE, scale=GAMMA_SCALE)
+GAMMA_GAMMA_DIST = scipy.stats.gamma(GAMMA_SHAPE, scale=GAMMA_SCALE)
 
-BBBM_AVG_DURATION = GAMMA_SHAPE / rate
+BBBM_AVG_DURATION = GAMMA_SHAPE / RATE
 MCI_AVG_DURATION = 3.25  # from client
-MCI_TO_AD_HAZARD = 0.25  # TBD, this is made up
+
+DW_BBBM = 0
+EMR_BBBM = 0
+EMC_MCI = 0
