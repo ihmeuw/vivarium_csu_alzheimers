@@ -171,7 +171,7 @@ class AlzheimersIncidence(Component):
 
     def load_incidence_rate(self, builder: Builder) -> pd.Series:
         incidence_rate = builder.data.load(
-            data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE
+            data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION
         )
         incidence_rate.loc[incidence_rate["age_end"] == 125, "age_end"] = self.age_end
         # Match population structure by removing under 5 age groups

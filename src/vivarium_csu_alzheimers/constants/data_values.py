@@ -47,11 +47,11 @@ RATE = 3.75 / 0.03  # rate parameter lambda
 # Convert rate to scale for scipy
 GAMMA_SCALE = 1 / RATE
 
-GAMMA_GAMMA_DIST = scipy.stats.gamma(GAMMA_SHAPE, scale=GAMMA_SCALE)
+BBBM_GAMMA_DIST = scipy.stats.gamma(GAMMA_SHAPE, scale=GAMMA_SCALE)
 
 BBBM_AVG_DURATION = GAMMA_SHAPE / RATE
 MCI_AVG_DURATION = 3.25  # from client
 
 DW_BBBM = 0
 EMR_BBBM = 0
-EMC_MCI = 0
+EMR_MCI = 0

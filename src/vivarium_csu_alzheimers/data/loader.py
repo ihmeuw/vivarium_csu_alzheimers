@@ -60,22 +60,25 @@ def get_data(
         data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         data_keys.POPULATION.SCALING_FACTOR: load_alzheimers_all_states_prevalence,
-        data_keys.ALZHEIMERS.PREVALENCE: load_alzheimers_prevalence,
+        data_keys.ALZHEIMERS.PREVALENCE: load_standard_data,
         data_keys.ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE: load_bbbm_conditional_prevalence,
         data_keys.ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE: load_mci_conditional_prevalence,
-        data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,  # GBD cause incidence
-        data_keys.ALZHEIMERS.STATE_INCIDENCE_RATE: load_ad_dementia_state_incidence_rate,  # state incidence for transition from MCI
-        data_keys.ALZHEIMERS.BBBM_INCIDENCE_COUNT: load_bbbm_incidence_count,
+        data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
+        data_keys.ALZHEIMERS.MCI_TO_DEMENTIA_TRANSITION_RATE: load_mci_to_dementia_transition_rate,
+        data_keys.ALZHEIMERS.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: load_susceptible_to_bbbm_transition_count,
         # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
         data_keys.ALZHEIMERS.DISABLIITY_WEIGHT: load_standard_data,
         data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
-        data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE: load_alzheimers_total_population_incidence,
+        data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION: load_alzheimers_incidence_total_population,
     }
     mapped_value = mapping[lookup_key](lookup_key, location, years)
-    # drop age_groups under 5
+
+    # To avoid issues with irrelevant differences between the very young age
+    # groups in GBD and FHS data, we will drop rows with age_start < 5 from
+    # all age-specific DataFrames
     if isinstance(mapped_value, pd.DataFrame):
         df = mapped_value
         if "age_start" in df.index.names:
@@ -203,13 +206,7 @@ def _load_em_from_meid(location, meid, measure):
 # TODO - add project-specific data functions here
 
 
-def load_alzheimers_prevalence(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> pd.DataFrame:
-    return load_standard_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
-
-
-def load_alzheimers_total_population_incidence(
+def load_alzheimers_incidence_total_population(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     """Load raw Alzheimers incidence rates from GBD. The incidence rate we pull through vivarium framework
@@ -250,50 +247,68 @@ def reshape_to_vivarium_format(df, location):
 def load_alzheimers_all_states_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    all_state_dur = load_alzheimers_duration_all_states(None, location, years)
-    alz_dur = load_alzheimers_duration(None, location, years)
+    """
+    eq 1 in attention box:
+    https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#alzheimers-cause-state-data-including-susceptible-note
+    """
+    all_state_dur = load_all_states_duration(None, location, years)
+    alz_dur = load_dementia_duration(None, location, years)
     alz_prev = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
+    # bfill(limit=2) casts the 40-44 age group data to the 30-34 and 35-39 age group rows
     return ((all_state_dur * alz_prev) / alz_dur).bfill(limit=2).fillna(0)
 
 
-def load_alzheimers_duration(
+def load_dementia_duration(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
+    """delta_AD in
+    https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#alzheimers-cause-state-data-including-susceptible-note
+    """
     prev = get_data(data_keys.ALZHEIMERS.PREVALENCE, location, years)
     total_pop_inc = get_data(
-        data_keys.ALZHEIMERS.TOTAL_POPULATION_INCIDENCE_RATE,
+        data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION,
         location,
         years,
     )
     return (prev / total_pop_inc).fillna(0)
 
 
-def load_alzheimers_duration_all_states(
+def load_all_states_duration(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    alz_dur = load_alzheimers_duration(None, location, years)
+    """delta_all_AD_states in
+    https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#alzheimers-cause-state-data-including-susceptible-note
+    """
+    alz_dur = load_dementia_duration(None, location, years)
     return alz_dur + data_values.BBBM_AVG_DURATION + data_values.MCI_AVG_DURATION
 
 
 def load_bbbm_conditional_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    # Prevalence of BBBM state among simulants in any state
-    all_state_dur = load_alzheimers_duration_all_states(None, location, years)
+    """BBBM-AD initial prevalence in
+    https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#id6
+    """
+    all_state_dur = load_all_states_duration(None, location, years)
     return data_values.BBBM_AVG_DURATION / all_state_dur
 
 
 def load_mci_conditional_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    # Prevalence of MCI state among simulants in any state
-    all_state_dur = load_alzheimers_duration_all_states(None, location, years)
+    """MCI-AD initial prevalence in
+    https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#id6
+    """
+    all_state_dur = load_all_states_duration(None, location, years)
     return data_values.MCI_AVG_DURATION / all_state_dur
 
 
-def load_bbbm_incidence_count(
+def load_susceptible_to_bbbm_transition_count(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
+    """I_BBBM_g,t + D_g,t in
+    https://vivarium-research.readthedocs.io/en/latest/models/other_models/alzheimers_population/index.html
+    """
     DUR = 7  # total duration of pre-dementia AD
     W = 5  # width of age groups
     R = 2  # remainder (DUR = nw + r)
@@ -303,6 +318,9 @@ def load_bbbm_incidence_count(
     new_bbbm_people = pd.DataFrame(0, index=pop.index, columns=pop.columns)
     for index, row in new_bbbm_people.iterrows():
         # create tuples to index population for future age groups and year
+        # 'index' tuple format is (location, sex, age_start, age_end, year_start, year_end)
+        # we add empty strings to the location/sex values to keep them the same,
+        # a multiple of W to change age groups, and DUR to change the year
         next_group_future_year = tuple(map(add, list(index), ["", "", W, W, DUR, DUR]))
         scnd_group_future_year = tuple(
             map(add, list(index), ["", "", 2 * W, 2 * W, DUR, DUR])
@@ -323,25 +341,27 @@ def load_bbbm_incidence_count(
             min(2051, scnd_group_future_year[5]),
         )
         # get age group incidences
-        # TBD should new_bbbm_people use inc draws? currently single value
-        next_group_inc = inc.loc[next_group_future_year[1:4] + (2021, 2022)].mean()
-        scnd_group_inc = inc.loc[scnd_group_future_year[1:4] + (2021, 2022)].mean()
+        next_group_inc = inc.loc[next_group_future_year[1:4] + (2021, 2022)]
+        scnd_group_inc = inc.loc[scnd_group_future_year[1:4] + (2021, 2022)]
 
         # set value
-        # pdb.set_trace()
-        # print([next_group_inc, pop.loc[next_group_future_year].value, scnd_group_inc, pop.loc[scnd_group_future_year].value])
         new_bbbm_people.loc[index] = (
-            (1 - (R / W)) * next_group_inc * pop.loc[next_group_future_year].value
-        ) + ((R / W) * scnd_group_inc * pop.loc[scnd_group_future_year].value)
-    # TBD add deaths and scale
-    # pdb.set_trace()
+            (1 - (R / W)) * next_group_inc * pop.loc[next_group_future_year]
+        ) + ((R / W) * scnd_group_inc * pop.loc[scnd_group_future_year])
+    # TBD add D_g,t when math is ready from Nathaniel
+    new_bbbm_people.index = new_bbbm_people.index.droplevel("location")
     return new_bbbm_people
 
 
 def load_mci_disability_weight(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    data = pd.read_csv("/ihme/epi/disability_weights/standard/dw_full.csv")
+    """DW_MCI in
+    https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#id9
+    """
+    data = pd.read_csv(
+        "/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/data/dw_full.csv"
+    )  # comes from /ihme/epi/disability_weights/standard/dw_full.csv
     motor_data = (
         data[data.healthstate.notnull() & data.healthstate.str.contains("motor")]
         .set_index("healthstate")
@@ -355,12 +375,16 @@ def load_mci_disability_weight(
     demography = get_data(data_keys.POPULATION.DEMOGRAPHY, location)
     data = pd.DataFrame([df_dw_mci], index=demography.index)
     data.index = data.index.droplevel("location")
+    data.columns = data.columns.str.replace("draw", "draw_")
     return data
 
 
-def load_ad_dementia_state_incidence_rate(
+def load_mci_to_dementia_transition_rate(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
+    """i_AD in
+    https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#id5
+    """
     acmr = get_data(data_keys.POPULATION.ACMR, location, years)
     csmr = get_data(data_keys.ALZHEIMERS.CSMR, location, years).droplevel(
         ["year_start", "year_end"]
@@ -369,4 +393,5 @@ def load_ad_dementia_state_incidence_rate(
     # for now, assume csmr is the same for all years based on docs
     csmr_all_years = pd.DataFrame(csmr, index=acmr.index)
     mort_MCI = acmr - csmr_all_years  # note that emr_MCI is 0
+    # TBD math changes from Nathaniel due to negative values for older age groups
     return (1 / data_values.MCI_AVG_DURATION) - mort_MCI
