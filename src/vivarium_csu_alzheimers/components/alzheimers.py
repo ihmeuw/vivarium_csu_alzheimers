@@ -53,7 +53,7 @@ class Alzheimers(Component):
 
     def setup(self, builder):
         # Load artifact data for disease model
-        self.bbbm_prevalence = builder.data.load(ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE)
+        # self.bbbm_prevalence = builder.data.load(ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE)
         self.mci_prevalence = builder.data.load(ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE)
         self.alzheimers_prevalence = builder.data.load(ALZHEIMERS.PREVALENCE)
         self.mci_disability_weight = builder.data.load(ALZHEIMERS.MCI_DISABILITY_WEIGHT)
@@ -67,22 +67,22 @@ class Alzheimers(Component):
         bbbm_state = BBBMDiseaseState(
             ALZHEIMERS_DISEASE_MODEL.BBBM_STATE,
             allow_self_transition=True,
-            prevalence=self.bbbm_prevalence,
+            prevalence=lambda builder: builder.data.load(ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE),
             disability_weight=data_values.DW_BBBM,
             excess_mortality_rate=data_values.EMR_BBBM,
         )
         mci_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.MCI_STATE,
             allow_self_transition=True,
-            prevalence=self.mci_prevalence,
-            disability_weight=self.mci_disability_weight,
+            prevalence=lambda builder: builder.data.load(ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE),
+            disability_weight=lambda builder: builder.data.load(ALZHEIMERS.MCI_DISABILITY_WEIGHT),
             excess_mortality_rate=data_values.EMC_MCI,
         )
         alzheimers_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE,
-            prevalence=self.alzheimers_prevalence,
-            disability_weight=self.alzheimers_disability_weight,
-            excess_mortality_rate=self.alzheimers_emr,
+            prevalence=lambda builder: builder.data.load(ALZHEIMERS.PREVALENCE),
+            disability_weight=lambda builder: builder.data.load(ALZHEIMERS.DISABILITY_WEIGHT),
+            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR),
         )
 
         # Add transitions between states
@@ -95,7 +95,7 @@ class Alzheimers(Component):
         mci_state.add_rate_transition(
             output=alzheimers_state,
             # TODO: update to calculate rate
-            transition_rate=self.mci_to_alzheimers_rate,
+            transition_rate=self.get_mci_to_alzheimers_rate,
         )
 
         return DiseaseModel(

@@ -10,8 +10,8 @@ components:
     vivarium_public_health:
         population:
             - Mortality()
-        disease:
-           # - SI('alzheimers_disease_and_other_dementias')
+        # disease:
+        #    - SI('alzheimers_disease_and_other_dementias')
         results:
             - DisabilityObserver()
             - MortalityObserver()
