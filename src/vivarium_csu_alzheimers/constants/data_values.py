@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import NamedTuple
 
 import scipy
 
@@ -55,3 +56,11 @@ MCI_AVG_DURATION = 3.25  # from client
 DW_BBBM = 0
 EMR_BBBM = 0
 EMR_MCI = 0
+
+
+class __Columns(NamedTuple):
+    BBBM_ENTRANCE_TIME: str = "bbbm_entrance_time"
+    ENTRANCE_TIME: str = "entrance_time"
+
+
+COLUMNS = __Columns()
