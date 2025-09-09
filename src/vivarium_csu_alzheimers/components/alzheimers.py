@@ -45,7 +45,7 @@ class BBBMTransitionRate(RateTransition):
             self.transition_rate_pipeline_name,
             source=self.compute_transition_rate,
             component=self,
-            required_resources=["alive", self.joint_paf + COLUMNS.BBBM_ENTRANCE_TIME],
+            required_resources=["alive", self.joint_paf, COLUMNS.BBBM_ENTRANCE_TIME],
         )
         self.rate_conversion_type = self.configuration["rate_conversion_type"]
 
@@ -59,9 +59,13 @@ class BBBMTransitionRate(RateTransition):
 
 
 class BBBMDiseaseState(DiseaseState):
-    def add_bbbm_transition(self, output: BaseDiseaseState) -> BBBMTransitionRate:
+    def add_bbbm_transition(
+        self, output: BaseDiseaseState, transition_rate: DataInput
+    ) -> BBBMTransitionRate:
         """Method to instantiate BBBMTransitionRate and add it to the disease state."""
-        transition = BBBMTransitionRate(input_state=self, output_state=output)
+        transition = BBBMTransitionRate(
+            input_state=self, output_state=output, transition_rate=transition_rate
+        )
         self.add_transition(transition)
         return transition
 
@@ -100,17 +104,18 @@ class Alzheimers(Component):
         new_simulants = pd.DataFrame(index=pop_data.index)
         if pop_data.user_data.get("sim_state") == "time_step":
             breakpoint()
-            new_simulants[COLUMNS.BBBM_ENTRANCE_TIME] = pop_data[COLUMNS.ENTRANCE_TIME]
+            new_simulants[COLUMNS.BBBM_ENTRANCE_TIME] = pop_data.creation_time
         else:
-            # Take random draw and get bbbm entrance time
             draws = self.randomness.get_draw(
                 pop_data.index, additional_key="bbbm_entrance_time"
             )
-            bbbm_duration = draws * BBBM_AVG_DURATION
-            breakpoint()
-            new_simulants[COLUMNS.BBBM_ENTRANCE_TIME] = (
-                pop_data[COLUMNS.ENTRANCE_TIME] - bbbm_duration
+            bbbm_entrance_time = pd.to_datetime(
+                draws * BBBM_AVG_DURATION * 365.0 * -1.0,
+                yearfirst=True,
+                unit="D",
+                origin=pop_data.creation_time,
             )
+            new_simulants[COLUMNS.BBBM_ENTRANCE_TIME] = bbbm_entrance_time
 
         self.population_view.update(new_simulants)
 
@@ -147,8 +152,8 @@ class Alzheimers(Component):
         # Add transitions between states
         bbbm_state.add_bbbm_transition(
             output=mci_state,
-            # TODO: update to use hazard rate calculation
-            # transition_rate=0.25,  # placeholder value
+            # Transition rate is handled in BBBMTransitionRate class and this is a placeholder
+            transition_rate=0.0,
         )
         mci_state.add_rate_transition(
             output=alzheimers_state,
