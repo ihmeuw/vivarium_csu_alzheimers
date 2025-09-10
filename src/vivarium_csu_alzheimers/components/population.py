@@ -145,7 +145,7 @@ class AlzheimersIncidence(Component):
             self.bbbm_incidence_counts.index.get_level_values("year_start") == query_year
         ]
         incident_cases = incident_cases.droplevel(["year_start", "year_end"])
-        # TODO: this needs to be updated
+        # New simulants = model_scale * new_cases * step_size
         mean_incident_cases = self.model_scale * incident_cases * step_size
         simulants_to_add = pd.Series(0, index=mean_incident_cases.index)
 
