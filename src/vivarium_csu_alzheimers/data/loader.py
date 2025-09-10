@@ -306,8 +306,10 @@ def load_mci_conditional_prevalence(
 def load_susceptible_to_bbbm_transition_count(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    """I_BBBM_g,t + D_g,t in
+    """I_BBBM_g,t + D_g,t in "Calculating entrance rate with presymptomatic and MCI stages" from
     https://vivarium-research.readthedocs.io/en/latest/models/other_models/alzheimers_population/index.html
+    Link to WIP docs from open PR:
+    https://vivarium-research--1768.org.readthedocs.build/en/1768/models/other_models/alzheimers_population/index.html#calculating-entrance-rate-with-presymptomatic-and-mci-stages
     """
     DUR = 7  # total duration of pre-dementia AD
     W = 5  # width of age groups
