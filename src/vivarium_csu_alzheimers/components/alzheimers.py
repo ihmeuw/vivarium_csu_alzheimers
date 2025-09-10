@@ -18,7 +18,6 @@ from vivarium_csu_alzheimers.constants.data_values import (
     DW_BBBM,
     EMR_BBBM,
     EMR_MCI,
-    MCI_AVG_DURATION,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
 from vivarium_csu_alzheimers.data.mci_hazard import gamma_hazard
@@ -52,10 +51,12 @@ class BBBMTransitionRate(RateTransition):
     def compute_transition_rate(self, index: pd.Index) -> pd.Series:
         entrance_time = self.population_view.get(index)["bbbm_entrance_time"]
         current_time = self.clock()
+        time_diff_numeric = (current_time - entrance_time).dt.total_seconds() / (
+            365.0 * 24 * 3600
+        )  # years
         # TODO: check for off by one error
         # TODO: scale rate properly
-        breakpoint()
-        return gamma_hazard(current_time - entrance_time) * self.step_size
+        return gamma_hazard(time_diff_numeric) * self.step_size
 
 
 class BBBMDiseaseState(DiseaseState):
@@ -103,7 +104,6 @@ class Alzheimers(Component):
         """Initialize BBBM entrance time for new simulants."""
         new_simulants = pd.DataFrame(index=pop_data.index)
         if pop_data.user_data.get("sim_state") == "time_step":
-            breakpoint()
             new_simulants[COLUMNS.BBBM_ENTRANCE_TIME] = pop_data.creation_time
         else:
             draws = self.randomness.get_draw(
