@@ -10,9 +10,9 @@ ARTIFACT_ROOT = Path(
 )
 
 FORECAST_NC_DATA_FILEPATHS_DICT = {
-    "population": "/mnt/share/forecasting/data/9/future/population/20240320_daly_capstone_resubmission_squeeze_soft_round_shifted_hiv_shocks_covid_all_who_reagg/population_agg.nc",
+    "population": "/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/data/population_agg.nc",  #  comes from /mnt/share/forecasting/data/9/future/population/20240320_daly_capstone_resubmission_squeeze_soft_round_shifted_hiv_shocks_covid_all_who_reagg/population_agg.nc
     #     'births': '/mnt/share/forecasting/data/9/future/live_births/20231204_ref/live_births.nc',
     #     'deaths': '/snfs1/Project/forecasting/results/7/future/death/20240320_daly_capstone_resubmission_squeeze_soft_round_shifted_hiv_shocks_covid_all_who_reagg_num/_all.nc',
-    "mortality": "/snfs1/Project/forecasting/results/7/future/death/20240320_daly_capstone_resubmission_squeeze_soft_round_shifted_hiv_shocks_covid_all_who_reagg/_all.nc",
+    "mortality": "/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/data/mortality_all.nc",  # comes from /snfs1/Project/forecasting/results/7/future/death/20240320_daly_capstone_resubmission_squeeze_soft_round_shifted_hiv_shocks_covid_all_who_reagg/_all.nc
     #     'migration': '/mnt/share/forecasting/data/6/future/migration/20230605_loc_intercept_shocks_pg_21LOCS_ATTENUATED/migration.nc',
 }
