@@ -97,7 +97,9 @@ def load_population_location(
     return location
 
 
-def load_forecast(param: str, location: str, years: int | str | list[int]) -> pd.DataFrame:
+def load_forecast(
+    param: str, location: str, years: int | str | list[int]
+) -> pd.DataFrame:
     loc_id = utility_data.get_location_id(location)
     age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
     return table_from_nc(
@@ -144,7 +146,9 @@ def load_standard_data(
 ) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
-    return interface.get_measure(entity, key.measure, location, years).droplevel("location")
+    return interface.get_measure(entity, key.measure, location, years).droplevel(
+        "location"
+    )
 
 
 def load_metadata(key: str, location: str, years: int | str | list[int] | None = None):
@@ -198,8 +202,12 @@ def _load_em_from_meid(location, meid, measure):
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
     data = vi_utils.reshape(data)
     data = vi_utils.scrub_gbd_conventions(data, location)
-    data = vi_utils.split_interval(data, interval_column="age", split_column_prefix="age")
-    data = vi_utils.split_interval(data, interval_column="year", split_column_prefix="year")
+    data = vi_utils.split_interval(
+        data, interval_column="age", split_column_prefix="age"
+    )
+    data = vi_utils.split_interval(
+        data, interval_column="year", split_column_prefix="year"
+    )
     return vi_utils.sort_hierarchical_data(data).droplevel("location")
 
 
@@ -303,6 +311,75 @@ def load_mci_conditional_prevalence(
     return data_values.MCI_AVG_DURATION / all_state_dur
 
 
+def transform_group_index_J_BBBM(DUR, W, N, index_p0):
+    # transform index for current population age/year group (p0)
+    # into indices needed to compute the J_BBBM equation
+
+    (location, sex, age, _, year, _) = index_p0
+
+    # I_BBBM (p)opulation age/year group 1 (p1)
+    age_p1 = age + (N * W)  # age_start for group 1
+    age_p1 = min(age_p1, 95)  # oldest age group is 95-125
+    year_p12 = round(year + DUR)  # year_start for groups 1 and 2
+    year_p12 = min(year_p12, 2050)
+
+    # I_BBBM (p)opulation age/year group 2 (p2)
+    age_p2 = age + ((N + 1) * W)
+    age_p2 = min(age_p2, 95)
+
+    # I_BBBM (i)ncidence age/year groups (i1, i2)
+    age_i1 = age_p1
+    age_i2 = age_p2
+    year_i12 = 2021
+
+    # gamma (m)ortality age/year group (m)
+    age_m = round(age + (DUR / 2))
+    age_m = W * round(age_m / W)
+    age_m = min(age_m, 95)
+    year_m = round(year + (DUR / 2))
+    year_m = min(year_m, 2050)
+
+    return (
+        (  # I_BBBM (p)opulation age/year group 1 (p1)
+            location,
+            sex,
+            age_p1,
+            age_p1 + 5 if age_p1 != 95 else 125,
+            year_p12,
+            year_p12 + 1,
+        ),
+        (  # I_BBBM (p)opulation age/year group 2 (p2)
+            location,
+            sex,
+            age_p2,
+            age_p2 + 5 if age_p2 != 95 else 125,
+            year_p12,
+            year_p12 + 1,
+        ),
+        (  # I_BBBM (i)ncidence age/year groups (i1)
+            sex,
+            age_i1,
+            age_i1 + 5 if age_i1 != 95 else 125,
+            year_i12,
+            year_i12 + 1,
+        ),
+        (  # I_BBBM (i)ncidence age/year groups (i2)
+            sex,
+            age_i2,
+            age_i2 + 5 if age_i2 != 95 else 125,
+            year_i12,
+            year_i12 + 1,
+        ),
+        (  # gamma (m)ortality age/year group (m)
+            sex,
+            age_m,
+            age_m + 5 if age_m != 95 else 125,
+            year_m,
+            year_m + 1,
+        ),
+    )
+
+
 def load_susceptible_to_bbbm_transition_count(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
@@ -311,46 +388,29 @@ def load_susceptible_to_bbbm_transition_count(
     Link to WIP docs from open PR:
     https://vivarium-research--1768.org.readthedocs.build/en/1768/models/other_models/alzheimers_population/index.html#calculating-entrance-rate-with-presymptomatic-and-mci-stages
     """
-    DUR = 7  # total duration of pre-dementia AD
-    W = 5  # width of age groups
-    R = 2  # remainder (DUR = nw + r)
 
     inc = get_data(data_keys.ALZHEIMERS.INCIDENCE_RATE, location, years)
     pop = get_data(data_keys.POPULATION.STRUCTURE, location, years)
-    new_bbbm_people = pd.DataFrame(0, index=pop.index, columns=pop.columns)
-    for index, row in new_bbbm_people.iterrows():
-        # create tuples to index population for future age groups and year
-        # 'index' tuple format is (location, sex, age_start, age_end, year_start, year_end)
-        # we add empty strings to the location/sex values to keep them the same,
-        # a multiple of W to change age groups, and DUR to change the year
-        next_group_future_year = tuple(map(add, list(index), ["", "", W, W, DUR, DUR]))
-        scnd_group_future_year = tuple(
-            map(add, list(index), ["", "", 2 * W, 2 * W, DUR, DUR])
-        )
-        # cap age and year
-        age_end = min(100, next_group_future_year[3])
-        next_group_future_year = next_group_future_year[:2] + (
-            min(95, next_group_future_year[2]),
-            age_end if age_end < 100 else 125,
-            min(2050, next_group_future_year[4]),
-            min(2051, next_group_future_year[5]),
-        )
-        age_end = min(100, scnd_group_future_year[3])
-        scnd_group_future_year = scnd_group_future_year[:2] + (
-            min(95, scnd_group_future_year[2]),
-            age_end if age_end < 100 else 125,
-            min(2050, scnd_group_future_year[4]),
-            min(2051, scnd_group_future_year[5]),
-        )
-        # get age group incidences
-        next_group_inc = inc.loc[next_group_future_year[1:4] + (2021, 2022)]
-        scnd_group_inc = inc.loc[scnd_group_future_year[1:4] + (2021, 2022)]
+    mort = load_mortality_BBBM_MCI(None, location, years)
 
-        # set value
-        new_bbbm_people.loc[index] = (
-            (1 - (R / W)) * next_group_inc * pop.loc[next_group_future_year]
-        ) + ((R / W) * scnd_group_inc * pop.loc[scnd_group_future_year])
-    # TBD add D_g,t when math is ready from Nathaniel
+    DUR = (
+        data_values.BBBM_AVG_DURATION + data_values.MCI_AVG_DURATION
+    )  # total duration of pre-dementia AD
+    W = data_values.GBD_AGE_GROUPS_WIDTH
+    N = int(DUR / W)
+    R = DUR % W  # remainder
+
+    new_bbbm_people = pd.DataFrame(0, index=pop.index, columns=pop.columns)
+    for index, _ in new_bbbm_people.iterrows():
+        (index_p1, index_p2, index_i1, index_i2, index_m) = (
+            transform_group_index_J_BBBM(DUR, W, N, index)
+        )
+        I_bbbm = ((1 - (R / W)) * inc.loc[index_i1] * pop.loc[index_p1]) + (
+            (R / W) * inc.loc[index_i2] * pop.loc[index_p2]
+        )
+        gamma = DUR * mort.loc[index_m]
+        new_bbbm_people.loc[index] = I_bbbm / (1 - gamma)
+
     new_bbbm_people.index = new_bbbm_people.index.droplevel("location")
     return new_bbbm_people
 
@@ -381,11 +441,11 @@ def load_mci_disability_weight(
     return data
 
 
-def load_mci_to_dementia_transition_rate(
+def load_mortality_BBBM_MCI(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    """i_AD in
-    https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#id5
+    """
+    Mortality with emr = 0, such as for BBBM and MCI states
     """
     acmr = get_data(data_keys.POPULATION.ACMR, location, years)
     csmr = get_data(data_keys.ALZHEIMERS.CSMR, location, years).droplevel(
@@ -394,6 +454,15 @@ def load_mci_to_dementia_transition_rate(
 
     # for now, assume csmr is the same for all years based on docs
     csmr_all_years = pd.DataFrame(csmr, index=acmr.index)
-    mort_MCI = acmr - csmr_all_years  # note that emr_MCI is 0
+    return acmr - csmr_all_years  #  emr_MCI = 0
+
+
+def load_mci_to_dementia_transition_rate(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    """i_AD in
+    https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#id5
+    """
+    mort_MCI = load_mortality_BBBM_MCI(None, location, years)
     # TBD math changes from Nathaniel due to negative values for older age groups
     return (1 / data_values.MCI_AVG_DURATION) - mort_MCI
