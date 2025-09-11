@@ -56,6 +56,7 @@ MCI_AVG_DURATION = 3.25  # from client
 DW_BBBM = 0
 EMR_BBBM = 0
 EMR_MCI = 0
+GBD_AGE_GROUPS_WIDTH = 5
 
 
 class __Columns(NamedTuple):
