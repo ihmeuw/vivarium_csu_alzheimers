@@ -42,8 +42,9 @@ SCREENING_SCALE_UP_DIFFERENCE = (
 # Adjust variance until about 90% of probability lies in interval (variance = .03)
 
 # Use method of moments to get shape and rate parameters
-GAMMA_SHAPE = 3.75**2 / 0.03  # shape parameter alpha
-RATE = 3.75 / 0.03  # rate parameter lambda
+# FIXME: Fix values when we have a better hazard function
+GAMMA_SHAPE = 3.75**2  # shape parameter alpha
+RATE = 3.75  # rate parameter lambda
 
 # Convert rate to scale for scipy
 GAMMA_SCALE = 1 / RATE

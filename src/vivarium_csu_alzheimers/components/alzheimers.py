@@ -54,7 +54,6 @@ class BBBMTransitionRate(RateTransition):
         time_diff_numeric = (current_time - entrance_time).dt.total_seconds() / (
             365.0 * 24 * 3600
         )  # years
-        breakpoint()
         # NOTE: Due to the construction of the hazard function, we clip most of the rate to probability
         # conversions at 1.0
         return gamma_hazard(time_diff_numeric) * self.step_size
@@ -112,10 +111,10 @@ class Alzheimers(Component):
                 pop_data.index, additional_key="bbbm_entrance_time"
             )
             bbbm_entrance_time = pd.to_datetime(
-                draws * (BBBM_AVG_DURATION - self.step_size) * 365.0 * -1.0,
+                draws * (BBBM_AVG_DURATION) * 365.0 * -1.0,
                 yearfirst=True,
                 unit="D",
-                origin=pop_data.creation_time,
+                origin=pop_data.creation_time + pd.Timedelta(days=self.step_size * 365.0),
             )
             new_simulants[COLUMNS.BBBM_ENTRANCE_TIME] = bbbm_entrance_time
 
