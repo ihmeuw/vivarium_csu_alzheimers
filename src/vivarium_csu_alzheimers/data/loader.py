@@ -403,7 +403,6 @@ def load_susceptible_to_bbbm_transition_count(
         gamma = DUR * mort.loc[index_m]
         gamma = 1 - np.exp(-gamma)
         new_bbbm_people.loc[index] = I_bbbm / (1 - gamma)
-        new_bbbm_people.loc[index] = gamma
 
     new_bbbm_people.index = new_bbbm_people.index.droplevel("location")
     return new_bbbm_people
