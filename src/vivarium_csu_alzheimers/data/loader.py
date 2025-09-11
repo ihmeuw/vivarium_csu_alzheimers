@@ -97,9 +97,7 @@ def load_population_location(
     return location
 
 
-def load_forecast(
-    param: str, location: str, years: int | str | list[int]
-) -> pd.DataFrame:
+def load_forecast(param: str, location: str, years: int | str | list[int]) -> pd.DataFrame:
     loc_id = utility_data.get_location_id(location)
     age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
     return table_from_nc(
@@ -146,9 +144,7 @@ def load_standard_data(
 ) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
-    return interface.get_measure(entity, key.measure, location, years).droplevel(
-        "location"
-    )
+    return interface.get_measure(entity, key.measure, location, years).droplevel("location")
 
 
 def load_metadata(key: str, location: str, years: int | str | list[int] | None = None):
@@ -202,12 +198,8 @@ def _load_em_from_meid(location, meid, measure):
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
     data = vi_utils.reshape(data)
     data = vi_utils.scrub_gbd_conventions(data, location)
-    data = vi_utils.split_interval(
-        data, interval_column="age", split_column_prefix="age"
-    )
-    data = vi_utils.split_interval(
-        data, interval_column="year", split_column_prefix="year"
-    )
+    data = vi_utils.split_interval(data, interval_column="age", split_column_prefix="age")
+    data = vi_utils.split_interval(data, interval_column="year", split_column_prefix="year")
     return vi_utils.sort_hierarchical_data(data).droplevel("location")
 
 
@@ -402,14 +394,16 @@ def load_susceptible_to_bbbm_transition_count(
 
     new_bbbm_people = pd.DataFrame(0, index=pop.index, columns=pop.columns)
     for index, _ in new_bbbm_people.iterrows():
-        (index_p1, index_p2, index_i1, index_i2, index_m) = (
-            transform_group_index_J_BBBM(DUR, W, N, index)
+        (index_p1, index_p2, index_i1, index_i2, index_m) = transform_group_index_J_BBBM(
+            DUR, W, N, index
         )
         I_bbbm = ((1 - (R / W)) * inc.loc[index_i1] * pop.loc[index_p1]) + (
             (R / W) * inc.loc[index_i2] * pop.loc[index_p2]
         )
         gamma = DUR * mort.loc[index_m]
+        gamma = 1 - np.exp(-gamma)
         new_bbbm_people.loc[index] = I_bbbm / (1 - gamma)
+        new_bbbm_people.loc[index] = gamma
 
     new_bbbm_people.index = new_bbbm_people.index.droplevel("location")
     return new_bbbm_people
