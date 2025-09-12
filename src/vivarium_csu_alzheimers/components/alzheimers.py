@@ -54,8 +54,7 @@ class BBBMTransitionRate(RateTransition):
         time_diff_numeric = (current_time - entrance_time).dt.total_seconds() / (
             365.0 * 24 * 3600
         )  # years
-        # NOTE: Due to the construction of the hazard function, we clip most of the rate to probability
-        # conversions at 1.0
+
         return gamma_hazard(time_diff_numeric) * self.step_size
 
 
