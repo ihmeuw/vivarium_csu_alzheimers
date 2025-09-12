@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import NamedTuple
 
 import scipy
 
@@ -41,8 +42,9 @@ SCREENING_SCALE_UP_DIFFERENCE = (
 # Adjust variance until about 90% of probability lies in interval (variance = .03)
 
 # Use method of moments to get shape and rate parameters
-GAMMA_SHAPE = 3.75**2 / 0.03  # shape parameter alpha
-RATE = 3.75 / 0.03  # rate parameter lambda
+# FIXME: Fix values when we have a better hazard function
+GAMMA_SHAPE = 3.75**2  # shape parameter alpha
+RATE = 3.75  # rate parameter lambda
 
 # Convert rate to scale for scipy
 GAMMA_SCALE = 1 / RATE
@@ -55,5 +57,12 @@ MCI_AVG_DURATION = 3.25  # from client
 DW_BBBM = 0
 EMR_BBBM = 0
 EMR_MCI = 0
-
 GBD_AGE_GROUPS_WIDTH = 5
+
+
+class __Columns(NamedTuple):
+    BBBM_ENTRANCE_TIME: str = "bbbm_entrance_time"
+    ENTRANCE_TIME: str = "entrance_time"
+
+
+COLUMNS = __Columns()
