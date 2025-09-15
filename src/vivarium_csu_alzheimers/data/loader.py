@@ -69,7 +69,11 @@ def get_data(
         # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
         data_keys.ALZHEIMERS.EMR: load_standard_data,
+<<<<<<< HEAD
         data_keys.ALZHEIMERS.DISABILIITY_WEIGHT: load_standard_data,
+=======
+        data_keys.ALZHEIMERS.DISABLIITY_WEIGHT: load_standard_data,
+>>>>>>> main
         data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
         data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION: load_alzheimers_incidence_total_population,
