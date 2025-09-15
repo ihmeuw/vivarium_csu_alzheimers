@@ -141,12 +141,14 @@ class AlzheimersIncidence(Component):
             pop_structure.index.get_level_values("year_start") == query_year
         ]
         pop_structure.index = pop_structure.index.droplevel(["year_start", "year_end"])
-        incident_cases = self.bbbm_incidence_counts.loc[
+        full_population_incident_cases = self.bbbm_incidence_counts.loc[
             self.bbbm_incidence_counts.index.get_level_values("year_start") == query_year
         ]
-        incident_cases = incident_cases.droplevel(["year_start", "year_end"])
+        full_population_incident_cases = full_population_incident_cases.droplevel(
+            ["year_start", "year_end"]
+        )
         # New simulants = model_scale * new_cases * step_size
-        mean_incident_cases = self.model_scale * incident_cases * step_size
+        mean_incident_cases = self.model_scale * full_population_incident_cases * step_size
         simulants_to_add = pd.Series(0, index=mean_incident_cases.index)
 
         # Determine number of simulants to add for each demographic group

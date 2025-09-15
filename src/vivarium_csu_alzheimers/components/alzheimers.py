@@ -59,12 +59,10 @@ class BBBMTransitionRate(RateTransition):
 
 
 class BBBMDiseaseState(DiseaseState):
-    def add_bbbm_transition(
-        self, output: BaseDiseaseState, transition_rate: DataInput
-    ) -> BBBMTransitionRate:
+    def add_bbbm_transition(self, output: BaseDiseaseState) -> BBBMTransitionRate:
         """Method to instantiate BBBMTransitionRate and add it to the disease state."""
         transition = BBBMTransitionRate(
-            input_state=self, output_state=output, transition_rate=transition_rate
+            input_state=self, output_state=output, transition_rate=0.0
         )
         self.add_transition(transition)
         return transition
@@ -143,18 +141,12 @@ class Alzheimers(Component):
         alzheimers_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE,
             prevalence=lambda builder: builder.data.load(ALZHEIMERS.PREVALENCE),
-            disability_weight=lambda builder: builder.data.load(
-                ALZHEIMERS.DISABILIITY_WEIGHT
-            ),
+            disability_weight=lambda builder: builder.data.load(ALZHEIMERS.DISABILITY_WEIGHT),
             excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR),
         )
 
         # Add transitions between states
-        bbbm_state.add_bbbm_transition(
-            output=mci_state,
-            # Transition rate is handled in BBBMTransitionRate class and this is a placeholder
-            transition_rate=0.0,
-        )
+        bbbm_state.add_bbbm_transition(output=mci_state)
         mci_state.add_rate_transition(
             output=alzheimers_state,
             transition_rate=lambda builder: builder.data.load(
