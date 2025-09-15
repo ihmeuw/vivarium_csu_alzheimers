@@ -3,8 +3,6 @@ from typing import NamedTuple
 
 import scipy
 
-import scipy
-
 ############################
 # Disease Model Parameters #
 ############################

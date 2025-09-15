@@ -46,7 +46,7 @@ class __Alzheimers(NamedTuple):
     )
     CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
     EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
-    DISABILIITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"
+    DISABILITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"
     MCI_DISABILITY_WEIGHT: str = "cause.alzheimers.mci_disability_weight"
     RESTRICTIONS: str = "cause.alzheimers_disease_and_other_dementias.restrictions"
 

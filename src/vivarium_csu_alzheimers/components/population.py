@@ -141,12 +141,14 @@ class AlzheimersIncidence(Component):
             pop_structure.index.get_level_values("year_start") == query_year
         ]
         pop_structure.index = pop_structure.index.droplevel(["year_start", "year_end"])
-        incident_cases = self.bbbm_incidence_counts.loc[
+        full_population_incident_cases = self.bbbm_incidence_counts.loc[
             self.bbbm_incidence_counts.index.get_level_values("year_start") == query_year
         ]
-        incident_cases = incident_cases.droplevel(["year_start", "year_end"])
+        full_population_incident_cases = full_population_incident_cases.droplevel(
+            ["year_start", "year_end"]
+        )
         # New simulants = model_scale * new_cases * step_size
-        mean_incident_cases = self.model_scale * incident_cases * step_size
+        mean_incident_cases = self.model_scale * full_population_incident_cases * step_size
         simulants_to_add = pd.Series(0, index=mean_incident_cases.index)
 
         # Determine number of simulants to add for each demographic group
@@ -171,15 +173,9 @@ class AlzheimersIncidence(Component):
     # Helper methods #
     ##################
 
-<<<<<<< HEAD
     def load_bbbm_incidence_counts(self, builder: Builder) -> pd.Series:
         incidence_counts = builder.data.load(
             data_keys.ALZHEIMERS.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT
-=======
-    def load_incidence_rate(self, builder: Builder) -> pd.Series:
-        incidence_rate = builder.data.load(
-            data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION
->>>>>>> main
         )
         # Updating age_end to match configuration since some simulants are living past 125
         incidence_counts.loc[incidence_counts["age_end"] == 125, "age_end"] = self.age_end
