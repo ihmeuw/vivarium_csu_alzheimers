@@ -24,7 +24,7 @@ LOCATIONS = [
     "Japan",
     "Germany",
     "Israel",
-    "Taiwan",
+    "Taiwan (Province of China)",
     "Spain",
 ]
 

@@ -456,6 +456,4 @@ def load_mci_to_dementia_transition_rate(
     """i_AD in
     https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#id5
     """
-    mort_MCI = load_mortality_BBBM_MCI(None, location, years)
-    # TBD math changes from Nathaniel due to negative values for older age groups
-    return (1 / data_values.MCI_AVG_DURATION) - mort_MCI
+    return 1 / data_values.MCI_AVG_DURATION
