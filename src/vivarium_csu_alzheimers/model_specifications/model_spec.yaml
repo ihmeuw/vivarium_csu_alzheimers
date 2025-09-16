@@ -15,6 +15,7 @@ components:
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
 
+configuration:
     input_data:
         input_draw_number: 0
         artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model4.2/united_states_of_america.hdf'
@@ -30,7 +31,7 @@ components:
             month: 1
             day: 1
         end:
-            year: 2100
+            year: 2035
             month: 12
             day: 31
         step_size: 183  # days 365/2 = 182.5. 183 days gaurantees 2 steps per year for the 
