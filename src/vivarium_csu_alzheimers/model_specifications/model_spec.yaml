@@ -31,14 +31,14 @@ configuration:
             month: 1
             day: 1
         end:
-            year: 2035
+            year: 2100
             month: 12
             day: 31
         step_size: 183  # days 365/2 = 182.5. 183 days gaurantees 2 steps per year for the 
                         # 76 year simulation period including leap years
     population:
         population_size: 20_000
-        initialization_age_min: 30
+        initialization_age_min: 25
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
         untracking_age: 200
