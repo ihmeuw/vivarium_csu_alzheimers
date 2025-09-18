@@ -396,7 +396,7 @@ def load_susceptible_to_bbbm_transition_count(
     https://vivarium-research--1768.org.readthedocs.build/en/1768/models/other_models/alzheimers_population/index.html#calculating-entrance-rate-with-presymptomatic-and-mci-stages
     """
 
-    inc = get_data(data_keys.ALZHEIMERS.INCIDENCE_RATE, location, years)
+    inc = get_data(data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION, location, years)
     pop = get_data(data_keys.POPULATION.STRUCTURE, location, years)
     mort = load_background_mortality(None, location, years)
 
