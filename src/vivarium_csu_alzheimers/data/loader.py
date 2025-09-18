@@ -97,7 +97,9 @@ def load_population_location(
     return location
 
 
-def load_forecast(param: str, location: str, years: int | str | list[int]) -> pd.DataFrame:
+def load_forecast(
+    param: str, location: str, years: int | str | list[int]
+) -> pd.DataFrame:
     loc_id = utility_data.get_location_id(location)
     age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
     return table_from_nc(
@@ -144,7 +146,9 @@ def load_standard_data(
 ) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
-    return interface.get_measure(entity, key.measure, location, years).droplevel("location")
+    return interface.get_measure(entity, key.measure, location, years).droplevel(
+        "location"
+    )
 
 
 def load_metadata(key: str, location: str, years: int | str | list[int] | None = None):
@@ -198,8 +202,12 @@ def _load_em_from_meid(location, meid, measure):
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
     data = vi_utils.reshape(data)
     data = vi_utils.scrub_gbd_conventions(data, location)
-    data = vi_utils.split_interval(data, interval_column="age", split_column_prefix="age")
-    data = vi_utils.split_interval(data, interval_column="year", split_column_prefix="year")
+    data = vi_utils.split_interval(
+        data, interval_column="age", split_column_prefix="age"
+    )
+    data = vi_utils.split_interval(
+        data, interval_column="year", split_column_prefix="year"
+    )
     return vi_utils.sort_hierarchical_data(data).droplevel("location")
 
 
@@ -325,7 +333,7 @@ def transform_group_index_J_BBBM(DUR, W, N, index_p0):
     year_i12 = 2021
 
     # gamma (m)ortality age/year group (m)
-    age_m = round(age + (DUR / 2))
+    age_m = age + (DUR / 2)
     age_m = W * round(age_m / W)  # round to nearest W
     age_m = min(age_m, 95)  # NB: for mortality, still using oldest age group
     year_m = round(year + (DUR / 2))
@@ -376,7 +384,9 @@ def loc_any_group(df, index, val):
     # get row of dataframe (population, incidence or mortality) by index tuple.
     # if age group does not exist, set row to val
 
-    age = index[-4]  # population df starts with location; incidence and mortality dfs don't
+    age = index[
+        -4
+    ]  # population df starts with location; incidence and mortality dfs don't
     if age > 95:
         # return zeros for all values
         df_row = df.iloc[0]  # get row with same shape as df
@@ -396,7 +406,9 @@ def load_susceptible_to_bbbm_transition_count(
     https://vivarium-research--1768.org.readthedocs.build/en/1768/models/other_models/alzheimers_population/index.html#calculating-entrance-rate-with-presymptomatic-and-mci-stages
     """
 
-    inc = get_data(data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION, location, years)
+    inc = get_data(
+        data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION, location, years
+    )
     pop = get_data(data_keys.POPULATION.STRUCTURE, location, years)
     mort = load_background_mortality(None, location, years)
 
@@ -409,12 +421,16 @@ def load_susceptible_to_bbbm_transition_count(
 
     new_bbbm_people = pd.DataFrame(0, index=pop.index, columns=pop.columns)
     for index, _ in new_bbbm_people.iterrows():
-        (index_p1, index_p2, index_i1, index_i2, index_m) = transform_group_index_J_BBBM(
-            DUR, W, N, index
+        (index_p1, index_p2, index_i1, index_i2, index_m) = (
+            transform_group_index_J_BBBM(DUR, W, N, index)
         )
         I_bbbm = (
-            (1 - (R / W)) * loc_any_group(inc, index_i1, 0) * loc_any_group(pop, index_p1, 0)
-        ) + ((R / W) * loc_any_group(inc, index_i2, 0) * loc_any_group(pop, index_p2, 0))
+            (1 - (R / W))
+            * loc_any_group(inc, index_i1, 0)
+            * loc_any_group(pop, index_p1, 0)
+        ) + (
+            (R / W) * loc_any_group(inc, index_i2, 0) * loc_any_group(pop, index_p2, 0)
+        )
         gamma = DUR * mort.loc[index_m]
         gamma = 1 - np.exp(-gamma)
         new_bbbm_people.loc[index] = I_bbbm / (1 - gamma)
