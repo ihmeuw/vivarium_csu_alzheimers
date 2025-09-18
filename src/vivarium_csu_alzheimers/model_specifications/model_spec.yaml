@@ -15,9 +15,10 @@ components:
             - MortalityObserver()
             - DiseaseObserver('alzheimers_disease_and_other_dementias')
 
+configuration:
     input_data:
         input_draw_number: 0
-        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model4.1/united_states_of_america.hdf'
+        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model4.2/united_states_of_america.hdf'
     interpolation:
         order: 0
         extrapolate: True
@@ -37,7 +38,7 @@ components:
                         # 76 year simulation period including leap years
     population:
         population_size: 20_000
-        initialization_age_min: 30
+        initialization_age_min: 25
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
         untracking_age: 200

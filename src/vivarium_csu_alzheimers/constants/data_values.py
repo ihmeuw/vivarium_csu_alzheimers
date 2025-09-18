@@ -43,15 +43,11 @@ SCREENING_SCALE_UP_DIFFERENCE = (
 
 # Use method of moments to get shape and rate parameters
 # FIXME: Fix values when we have a better hazard function
-GAMMA_SHAPE = 3.75**2  # shape parameter alpha
-RATE = 3.75  # rate parameter lambda
+WEIBULL_SHAPE = 1.22
+WEIBULL_SCALE = 6.76
+BBBM_HAZARD_DIST = scipy.stats.weibull_min(WEIBULL_SHAPE, scale=WEIBULL_SCALE)
+BBBM_AVG_DURATION = BBBM_HAZARD_DIST.mean()
 
-# Convert rate to scale for scipy
-GAMMA_SCALE = 1 / RATE
-
-BBBM_GAMMA_DIST = scipy.stats.gamma(GAMMA_SHAPE, scale=GAMMA_SCALE)
-
-BBBM_AVG_DURATION = GAMMA_SHAPE / RATE
 MCI_AVG_DURATION = 3.85
 DW_BBBM = 0
 EMR_BBBM = 0
