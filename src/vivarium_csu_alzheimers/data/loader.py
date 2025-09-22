@@ -325,7 +325,7 @@ def transform_group_index_J_BBBM(DUR, W, N, index_p0):
     year_i12 = 2021
 
     # gamma (m)ortality age/year group (m)
-    age_m = round(age + (DUR / 2))
+    age_m = age + (DUR / 2)
     age_m = W * round(age_m / W)  # round to nearest W
     age_m = min(age_m, 95)  # NB: for mortality, still using oldest age group
     year_m = round(year + (DUR / 2))
