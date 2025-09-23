@@ -28,9 +28,18 @@ from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
 from vivarium_csu_alzheimers.constants import data_keys, data_values
-from vivarium_csu_alzheimers.constants.paths import FORECAST_NC_DATA_FILEPATHS_DICT
-from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
+from vivarium_csu_alzheimers.constants.paths import (
+    FORECAST_NC_DATA_FILEPATHS_DICT,
+    DEMENTIA_PROPORTIONS_PATH,
+)
+from vivarium_csu_alzheimers.data.extra_gbd import (
+    load_raw_incidence,
+    load_incidence_dismod,
+    load_prevalence_dismod,
+)
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
+
+import pdb
 
 
 def get_data(
@@ -60,10 +69,9 @@ def get_data(
         data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         data_keys.POPULATION.SCALING_FACTOR: load_alzheimers_all_states_prevalence,
-        data_keys.ALZHEIMERS.PREVALENCE: load_standard_data,
+        data_keys.ALZHEIMERS.PREVALENCE: load_prevalence,
         data_keys.ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE: load_bbbm_conditional_prevalence,
         data_keys.ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE: load_mci_conditional_prevalence,
-        data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
         data_keys.ALZHEIMERS.MCI_TO_DEMENTIA_TRANSITION_RATE: load_mci_to_dementia_transition_rate,
         data_keys.ALZHEIMERS.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: load_susceptible_to_bbbm_transition_count,
         # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
@@ -97,7 +105,9 @@ def load_population_location(
     return location
 
 
-def load_forecast(param: str, location: str, years: int | str | list[int]) -> pd.DataFrame:
+def load_forecast(
+    param: str, location: str, years: int | str | list[int]
+) -> pd.DataFrame:
     loc_id = utility_data.get_location_id(location)
     age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
     return table_from_nc(
@@ -144,7 +154,9 @@ def load_standard_data(
 ) -> pd.DataFrame:
     key = EntityKey(key)
     entity = get_entity(key)
-    return interface.get_measure(entity, key.measure, location, years).droplevel("location")
+    return interface.get_measure(entity, key.measure, location, years).droplevel(
+        "location"
+    )
 
 
 def load_metadata(key: str, location: str, years: int | str | list[int] | None = None):
@@ -198,8 +210,12 @@ def _load_em_from_meid(location, meid, measure):
     data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
     data = vi_utils.reshape(data)
     data = vi_utils.scrub_gbd_conventions(data, location)
-    data = vi_utils.split_interval(data, interval_column="age", split_column_prefix="age")
-    data = vi_utils.split_interval(data, interval_column="year", split_column_prefix="year")
+    data = vi_utils.split_interval(
+        data, interval_column="age", split_column_prefix="age"
+    )
+    data = vi_utils.split_interval(
+        data, interval_column="year", split_column_prefix="year"
+    )
     return vi_utils.sort_hierarchical_data(data).droplevel("location")
 
 
@@ -215,11 +231,49 @@ def load_alzheimers_incidence_total_population(
     entity = get_entity(key)
     raw_incidence = load_raw_incidence(entity, location)
     incidence = reshape_to_vivarium_format(raw_incidence, location)
+    pdb.set_trace()
     incidence.index = incidence.index.droplevel(
         ["cause_id", "measure_id", "metric_id", "version_id"]
     )
 
+    raw_incidence = load_incidence_dismod(location)  # total population
+    pdb.set_trace()
+    incidence = reshape_to_vivarium_format(raw_incidence, location)
+    incidence.index = incidence.index.droplevel(
+        ["cause_id", "measure_id", "metric_id", "version_id"]
+    )
+
+    proportions = load_dementia_proportions(None, location, years)
+    pdb.set_trace()
+
     return incidence
+
+
+def load_prevalence(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    # testing
+    load_alzheimers_incidence_total_population(
+        data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION, location, years
+    )
+
+    raw_prevalence = load_incidence_dismod(location)  # total population
+    pdb.set_trace()
+    prevalence = reshape_to_vivarium_format(raw_prevalence, location, 1000)
+    prevalence.index = prevalence.index.droplevel(
+        ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
+    )
+
+    proportions = load_dementia_proportions(None, location, years)
+    pdb.set_trace()
+
+    # does this do the same thing??
+    from_meid = _load_em_from_meid(
+        location, 24351, vi_globals.MEASURES["Incidence rate"]
+    )
+
+    # TBD data formatting / multiply by props
+    return prevalence
 
 
 def get_entity(key: str | EntityKey):
@@ -235,6 +289,7 @@ def get_entity(key: str | EntityKey):
 
 
 def reshape_to_vivarium_format(df, location):
+    pdb.set_trace()
     df = vi_utils.reshape(df, value_cols=vi_globals.DRAW_COLUMNS)
     df = vi_utils.scrub_gbd_conventions(df, location)
     df = vi_utils.split_interval(df, interval_column="age", split_column_prefix="age")
@@ -376,7 +431,9 @@ def loc_any_group(df, index, val):
     # get row of dataframe (population, incidence or mortality) by index tuple.
     # if age group does not exist, set row to val
 
-    age = index[-4]  # population df starts with location; incidence and mortality dfs don't
+    age = index[
+        -4
+    ]  # population df starts with location; incidence and mortality dfs don't
     if age > 95:
         # return zeros for all values
         df_row = df.iloc[0]  # get row with same shape as df
@@ -396,7 +453,9 @@ def load_susceptible_to_bbbm_transition_count(
     https://vivarium-research--1768.org.readthedocs.build/en/1768/models/other_models/alzheimers_population/index.html#calculating-entrance-rate-with-presymptomatic-and-mci-stages
     """
 
-    inc = get_data(data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION, location, years)
+    inc = get_data(
+        data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION, location, years
+    )
     pop = get_data(data_keys.POPULATION.STRUCTURE, location, years)
     mort = load_background_mortality(None, location, years)
 
@@ -409,12 +468,16 @@ def load_susceptible_to_bbbm_transition_count(
 
     new_bbbm_people = pd.DataFrame(0, index=pop.index, columns=pop.columns)
     for index, _ in new_bbbm_people.iterrows():
-        (index_p1, index_p2, index_i1, index_i2, index_m) = transform_group_index_J_BBBM(
-            DUR, W, N, index
+        (index_p1, index_p2, index_i1, index_i2, index_m) = (
+            transform_group_index_J_BBBM(DUR, W, N, index)
         )
         I_bbbm = (
-            (1 - (R / W)) * loc_any_group(inc, index_i1, 0) * loc_any_group(pop, index_p1, 0)
-        ) + ((R / W) * loc_any_group(inc, index_i2, 0) * loc_any_group(pop, index_p2, 0))
+            (1 - (R / W))
+            * loc_any_group(inc, index_i1, 0)
+            * loc_any_group(pop, index_p1, 0)
+        ) + (
+            (R / W) * loc_any_group(inc, index_i2, 0) * loc_any_group(pop, index_p2, 0)
+        )
         gamma = DUR * mort.loc[index_m]
         gamma = 1 - np.exp(-gamma)
         new_bbbm_people.loc[index] = I_bbbm / (1 - gamma)
@@ -472,3 +535,11 @@ def load_mci_to_dementia_transition_rate(
     https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#id5
     """
     return 1 / data_values.MCI_AVG_DURATION
+
+
+def load_dementia_proportions(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    df = pd.read_csv(DEMENTIA_PROPORTIONS_PATH)
+    # TBD vivarium inputs format (ids from age group and sex names, etc)
+    return df
