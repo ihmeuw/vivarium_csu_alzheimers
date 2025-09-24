@@ -48,6 +48,3 @@ configuration:
             - 'age_group'
             - 'sex'
             - 'current_year' 
-    
-    intervention:
-        scenario: 'baseline'
