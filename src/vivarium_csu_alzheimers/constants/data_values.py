@@ -3,6 +3,8 @@ from typing import NamedTuple
 
 import scipy
 
+from vivarium_csu_alzheimers.constants.data_keys import TESTING_RATES
+
 ############################
 # Disease Model Parameters #
 ############################
@@ -58,6 +60,67 @@ GBD_AGE_GROUPS_WIDTH = 5
 class __Columns(NamedTuple):
     BBBM_ENTRANCE_TIME: str = "bbbm_entrance_time"
     ENTRANCE_TIME: str = "entrance_time"
+    TESTING_PROPENSITY: str = "testing_propensity"
+    TESTED_STATUS: str = "tested_status"
 
 
 COLUMNS = __Columns()
+
+
+class __TestingStates(NamedTuple):
+    NOT_TESTED: str = "not_tested"
+    CSF: str = "csf"
+    PET: str = "pet"
+
+
+TESTING_STATES = __TestingStates()
+
+
+class TestingRates(NamedTuple):
+    mean: float
+    ci_lower: float
+    ci_upper: float
+
+
+LOCATION_TESTING_RATES = {
+    "United States of America": {
+        TESTING_RATES.CSF: TestingRates(mean=0.108, ci_lower=0.054, ci_upper=0.161),
+        TESTING_RATES.PET: TestingRates(mean=0.15, ci_lower=0.075, ci_upper=0.225),
+    },
+    "Germany": {
+        TESTING_RATES.CSF: TestingRates(mean=0.187, ci_lower=0.094, ci_upper=0.281),
+        TESTING_RATES.PET: TestingRates(mean=0.16, ci_lower=0.08, ci_upper=0.24),
+    },
+    "Spain": {
+        TESTING_RATES.CSF: TestingRates(mean=0.246, ci_lower=0.123, ci_upper=0.369),
+        TESTING_RATES.PET: TestingRates(mean=0.259, ci_lower=0.129, ci_upper=0.388),
+    },
+    "Sweden": {
+        TESTING_RATES.CSF: TestingRates(mean=0.405, ci_lower=0.203, ci_upper=0.608),
+        TESTING_RATES.PET: TestingRates(mean=0.045, ci_lower=0.023, ci_upper=0.068),
+    },
+    "United Kingdom": {
+        TESTING_RATES.CSF: TestingRates(mean=0.095, ci_lower=0.047, ci_upper=0.142),
+        TESTING_RATES.PET: TestingRates(mean=0.107, ci_lower=0.053, ci_upper=0.16),
+    },
+    "Japan": {
+        TESTING_RATES.CSF: TestingRates(mean=0.133, ci_lower=0.067, ci_upper=0.2),
+        TESTING_RATES.PET: TestingRates(mean=0.149, ci_lower=0.075, ci_upper=0.224),
+    },
+    "Israel": {
+        TESTING_RATES.CSF: TestingRates(mean=0.133, ci_lower=0.067, ci_upper=0.2),
+        TESTING_RATES.PET: TestingRates(mean=0.149, ci_lower=0.075, ci_upper=0.224),
+    },
+    "Taiwan (Province of China)": {
+        TESTING_RATES.CSF: TestingRates(mean=0.133, ci_lower=0.067, ci_upper=0.2),
+        TESTING_RATES.PET: TestingRates(mean=0.149, ci_lower=0.075, ci_upper=0.224),
+    },
+    "Brazil": {
+        TESTING_RATES.CSF: TestingRates(mean=0.133, ci_lower=0.067, ci_upper=0.2),
+        TESTING_RATES.PET: TestingRates(mean=0.149, ci_lower=0.075, ci_upper=0.224),
+    },
+    "China": {
+        TESTING_RATES.CSF: TestingRates(mean=0.044, ci_lower=0.022, ci_upper=0.066),
+        TESTING_RATES.PET: TestingRates(mean=0.061, ci_lower=0.03, ci_upper=0.091),
+    },
+}

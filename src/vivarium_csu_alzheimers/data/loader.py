@@ -13,14 +13,10 @@ for an example.
    No logging is done here. Logging is done in vivarium inputs itself and forwarded.
 """
 
-from operator import add
-from typing import Any
-
 import numpy as np
 import pandas as pd
 from gbd_mapping import causes, covariates, risk_factors
 from vivarium.framework.artifact import EntityKey
-from vivarium_gbd_access import gbd
 from vivarium_inputs import globals as vi_globals
 from vivarium_inputs import interface
 from vivarium_inputs import utilities as vi_utils
@@ -28,9 +24,11 @@ from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
 from vivarium_csu_alzheimers.constants import data_keys, data_values
+from vivarium_csu_alzheimers.constants.metadata import ARTIFACT_COLUMNS
 from vivarium_csu_alzheimers.constants.paths import FORECAST_NC_DATA_FILEPATHS_DICT
 from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
+from vivarium_csu_alzheimers.utilities import get_norm, get_random_variable_draws
 
 
 def get_data(
@@ -73,6 +71,8 @@ def get_data(
         data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
         data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION: load_alzheimers_incidence_total_population,
+        data_keys.TESTING_RATES.CSF: load_csf_pet_testing_rates,
+        data_keys.TESTING_RATES.PET: load_csf_pet_testing_rates,
     }
     mapped_value = mapping[lookup_key](lookup_key, location, years)
 
@@ -188,22 +188,6 @@ def load_categorical_paf(
     )
     paf = (sum_exp_x_rr - 1) / sum_exp_x_rr
     return paf
-
-
-def _load_em_from_meid(location, meid, measure):
-    location_id = utility_data.get_location_id(location)
-    data = gbd.get_modelable_entity_draws(meid, location_id)
-    data = data[data.measure_id == vi_globals.MEASURES[measure]]
-    data = vi_utils.normalize(data, fill_value=0)
-    data = data.filter(vi_globals.DEMOGRAPHIC_COLUMNS + vi_globals.DRAW_COLUMNS)
-    data = vi_utils.reshape(data)
-    data = vi_utils.scrub_gbd_conventions(data, location)
-    data = vi_utils.split_interval(data, interval_column="age", split_column_prefix="age")
-    data = vi_utils.split_interval(data, interval_column="year", split_column_prefix="year")
-    return vi_utils.sort_hierarchical_data(data).droplevel("location")
-
-
-# TODO - add project-specific data functions here
 
 
 def load_alzheimers_incidence_total_population(
@@ -472,3 +456,23 @@ def load_mci_to_dementia_transition_rate(
     https://vivarium-research.readthedocs.io/en/latest/models/causes/alzheimers/presymptomatic_and_mci_gbd_2021/index.html#id5
     """
     return 1 / data_values.MCI_AVG_DURATION
+
+
+def load_csf_pet_testing_rates(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    """Load the testing rates.
+
+    NOTES
+    -----
+    Testing rates do not vary by age, sex, or year, and so we do not include
+    demographics in the artifact. We simply return a single-row dataframe where
+    the index is meaningless.
+    """
+    rate = data_values.LOCATION_TESTING_RATES[location][key]
+    dist = get_norm(
+        mean=rate.mean,
+        ninety_five_pct_confidence_interval=(rate.ci_lower, rate.ci_upper),
+    )
+    draws = get_random_variable_draws(ARTIFACT_COLUMNS, key, dist)
+    return pd.DataFrame([draws], columns=ARTIFACT_COLUMNS)
