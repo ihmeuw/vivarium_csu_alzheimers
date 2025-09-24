@@ -32,18 +32,15 @@ POPULATION = __Population()
 
 
 class __Alzheimers(NamedTuple):
-    PREVALENCE: str = "cause.alzheimers_disease_and_other_dementias.prevalence"
+    PREVALENCE: str = "cause.alzheimers.prevalence"
     BBBM_CONDITIONAL_PREVALANCE: str = "cause.alzheimers.bbbm_conditional_prevalence"
     MCI_CONDITIONAL_PREVALENCE: str = "cause.alzheimers.mci_conditional_prevalence"
-    INCIDENCE_RATE: str = "cause.alzheimers_disease_and_other_dementias.incidence_rate"
     MCI_TO_DEMENTIA_TRANSITION_RATE: str = "cause.alzheimers.mci_to_dementia_transition_rate"
     SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: str = (
         "cause.alzheimers.susceptible_to_bbbm_transition_count"
     )
     # BBBM to MCI transition rate caluclated during sim using mci_hazard.py and time in state
-    INCIDENCE_RATE_TOTAL_POPULATION: str = (
-        "cause.alzheimers_disease_and_other_dementias.population_incidence_rate"
-    )
+    INCIDENCE_RATE_TOTAL_POPULATION: str = "cause.alzheimers.population_incidence_rate"
     CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
     EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
     DISABILITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"

@@ -4,8 +4,6 @@ from vivarium_gbd_access import utilities as vi_utils
 from vivarium_inputs import globals as vi_globals
 from vivarium_inputs import utility_data
 
-import pdb
-
 
 @vi_utils.cache
 def load_raw_incidence(entity, location: str) -> pd.DataFrame:
@@ -45,6 +43,8 @@ def load_incidence_dismod(location: str) -> pd.DataFrame:
         year_id=2023,
         location_id=location_id,
         measure_id=vi_globals.MEASURES["Incidence rate"],
+        downsample=True,
+        n_draws=500,
     )
     return data
 
@@ -60,5 +60,7 @@ def load_prevalence_dismod(location: str) -> pd.DataFrame:
         year_id=2023,
         location_id=location_id,
         measure_id=vi_globals.MEASURES["Prevalence"],
+        downsample=True,
+        n_draws=500,
     )
     return data
