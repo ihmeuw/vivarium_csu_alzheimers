@@ -35,7 +35,6 @@ from vivarium_csu_alzheimers.constants.paths import (
 from vivarium_csu_alzheimers.data.extra_gbd import (
     load_incidence_dismod,
     load_prevalence_dismod,
-    load_raw_incidence,
 )
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
 
