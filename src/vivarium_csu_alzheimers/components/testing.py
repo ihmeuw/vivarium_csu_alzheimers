@@ -69,7 +69,7 @@ class Testing(Component):
                 ),
             }
         )
-        
+
         # Define eligibility
         eligible_state_idx = self._get_eligible_state_idx(states)
         eligible_csf_propensity_idx = self._get_eligibile_csf_propensity_idx(
@@ -154,12 +154,14 @@ class Testing(Component):
             )
         ].index
 
-    def _get_eligibile_csf_propensity_idx(self, df: pd.DataFrame, csf_testing_rate: float) -> pd.Index[int]:
-        return df[
-            df[COLUMNS.TESTING_PROPENSITY] < csf_testing_rate
-        ].index
+    def _get_eligibile_csf_propensity_idx(
+        self, df: pd.DataFrame, csf_testing_rate: float
+    ) -> pd.Index[int]:
+        return df[df[COLUMNS.TESTING_PROPENSITY] < csf_testing_rate].index
 
-    def _get_eligible_pet_propensity_idx(self, df: pd.DataFrame, csf_testing_rate: float, pet_testing_rate: float) -> pd.Index[int]:
+    def _get_eligible_pet_propensity_idx(
+        self, df: pd.DataFrame, csf_testing_rate: float, pet_testing_rate: float
+    ) -> pd.Index[int]:
         return df[
             (df[COLUMNS.TESTING_PROPENSITY] >= csf_testing_rate)
             & (df[COLUMNS.TESTING_PROPENSITY] < csf_testing_rate + pet_testing_rate)
