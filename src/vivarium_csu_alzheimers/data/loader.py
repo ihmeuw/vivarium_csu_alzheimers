@@ -236,6 +236,7 @@ def load_alzheimers_incidence_total_population(
 def load_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
+    
     raw_prevalence = load_prevalence_dismod(location)  # total population
     prevalence = reshape_to_vivarium_format(raw_prevalence, location)
     prevalence.index = prevalence.index.droplevel(
