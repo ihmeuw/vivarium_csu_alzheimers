@@ -18,7 +18,7 @@ components:
 
 configuration:
     input_data:
-        input_draw_number: 42
+        input_draw_number: 1
         # artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model6.0/united_states_of_america.hdf'
         artifact_path: '/Users/sbachmei/scratch/alz/artifacts/united_states_of_america.hdf'
     interpolation:

@@ -32,92 +32,32 @@ class Testing(Component):
 
     def setup(self, builder) -> None:
         self.randomness = builder.randomness.get_stream(self.name)
-        self.csf_testing_rate = builder.data.load(TESTING_RATES.CSF)[
-            "value"
-        ].item()
-        self.pet_testing_rate = builder.data.load(TESTING_RATES.PET)[
-            "value"
-        ].item()
+        self.csf_testing_rate = builder.data.load(TESTING_RATES.CSF)["value"].item()
+        self.pet_testing_rate = builder.data.load(TESTING_RATES.PET)["value"].item()
 
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         """Initialize testing propensity and testing history for new simulants."""
-
-        states = self.population_view.subview(ALZHEIMERS_DISEASE_MODEL.MODEL_NAME).get(
+        pop = self.population_view.subview(ALZHEIMERS_DISEASE_MODEL.MODEL_NAME).get(
             pop_data.index
         )
-
-        update = pd.DataFrame(
-            {
-                COLUMNS.TESTING_PROPENSITY: self.randomness.get_draw(
-                    pop_data.index, additional_key=COLUMNS.TESTING_PROPENSITY
-                ),
-                COLUMNS.TESTED_STATUS: pd.Series(
-                    TESTING_STATES.NOT_TESTED, index=pop_data.index
-                ),
-            }
+        pop[COLUMNS.TESTING_PROPENSITY] = self.randomness.get_draw(
+            pop_data.index, additional_key=COLUMNS.TESTING_PROPENSITY
         )
-
-        # Define eligibility
-        eligible_state_idx = self._get_eligible_state_idx(states)
-        eligible_csf_propensity_idx = self._get_eligibile_csf_propensity_idx(
-            update, self.csf_testing_rate
-        )
-        eligible_pet_propensity_idx = self._get_eligible_pet_propensity_idx(
-            update, csf_testing_rate=self.csf_testing_rate, pet_testing_rate=self.pet_testing_rate
-        )
-
-        # Update tested status with those who had CSF tests
-        update.loc[
-            eligible_state_idx.intersection(eligible_csf_propensity_idx),
-            COLUMNS.TESTED_STATUS,
-        ] = TESTING_STATES.CSF
-        # Update testing history with those who had PET tests
-        update.loc[
-            eligible_state_idx.intersection(eligible_pet_propensity_idx),
-            COLUMNS.TESTED_STATUS,
-        ] = TESTING_STATES.PET
-
-        self.population_view.update(update)
+        pop[COLUMNS.TESTED_STATUS] = TESTING_STATES.NOT_TESTED
+        self._update_baseline_testing(pop)
 
     def on_time_step(self, event: Event) -> None:
-
         pop = self.population_view.get(event.index)
-
-        # Define eligibility
-        eligible_state_idx = self._get_eligible_state_idx(pop)
-        eligible_csf_propensity_idx = self._get_eligibile_csf_propensity_idx(
-            pop, self.csf_testing_rate
-        )
-        eligible_pet_propensity_idx = self._get_eligible_pet_propensity_idx(
-            pop, csf_testing_rate=self.csf_testing_rate, pet_testing_rate=self.pet_testing_rate
-        )
-        eligible_untested_idx = pop[
-            pop[COLUMNS.TESTED_STATUS] == TESTING_STATES.NOT_TESTED
-        ].index
-        # Update testing history with those who had CSF tests
-        pop.loc[
-            eligible_state_idx.intersection(eligible_csf_propensity_idx).intersection(
-                eligible_untested_idx
-            ),
-            COLUMNS.TESTED_STATUS,
-        ] = TESTING_STATES.CSF
-        # Update testing history with those who had PET tests
-        pop.loc[
-            eligible_state_idx.intersection(eligible_pet_propensity_idx).intersection(
-                eligible_untested_idx
-            ),
-            COLUMNS.TESTED_STATUS,
-        ] = TESTING_STATES.PET
-
-        self.population_view.update(pop)
-
+        self._update_baseline_testing(pop)
 
     ##################
     # Helper methods #
     ##################
 
-    def _get_eligible_state_idx(self, df: pd.DataFrame) -> pd.Index[int]:
-        return df[
+    def _update_baseline_testing(self, df: pd.DataFrame) -> None:
+
+        # Define eligibility
+        eligible_state_idx = df[
             df[ALZHEIMERS_DISEASE_MODEL.MODEL_NAME].isin(
                 [
                     ALZHEIMERS_DISEASE_MODEL.MCI_STATE,
@@ -125,16 +65,30 @@ class Testing(Component):
                 ]
             )
         ].index
-
-    def _get_eligibile_csf_propensity_idx(
-        self, df: pd.DataFrame, csf_testing_rate: float
-    ) -> pd.Index[int]:
-        return df[df[COLUMNS.TESTING_PROPENSITY] < csf_testing_rate].index
-
-    def _get_eligible_pet_propensity_idx(
-        self, df: pd.DataFrame, csf_testing_rate: float, pet_testing_rate: float
-    ) -> pd.Index[int]:
-        return df[
-            (df[COLUMNS.TESTING_PROPENSITY] >= csf_testing_rate)
-            & (df[COLUMNS.TESTING_PROPENSITY] < csf_testing_rate + pet_testing_rate)
+        eligible_csf_propensity_idx = df[
+            df[COLUMNS.TESTING_PROPENSITY] < self.csf_testing_rate
         ].index
+        eligible_pet_propensity_idx = df[
+            (df[COLUMNS.TESTING_PROPENSITY] >= self.csf_testing_rate)
+            & (df[COLUMNS.TESTING_PROPENSITY] < self.csf_testing_rate + self.pet_testing_rate)
+        ].index
+        # TODO: Need to implement bbbm test result logic here (never received a positive bbbm test)
+        eligible_untested_idx = df[
+            df[COLUMNS.TESTED_STATUS] == TESTING_STATES.NOT_TESTED
+        ].index
+        # Update tested status with those who had CSF tests
+        df.loc[
+            eligible_state_idx.intersection(eligible_csf_propensity_idx).intersection(
+                eligible_untested_idx
+            ),
+            COLUMNS.TESTED_STATUS,
+        ] = TESTING_STATES.CSF
+        # Update testing history with those who had PET tests
+        df.loc[
+            eligible_state_idx.intersection(eligible_pet_propensity_idx).intersection(
+                eligible_untested_idx
+            ),
+            COLUMNS.TESTED_STATUS,
+        ] = TESTING_STATES.PET
+
+        self.population_view.update(df)
