@@ -3,7 +3,6 @@ from vivarium import Component
 from vivarium.framework.engine import Builder
 from vivarium.framework.population import SimulantData
 from vivarium.framework.values import list_combiner, union_post_processor
-from vivarium.types import DataInput
 from vivarium_public_health.disease import (
     BaseDiseaseState,
     DiseaseModel,
@@ -11,7 +10,7 @@ from vivarium_public_health.disease import (
     RateTransition,
 )
 
-from vivarium_csu_alzheimers.constants.data_keys import ALZHEIMERS, POPULATION
+from vivarium_csu_alzheimers.constants.data_keys import ALZHEIMERS
 from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AVG_DURATION,
     COLUMNS,
@@ -155,7 +154,7 @@ class Alzheimers(Component):
         )
 
         return DiseaseModel(
-            ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME,
+            ALZHEIMERS_DISEASE_MODEL.MODEL_NAME,
             initial_state=bbbm_state,
             states=[bbbm_state, mci_state, alzheimers_state],
         )

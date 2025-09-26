@@ -4,29 +4,8 @@ from vivarium.framework.results import Observer
 from vivarium_public_health import ResultsStratifier as ResultsStratifier_
 from vivarium_public_health.results import DiseaseObserver
 
-from vivarium_csu_alzheimers.constants.models import (
-    ALZHEIMERS_DISEASE_MODEL,
-    TESTING_ALZHEIMERS_DISEASE_MODEL,
-)
-
 
 class ResultsStratifier(ResultsStratifier_):
-    # def register_stratifications(self, builder: Builder) -> None:
-    #     super().register_stratifications(builder)
-    #     builder.results.register_stratification(
-    #         "alzheimers_state",
-    #         [
-    #             state
-    #             for state in ALZHEIMERS_DISEASE_MODEL
-    #             if state
-    #             not in [
-    #                 ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME,
-    #             ]
-    #         ],
-    #         is_vectorized=True,
-    #         requires_columns=[ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_MODEL_NAME],
-    #     )
-
     @staticmethod
     def get_age_bins(builder: Builder) -> pd.DataFrame:
         """Get the age bins for stratifying by age.

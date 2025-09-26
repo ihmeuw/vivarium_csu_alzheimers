@@ -1,7 +1,5 @@
 from typing import NamedTuple
 
-from vivarium_public_health.utilities import TargetString
-
 #############
 # Data Keys #
 #############
@@ -59,8 +57,23 @@ class __Alzheimers(NamedTuple):
 ALZHEIMERS = __Alzheimers()
 
 
+class __TestingRates(NamedTuple):
+    CSF: str = "testing_rates.csf"
+    PET: str = "testing_rates.pet"
+
+    @property
+    def name(self):
+        return "testing rates"
+
+    @property
+    def log_name(self):
+        return self.name.replace(" ", "_")
+
+
+TESTING_RATES = __TestingRates()
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
-    # TODO: list all key groups here
     ALZHEIMERS,
+    TESTING_RATES,
 ]
