@@ -19,21 +19,6 @@ class Testing(Component):
     """Marks simulants as having been tested if they meet the eligibility criteria."""
 
     @property
-    def configuration_defaults(self) -> dict[str, Any]:
-        return {
-            self.name: {
-                "data_sources": {
-                    "csf_testing_rate": partial(
-                        self.load_testing_rate, key=TESTING_RATES.CSF
-                    ),
-                    "pet_testing_rate": partial(
-                        self.load_testing_rate, key=TESTING_RATES.PET
-                    ),
-                },
-            },
-        }
-
-    @property
     def columns_created(self) -> list[str]:
         return [COLUMNS.TESTING_PROPENSITY, COLUMNS.TESTED_STATUS]
 
@@ -47,13 +32,15 @@ class Testing(Component):
 
     def setup(self, builder) -> None:
         self.randomness = builder.randomness.get_stream(self.name)
+        self.csf_testing_rate = builder.data.load(TESTING_RATES.CSF)[
+            "value"
+        ].item()
+        self.pet_testing_rate = builder.data.load(TESTING_RATES.PET)[
+            "value"
+        ].item()
 
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         """Initialize testing propensity and testing history for new simulants."""
-        # NOTE: csf/pet testing rates are scalar values. We did not include
-        #   demography in the lookup table and so we call it here w/ a "dummy" index
-        csf_testing_rate = self.lookup_tables["csf_testing_rate"](pd.Index([0])).item()
-        pet_testing_rate = self.lookup_tables["pet_testing_rate"](pd.Index([0])).item()
 
         states = self.population_view.subview(ALZHEIMERS_DISEASE_MODEL.MODEL_NAME).get(
             pop_data.index
@@ -73,10 +60,10 @@ class Testing(Component):
         # Define eligibility
         eligible_state_idx = self._get_eligible_state_idx(states)
         eligible_csf_propensity_idx = self._get_eligibile_csf_propensity_idx(
-            update, csf_testing_rate
+            update, self.csf_testing_rate
         )
         eligible_pet_propensity_idx = self._get_eligible_pet_propensity_idx(
-            update, csf_testing_rate=csf_testing_rate, pet_testing_rate=pet_testing_rate
+            update, csf_testing_rate=self.csf_testing_rate, pet_testing_rate=self.pet_testing_rate
         )
 
         # Update tested status with those who had CSF tests
@@ -94,20 +81,15 @@ class Testing(Component):
 
     def on_time_step(self, event: Event) -> None:
 
-        # NOTE: csf/pet testing rates are scalar values. We did not include
-        #   demography in the lookup table and so we call it here w/ a "dummy" index
-        csf_testing_rate = self.lookup_tables["csf_testing_rate"](pd.Index([0])).item()
-        pet_testing_rate = self.lookup_tables["pet_testing_rate"](pd.Index([0])).item()
-
         pop = self.population_view.get(event.index)
 
         # Define eligibility
         eligible_state_idx = self._get_eligible_state_idx(pop)
         eligible_csf_propensity_idx = self._get_eligibile_csf_propensity_idx(
-            pop, csf_testing_rate
+            pop, self.csf_testing_rate
         )
         eligible_pet_propensity_idx = self._get_eligible_pet_propensity_idx(
-            pop, csf_testing_rate=csf_testing_rate, pet_testing_rate=pet_testing_rate
+            pop, csf_testing_rate=self.csf_testing_rate, pet_testing_rate=self.pet_testing_rate
         )
         eligible_untested_idx = pop[
             pop[COLUMNS.TESTED_STATUS] == TESTING_STATES.NOT_TESTED
@@ -129,16 +111,6 @@ class Testing(Component):
 
         self.population_view.update(pop)
 
-    def load_testing_rate(self, builder: Builder, key: str) -> float:
-        """Load and return the testing rate.
-
-        Notes
-        -----
-        Because testing rates do not change by age, sex, or year, we did not include
-        demography in the artifact; it is a single row of draw values. As such we
-        are simply load that single value here.
-        """
-        return builder.data.load(key)["value"].item()
 
     ##################
     # Helper methods #

@@ -18,8 +18,9 @@ components:
 
 configuration:
     input_data:
-        input_draw_number: 0
-        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model6.0/united_states_of_america.hdf'
+        input_draw_number: 42
+        # artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model6.0/united_states_of_america.hdf'
+        artifact_path: '/Users/sbachmei/scratch/alz/artifacts/united_states_of_america.hdf'
     interpolation:
         order: 0
         extrapolate: True
@@ -32,7 +33,8 @@ configuration:
             month: 1
             day: 1
         end:
-            year: 2100
+            # year: 2100
+            year: 2030
             month: 12
             day: 31
         step_size: 183  # days 365/2 = 182.5. 183 days gaurantees 2 steps per year for the 
