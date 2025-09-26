@@ -39,6 +39,8 @@ ARTIFACT_INDEX_COLUMNS = [
 DRAW_COUNT = 500
 ARTIFACT_COLUMNS = pd.Index([f"draw_{i}" for i in range(DRAW_COUNT)])
 
+UNEXPECTED_AGE_GROUPS = [27, 33, 164]
+
 
 class __Scenarios(NamedTuple):
     baseline: str = "baseline"

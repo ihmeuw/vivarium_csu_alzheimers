@@ -23,10 +23,16 @@ from vivarium_inputs import utilities as vi_utils
 from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
-from vivarium_csu_alzheimers.constants import data_keys, data_values
+from vivarium_csu_alzheimers.constants import data_keys, data_values, metadata
 from vivarium_csu_alzheimers.constants.metadata import ARTIFACT_COLUMNS
-from vivarium_csu_alzheimers.constants.paths import FORECAST_NC_DATA_FILEPATHS_DICT
-from vivarium_csu_alzheimers.data.extra_gbd import load_raw_incidence
+from vivarium_csu_alzheimers.constants.paths import (
+    DEMENTIA_PROPORTIONS_PATH,
+    FORECAST_NC_DATA_FILEPATHS_DICT,
+)
+from vivarium_csu_alzheimers.data.extra_gbd import (
+    load_incidence_dismod,
+    load_prevalence_dismod,
+)
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
 from vivarium_csu_alzheimers.utilities import get_norm, get_random_variable_draws
 
@@ -58,10 +64,9 @@ def get_data(
         data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         data_keys.POPULATION.SCALING_FACTOR: load_alzheimers_all_states_prevalence,
-        data_keys.ALZHEIMERS.PREVALENCE: load_standard_data,
+        data_keys.ALZHEIMERS.PREVALENCE: load_prevalence,
         data_keys.ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE: load_bbbm_conditional_prevalence,
         data_keys.ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE: load_mci_conditional_prevalence,
-        data_keys.ALZHEIMERS.INCIDENCE_RATE: load_standard_data,
         data_keys.ALZHEIMERS.MCI_TO_DEMENTIA_TRANSITION_RATE: load_mci_to_dementia_transition_rate,
         data_keys.ALZHEIMERS.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: load_susceptible_to_bbbm_transition_count,
         # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
@@ -121,9 +126,7 @@ def load_age_bins(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     df = pd.DataFrame()
-    df.index = pd.MultiIndex.from_frame(
-        utility_data.get_age_bins()  # .query("age_start >= 5.0")
-    )
+    df.index = pd.MultiIndex.from_frame(utility_data.get_age_bins())
     return df
 
 
@@ -196,14 +199,27 @@ def load_alzheimers_incidence_total_population(
     """Load raw Alzheimers incidence rates from GBD. The incidence rate we pull through vivarium framework
     is the incidence rate / the susceptible population. We want incidence rate / total population.
     """
-    entity = get_entity(key)
-    raw_incidence = load_raw_incidence(entity, location)
+
+    raw_incidence = load_incidence_dismod(location)  # total population
     incidence = reshape_to_vivarium_format(raw_incidence, location)
     incidence.index = incidence.index.droplevel(
-        ["cause_id", "measure_id", "metric_id", "version_id"]
+        ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
     )
 
-    return incidence
+    return incidence * load_dementia_proportions(None, location, years)
+
+
+def load_prevalence(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+
+    raw_prevalence = load_prevalence_dismod(location)  # total population
+    prevalence = reshape_to_vivarium_format(raw_prevalence, location)
+    prevalence.index = prevalence.index.droplevel(
+        ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
+    )
+
+    return prevalence * load_dementia_proportions(None, location, years)
 
 
 def get_entity(key: str | EntityKey):
@@ -219,6 +235,9 @@ def get_entity(key: str | EntityKey):
 
 
 def reshape_to_vivarium_format(df, location):
+    df = df[
+        ~df.age_group_id.isin(metadata.UNEXPECTED_AGE_GROUPS)
+    ]  # unexpected age groups cause vi_utils.scrub_gbd_conventions to fail
     df = vi_utils.reshape(df, value_cols=vi_globals.DRAW_COLUMNS)
     df = vi_utils.scrub_gbd_conventions(df, location)
     df = vi_utils.split_interval(df, interval_column="age", split_column_prefix="age")
@@ -306,7 +325,7 @@ def transform_group_index_J_BBBM(DUR, W, N, index_p0):
     # I_BBBM (i)ncidence age/year groups (i1, i2)
     age_i1 = age_p1
     age_i2 = age_p2
-    year_i12 = 2021
+    year_i12 = 2023  # incidence uses 2023 data since model 5
 
     # gamma (m)ortality age/year group (m)
     age_m = age + (DUR / 2)
@@ -476,3 +495,34 @@ def load_csf_pet_testing_rates(
     )
     draws = get_random_variable_draws(ARTIFACT_COLUMNS, key, dist)
     return pd.DataFrame([draws], columns=ARTIFACT_COLUMNS)
+
+
+def load_dementia_proportions(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    df = pd.read_csv(DEMENTIA_PROPORTIONS_PATH)
+    bins = load_age_bins(None, None).index.to_frame().reset_index(drop=True)
+    merged = pd.merge(df, bins, on="age_group_name", how="left")
+    merged = merged[
+        (merged.type_label == "Alzheimer's disease")  # AD only, no mixed
+        & (merged.age_group_name != "All Age")
+    ]
+    merged["year_start"] = 2023
+    merged["year_end"] = 2024
+    merged = (
+        merged.set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
+        .drop(["age_group_name", "type_label", "age_group_id"], axis=1)
+        .rename({"proportion": "value"}, axis=1)
+    )
+
+    # add <40 age groups
+    for _, group in bins[bins.age_start < 40].iterrows():
+        merged.loc[("Male", group.age_start, group.age_end, 2023, 2024)] = 0
+        merged.loc[("Female", group.age_start, group.age_end, 2023, 2024)] = 0
+    merged = vi_utils.sort_hierarchical_data(merged)
+
+    # fake draws from value (for multiplication with incidence and prevalence)
+    df = pd.DataFrame(columns=vi_globals.DRAW_COLUMNS, index=merged.index)
+    for col in df.columns:
+        df[col] = merged.value
+    return df
