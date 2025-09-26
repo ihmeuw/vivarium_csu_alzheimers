@@ -47,8 +47,7 @@ class Testing(Component):
         self._update_baseline_testing(pop)
 
     def on_time_step(self, event: Event) -> None:
-        pop = self.population_view.get(event.index)
-        self._update_baseline_testing(pop)
+        self._update_baseline_testing(self.population_view.get(event.index))
 
     ##################
     # Helper methods #
@@ -83,7 +82,7 @@ class Testing(Component):
             ),
             COLUMNS.TESTED_STATUS,
         ] = TESTING_STATES.CSF
-        # Update testing history with those who had PET tests
+        # Update testing status with those who had PET tests
         df.loc[
             eligible_state_idx.intersection(eligible_pet_propensity_idx).intersection(
                 eligible_untested_idx
