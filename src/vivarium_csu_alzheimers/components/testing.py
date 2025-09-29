@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 from vivarium import Component
-from vivarium.framework.engine import Builder
 from vivarium.framework.event import Event
 from vivarium.framework.population import SimulantData
 from vivarium.framework.resource import Resource
@@ -15,12 +15,11 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_OLD_TIME,
     BBBM_POSITIVE_DIAGNOSIS_PROBABILITY,
     BBBM_TEST_RESULTS,
+    BBBM_TESTING_RATES,
     COLUMNS,
     TESTING_STATES,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
-
-FAKE_BBBM_TESTING_RATE = 0.3
 
 
 class Testing(Component):
@@ -50,8 +49,6 @@ class Testing(Component):
         self.randomness = builder.randomness.get_stream(self.name)
         self.csf_testing_rate = builder.data.load(TESTING_RATES.CSF)["value"].item()
         self.pet_testing_rate = builder.data.load(TESTING_RATES.PET)["value"].item()
-        # FIXME: replace with linear scale-ups
-        self.bbbm_testing_rate = FAKE_BBBM_TESTING_RATE
         self.scenario = scenarios.INTERVENTION_SCENARIOS[
             builder.configuration.intervention.scenario
         ]
@@ -136,6 +133,8 @@ class Testing(Component):
         if not self.scenario.bbbm_testing:
             return pop
 
+        testing_rate = self._get_bbbm_testing_rate(event_time)
+
         # Define eligibility
         eligible_state = (
             pop[ALZHEIMERS_DISEASE_MODEL.MODEL_NAME] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
@@ -146,7 +145,7 @@ class Testing(Component):
             pop[COLUMNS.BBBM_TEST_DATE] < event_time - BBBM_OLD_TIME
         )
         eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != "positive"
-        eligible_propensity = pop[COLUMNS.TESTING_PROPENSITY] < self.bbbm_testing_rate
+        eligible_propensity = pop[COLUMNS.TESTING_PROPENSITY] < testing_rate
 
         # Calculate test results
         tested_mask = (
@@ -170,3 +169,20 @@ class Testing(Component):
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_DATE] = event_time
 
         return pop
+
+    def _get_bbbm_testing_rate(self, event_time: pd.Timestamp) -> float:
+        """Gets the BBBM testing rate for a given timestamp using piecewise linear interpolation."""
+
+        if event_time < BBBM_TESTING_RATES[0][0]:
+            # Before the first defined time point, return 0
+            return 0.0
+
+        if event_time > BBBM_TESTING_RATES[-1][0]:
+            # Everything after the defined time point is a constant rate
+            return BBBM_TESTING_RATES[-1][1]
+
+        # Linearly interpolate everything else
+        timestamps = [ts.value for ts, _ in BBBM_TESTING_RATES]
+        rates = [rate for _, rate in BBBM_TESTING_RATES]
+
+        return np.interp(event_time.value, timestamps, rates)

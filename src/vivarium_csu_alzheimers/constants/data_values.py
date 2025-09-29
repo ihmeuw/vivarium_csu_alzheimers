@@ -143,3 +143,11 @@ class __BBBMTestResults(NamedTuple):
 
 
 BBBM_TEST_RESULTS = __BBBMTestResults()
+
+# bbbm testing rates are piecewise-linear starting at 2030 and maxing out in 2045
+BBBM_TESTING_RATES = [
+    (pd.Timestamp("2030-01-01"), 0.1),  # step increase from 0 in 2030
+    (pd.Timestamp("2035-01-01"), 0.2),
+    (pd.Timestamp("2040-01-01"), 0.4),
+    (pd.Timestamp("2045-01-01"), 0.6),  # plateaus from here on out
+]
