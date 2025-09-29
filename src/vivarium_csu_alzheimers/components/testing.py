@@ -65,15 +65,15 @@ class Testing(Component):
         ).get(pop_data.index)
 
         # Initialize columns
-        pop[COLUMNS.TESTED_STATUS] = TESTING_STATES.NOT_TESTED
         pop[COLUMNS.TESTING_PROPENSITY] = self.randomness.get_draw(
             pop_data.index, additional_key=COLUMNS.TESTING_PROPENSITY
         )
+        pop[COLUMNS.TESTED_STATUS] = TESTING_STATES.NOT_TESTED
         pop[COLUMNS.BBBM_TEST_DATE] = pd.NaT
         pop[COLUMNS.BBBM_TEST_RESULT] = pd.NA
 
         self._update_baseline_testing(pop)
-        # FIXME: is this the correct event time? does it matter on initialization?
+        # FIXME: is this the correct event time?
         self._update_bbbm_testing(pop, event_time=pop_data.creation_time)
 
         self.population_view.update(pop)
