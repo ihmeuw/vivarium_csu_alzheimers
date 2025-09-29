@@ -28,8 +28,8 @@ class Testing(Component):
     @property
     def columns_created(self) -> list[str]:
         return [
-            COLUMNS.TESTED_STATUS,
             COLUMNS.TESTING_PROPENSITY,
+            COLUMNS.TESTED_STATUS,
             COLUMNS.BBBM_TEST_DATE,
             COLUMNS.BBBM_TEST_RESULT,
         ]
@@ -52,8 +52,6 @@ class Testing(Component):
         self.scenario = scenarios.INTERVENTION_SCENARIOS[
             builder.configuration.intervention.scenario
         ]
-        self.clock = builder.time.clock()
-        self.step_size = builder.time.step_size()
 
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         """Initialize testing propensity and testing history for new simulants."""
@@ -88,7 +86,7 @@ class Testing(Component):
     # Helper methods #
     ##################
 
-    def _update_baseline_testing(self, pop: pd.DataFrame) -> pd.DataFrame:
+    def _update_baseline_testing(self, pop: pd.DataFrame) -> None:
 
         # Define eligibility
         eligible_state = pop[ALZHEIMERS_DISEASE_MODEL.MODEL_NAME].isin(
@@ -124,11 +122,9 @@ class Testing(Component):
             COLUMNS.TESTED_STATUS,
         ] = TESTING_STATES.PET
 
-        return pop
-
     def _update_bbbm_testing(
         self, pop: pd.DataFrame, event_time: pd.Timestamp
-    ) -> pd.DataFrame:
+    ) -> None:
 
         if not self.scenario.bbbm_testing:
             return pop
@@ -167,8 +163,6 @@ class Testing(Component):
         pop.loc[tested_mask, COLUMNS.TESTED_STATUS] = TESTING_STATES.BBBM
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_RESULT] = test_results
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_DATE] = event_time
-
-        return pop
 
     def _get_bbbm_testing_rate(self, event_time: pd.Timestamp) -> float:
         """Gets the BBBM testing rate for a given timestamp using piecewise linear interpolation."""
