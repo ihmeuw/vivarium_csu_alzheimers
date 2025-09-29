@@ -122,9 +122,7 @@ class Testing(Component):
             COLUMNS.TESTED_STATUS,
         ] = TESTING_STATES.PET
 
-    def _update_bbbm_testing(
-        self, pop: pd.DataFrame, event_time: pd.Timestamp
-    ) -> None:
+    def _update_bbbm_testing(self, pop: pd.DataFrame, event_time: pd.Timestamp) -> None:
 
         if not self.scenario.bbbm_testing:
             return pop
