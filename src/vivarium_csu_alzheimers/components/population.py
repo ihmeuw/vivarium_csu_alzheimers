@@ -15,6 +15,11 @@ from vivarium_csu_alzheimers.constants.metadata import ARTIFACT_INDEX_COLUMNS
 
 
 class AlzheimersPopulation(ScaledPopulation):
+    """Adds new simulants to the simulation based on demography counts.
+
+    The demography counts are created by the AlzheimersIncidence component, below.
+    """
+
     def setup(self, builder: Builder) -> None:
         super().setup(builder)
         self.key_columns = builder.configuration.randomness.key_columns
@@ -90,7 +95,16 @@ class AlzheimersPopulation(ScaledPopulation):
 
 
 class AlzheimersIncidence(Component):
-    """This is using FertilityCrudeBirthRate from Vivarium Public Health as a template."""
+    """Class to handle the incidence of Alzheimer's disease.
+
+    This is heavily based on the vivarium_public_health FertilityCrudeBirthRate
+    class. It determines which simulants will be added to the simulation.
+
+    Notes
+    -----
+    The AlzheimersPopulation component above ingests the demographic_counts created
+    here and uses that to actually add simulants to the simulation.
+    """
 
     #####################
     # Lifecycle methods #
