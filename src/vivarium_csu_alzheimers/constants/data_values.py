@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import NamedTuple
 
+import pandas as pd
 import scipy
 
 from vivarium_csu_alzheimers.constants.data_keys import TESTING_RATES
@@ -62,6 +63,9 @@ class __Columns(NamedTuple):
     ENTRANCE_TIME: str = "entrance_time"
     TESTING_PROPENSITY: str = "testing_propensity"
     TESTED_STATUS: str = "tested_status"
+    BBBM_TEST_DATE: str = "bbbm_test_date"
+    BBBM_TEST_RESULT: str = "bbbm_test_result"
+    AGE: str = "age"
 
 
 COLUMNS = __Columns()
@@ -71,6 +75,7 @@ class __TestingStates(NamedTuple):
     NOT_TESTED: str = "not_tested"
     CSF: str = "csf"
     PET: str = "pet"
+    BBBM: str = "bbbm"
 
 
 TESTING_STATES = __TestingStates()
@@ -82,7 +87,7 @@ class TestingRates(NamedTuple):
     ci_upper: float
 
 
-LOCATION_TESTING_RATES = {
+CSF_PET_LOCATION_TESTING_RATES = {
     "United States of America": {
         TESTING_RATES.CSF: TestingRates(mean=0.108, ci_lower=0.054, ci_upper=0.161),
         TESTING_RATES.PET: TestingRates(mean=0.15, ci_lower=0.075, ci_upper=0.225),
@@ -124,3 +129,25 @@ LOCATION_TESTING_RATES = {
         TESTING_RATES.PET: TestingRates(mean=0.061, ci_lower=0.03, ci_upper=0.091),
     },
 }
+
+
+BBBM_AGE_MIN = 60
+BBBM_AGE_MAX = 80
+BBBM_OLD_TIME = pd.DateOffset(years=3)
+BBBM_POSITIVE_DIAGNOSIS_PROBABILITY = 0.9
+
+
+class __BBBMTestResults(NamedTuple):
+    POSITIVE: str = "positive"
+    NEGATIVE: str = "negative"
+
+
+BBBM_TEST_RESULTS = __BBBMTestResults()
+
+# bbbm testing rates are piecewise-linear starting at 2030 and maxing out in 2045
+BBBM_TESTING_RATES = [
+    (pd.Timestamp("2030-01-01"), 0.1),  # step increase from 0 in 2030
+    (pd.Timestamp("2035-01-01"), 0.2),
+    (pd.Timestamp("2040-01-01"), 0.4),
+    (pd.Timestamp("2045-01-01"), 0.6),  # plateaus from here on out
+]

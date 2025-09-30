@@ -488,7 +488,7 @@ def load_csf_pet_testing_rates(
     demographics in the artifact. We simply return a single-row dataframe where
     the index is meaningless.
     """
-    rate = data_values.LOCATION_TESTING_RATES[location][key]
+    rate = data_values.CSF_PET_LOCATION_TESTING_RATES[location][key]
     dist = get_norm(
         mean=rate.mean,
         ninety_five_pct_confidence_interval=(rate.ci_lower, rate.ci_upper),

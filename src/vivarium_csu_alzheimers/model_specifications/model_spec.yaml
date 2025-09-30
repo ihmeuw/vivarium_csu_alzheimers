@@ -43,9 +43,10 @@ configuration:
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
         untracking_age: 200
-
     stratification:
         default:
             - 'age_group'
             - 'sex'
             - 'current_year' 
+    intervention:
+        scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'treatment'
