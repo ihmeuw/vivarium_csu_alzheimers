@@ -26,10 +26,14 @@ class Testing(Component):
     """Marks simulants as having been tested if they meet the eligibility criteria."""
 
     @property
+    def time_step_priority(self) -> int:
+        return 6
+
+    @property
     def columns_created(self) -> list[str]:
         return [
             COLUMNS.TESTING_PROPENSITY,
-            COLUMNS.TESTED_STATUS,
+            COLUMNS.TESTING_STATE,
             COLUMNS.BBBM_TEST_DATE,
             COLUMNS.BBBM_TEST_RESULT,
         ]
@@ -37,13 +41,13 @@ class Testing(Component):
     @property
     def columns_required(self) -> list[str]:
         return [
-            ALZHEIMERS_DISEASE_MODEL.MODEL_NAME,
+            COLUMNS.DISEASE_STATE,
             COLUMNS.AGE,
         ]
 
     @property
     def initialization_requirements(self) -> list[str | Resource]:
-        return [ALZHEIMERS_DISEASE_MODEL.MODEL_NAME, self.randomness, COLUMNS.AGE]
+        return [COLUMNS.DISEASE_STATE, self.randomness, COLUMNS.AGE]
 
     def setup(self, builder) -> None:
         self.randomness = builder.randomness.get_stream(self.name)
@@ -57,7 +61,7 @@ class Testing(Component):
         """Initialize testing propensity and testing history for new simulants."""
         pop = self.population_view.subview(
             [
-                ALZHEIMERS_DISEASE_MODEL.MODEL_NAME,
+                COLUMNS.DISEASE_STATE,
                 COLUMNS.AGE,
             ]
         ).get(pop_data.index)
@@ -66,7 +70,7 @@ class Testing(Component):
         pop[COLUMNS.TESTING_PROPENSITY] = self.randomness.get_draw(
             pop_data.index, additional_key=COLUMNS.TESTING_PROPENSITY
         )
-        pop[COLUMNS.TESTED_STATUS] = TESTING_STATES.NOT_TESTED
+        pop[COLUMNS.TESTING_STATE] = TESTING_STATES.NOT_TESTED
         pop[COLUMNS.BBBM_TEST_DATE] = pd.NaT
         pop[COLUMNS.BBBM_TEST_RESULT] = pd.NA
 
@@ -88,7 +92,7 @@ class Testing(Component):
     def _update_baseline_testing(self, pop: pd.DataFrame) -> None:
 
         # Define eligibility
-        eligible_state = pop[ALZHEIMERS_DISEASE_MODEL.MODEL_NAME].isin(
+        eligible_state = pop[COLUMNS.DISEASE_STATE].isin(
             [
                 ALZHEIMERS_DISEASE_MODEL.MCI_STATE,
                 ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE,
@@ -98,7 +102,7 @@ class Testing(Component):
         eligible_pet_propensity = (
             pop[COLUMNS.TESTING_PROPENSITY] >= self.csf_testing_rate
         ) & (pop[COLUMNS.TESTING_PROPENSITY] < self.csf_testing_rate + self.pet_testing_rate)
-        eligible_untested = ~pop[COLUMNS.TESTED_STATUS].isin(
+        eligible_untested = ~pop[COLUMNS.TESTING_STATE].isin(
             [TESTING_STATES.CSF, TESTING_STATES.PET]
         )
         eligible_bbbm_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
@@ -108,26 +112,26 @@ class Testing(Component):
         # Update tested status with those who had CSF tests
         pop.loc[
             eligible_baseline_testing & eligible_csf_propensity,
-            COLUMNS.TESTED_STATUS,
+            COLUMNS.TESTING_STATE,
         ] = TESTING_STATES.CSF
 
         # Update testing status with those who had PET tests
         pop.loc[
             eligible_baseline_testing & eligible_pet_propensity,
-            COLUMNS.TESTED_STATUS,
+            COLUMNS.TESTING_STATE,
         ] = TESTING_STATES.PET
 
     def _update_bbbm_testing(self, pop: pd.DataFrame, event_time: pd.Timestamp) -> None:
 
         if not self.scenario.bbbm_testing:
-            return pop
+            return
 
         testing_rate = self._get_bbbm_testing_rate(event_time)
+        if testing_rate == 0.0:
+            return
 
         # Define eligibility
-        eligible_state = (
-            pop[ALZHEIMERS_DISEASE_MODEL.MODEL_NAME] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
-        )
+        eligible_state = pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
         eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
         eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
             pop[COLUMNS.BBBM_TEST_DATE] <= event_time - BBBM_OLD_TIME
@@ -152,7 +156,7 @@ class Testing(Component):
         )
 
         # Update BBBM-specific columns for those who had BBBM tests
-        pop.loc[tested_mask, COLUMNS.TESTED_STATUS] = TESTING_STATES.BBBM
+        pop.loc[tested_mask, COLUMNS.TESTING_STATE] = TESTING_STATES.BBBM
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_RESULT] = test_results
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_DATE] = event_time
 

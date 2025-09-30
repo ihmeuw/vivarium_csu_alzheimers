@@ -30,10 +30,7 @@ class __InterventionScenarios(NamedTuple):
     )
 
     def __getitem__(self, item) -> InterventionScenario:
-        for scenario in self:
-            if scenario.name == item:
-                return scenario
-        raise KeyError(item)
+        return self._asdict()[item.upper()]
 
 
 INTERVENTION_SCENARIOS = __InterventionScenarios()

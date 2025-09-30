@@ -8,7 +8,7 @@ from vivarium_csu_alzheimers.constants import data_keys
 
 
 class __AlzheimersDiseaseModel(NamedTuple):
-    MODEL_NAME: str = data_keys.ALZHEIMERS.log_name
+    NAME: str = data_keys.ALZHEIMERS.log_name
     BBBM_STATE: str = "alzheimers_blood_based_biomarker_state"
     MCI_STATE: str = "alzheimers_mild_cognitive_impairment_state"
     ALZHEIMERS_DISEASE_STATE: str = "alzheimers_disease_state"
