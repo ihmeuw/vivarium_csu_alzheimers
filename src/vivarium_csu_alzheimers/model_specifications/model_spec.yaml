@@ -49,4 +49,4 @@ configuration:
             - 'sex'
             - 'current_year' 
     intervention:
-        scenario: bbbm_testing  # can be 'baseline', 'bbbm_testing', or 'treatment'
+        scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'treatment'

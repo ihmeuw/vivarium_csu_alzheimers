@@ -71,7 +71,6 @@ class Testing(Component):
         pop[COLUMNS.BBBM_TEST_RESULT] = pd.NA
 
         self._update_baseline_testing(pop)
-        # FIXME: is this the correct event time?
         self._update_bbbm_testing(pop, event_time=pop_data.creation_time)
 
         self.population_view.update(pop)
@@ -104,21 +103,17 @@ class Testing(Component):
         )
         eligible_bbbm_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
 
+        eligible_baseline_testing = eligible_state & eligible_untested & eligible_bbbm_results
+
         # Update tested status with those who had CSF tests
         pop.loc[
-            eligible_state
-            & eligible_csf_propensity
-            & eligible_untested
-            & eligible_bbbm_results,
+            eligible_baseline_testing & eligible_csf_propensity,
             COLUMNS.TESTED_STATUS,
         ] = TESTING_STATES.CSF
 
         # Update testing status with those who had PET tests
         pop.loc[
-            eligible_state
-            & eligible_pet_propensity
-            & eligible_untested
-            & eligible_bbbm_results,
+            eligible_baseline_testing & eligible_pet_propensity,
             COLUMNS.TESTED_STATUS,
         ] = TESTING_STATES.PET
 
@@ -134,9 +129,8 @@ class Testing(Component):
             pop[ALZHEIMERS_DISEASE_MODEL.MODEL_NAME] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
         )
         eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
-        # FIXME: clarify < or <=
         eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
-            pop[COLUMNS.BBBM_TEST_DATE] < event_time - BBBM_OLD_TIME
+            pop[COLUMNS.BBBM_TEST_DATE] <= event_time - BBBM_OLD_TIME
         )
         eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != "positive"
         eligible_propensity = pop[COLUMNS.TESTING_PROPENSITY] < testing_rate
