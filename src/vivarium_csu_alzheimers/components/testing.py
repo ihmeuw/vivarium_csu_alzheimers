@@ -40,10 +40,7 @@ class Testing(Component):
 
     @property
     def columns_required(self) -> list[str]:
-        return [
-            COLUMNS.DISEASE_STATE,
-            COLUMNS.AGE,
-        ]
+        return [COLUMNS.DISEASE_STATE, COLUMNS.AGE]
 
     @property
     def initialization_requirements(self) -> list[str | Resource]:

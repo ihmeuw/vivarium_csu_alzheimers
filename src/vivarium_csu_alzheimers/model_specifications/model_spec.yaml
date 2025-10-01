@@ -29,11 +29,11 @@ configuration:
         key_columns: ['entrance_time', 'age']
     time: 
         start:
-            year: 2029
+            year: 2025
             month: 1
             day: 1
         end:
-            year: 2032
+            year: 2100
             month: 12
             day: 31
         step_size: 183  # days 365/2 = 182.5. 183 days gaurantees 2 steps per year for the 
@@ -50,4 +50,4 @@ configuration:
             - 'sex'
             - 'current_year' 
     intervention:
-        scenario: bbbm_testing  # can be 'baseline', 'bbbm_testing', or 'treatment'
+        scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'treatment'
