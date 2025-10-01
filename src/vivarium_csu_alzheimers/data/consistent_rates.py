@@ -152,7 +152,7 @@ def ode_model(group: str,
                 1 - p(a, t),
                 p(a, t) * delta_BBBM(a, t), 
                 p(a, t) * delta_MCI(a, t),
-                p(a, t) * jnp.clip(1 - delta_BBBM(a, t) - delta_MCI(a, t), 0, 1),
+                p(a, t) * (1 - delta_BBBM(a, t) - delta_MCI(a, t)),
                 0
             ),
             saveat=saveat,
@@ -176,12 +176,12 @@ def ode_model(group: str,
         r_prev = jnp.clip(D / (denom_alive + eps), eps)
         r_inc = jnp.clip(new_D / (dt * (denom_alive + eps)), eps)
 
-        difference = 0.0
-        difference += (jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps)))**2
-        difference += (jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps)))**2
-        difference += (jnp.log(r_prev) - jnp.log(jnp.clip(p_dementia(a + dt, t + dt), eps)))**2
-        difference += (jnp.log(r_inc) - jnp.log(jnp.clip(i(a + dt/2, t + dt/2), eps)))**2
-        return jnp.sqrt(difference)
+        sq_difference = 0.0
+        sq_difference += (jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps)))**2
+        sq_difference += (jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps)))**2
+        sq_difference += (jnp.log(r_prev) - jnp.log(jnp.clip(p_dementia(a + dt, t + dt), eps)))**2
+        sq_difference += (jnp.log(r_inc) - jnp.log(jnp.clip(i(a + dt/2, t + dt/2), eps)))**2
+        return jnp.sqrt(sq_difference)
 
     # Vectorize the ode_consistency_factor function
     ode_consistency_factors = jax.vmap(ode_consistency_factor)
@@ -246,7 +246,7 @@ class ConsistentModel:
             )
 
             def p_dementia(a, t):
-                return p(a, t) * jnp.clip(1 - delta_BBBM(a, t) - delta_MCI(a, t), 0, 1)
+                return p(a, t) * (1 - delta_BBBM(a, t) - delta_MCI(a, t))
 
             data_model("p_dementia", p_dementia, df_data.query("measure == 'p_dementia'"))
 
@@ -350,7 +350,7 @@ def generate_consistent_rates(art: Artifact, location: str):
 
     """
     # TODO: check if the consistent rates are already in the artifact, and if so, skip rest of this function
-    ages = np.arange(30, 101, 10)
+    ages = np.arange(30, 101, 5)
     years = [2025]
     sexes = ["Male", "Female"]
     load_key = {
