@@ -48,11 +48,11 @@ def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[
     return pd.DataFrame(results)
 
 
-def at_param(name: str, ages, years, knot_val, method: str = "constant") -> Callable:
+def at_param(name: str, ages, years, knot_val) -> Callable:
     """Create an age- and time-specific rate function for a DisMod model.
 
-    This function generates a 2d-interpolated rate function
-    (the prior on knot values is defined elsewhere).
+    This function generates a piecewise-constant 2d-interpolated rate function
+    (the prior on knot values is passed as input).
 
     It uses `searchsorted` as an efficient piecewise constant
     interpolation method.
@@ -63,7 +63,7 @@ def at_param(name: str, ages, years, knot_val, method: str = "constant") -> Call
         The name of the rate parameter.
     ages : array-like
     years : array-like
-    knot_val : array-like with rows for ages and columns for years
+    knot_val : array-like of priors with rows for ages and columns for years
 
     Returns
     -------
@@ -177,11 +177,11 @@ def ode_model(group: str,
         r_inc = jnp.clip(new_D / (dt * (denom_alive + eps)), eps)
 
         difference = 0.0
-        difference += jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps))
-        difference += jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps))
-        difference += jnp.log(r_prev) - jnp.log(jnp.clip(p_dementia(a + dt, t + dt), eps))
-        difference += jnp.log(r_inc) - jnp.log(jnp.clip(i(a + dt/2, t + dt/2), eps))
-        return difference
+        difference += (jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps)))**2
+        difference += (jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps)))**2
+        difference += (jnp.log(r_prev) - jnp.log(jnp.clip(p_dementia(a + dt, t + dt), eps)))**2
+        difference += (jnp.log(r_inc) - jnp.log(jnp.clip(i(a + dt/2, t + dt/2), eps)))**2
+        return jnp.sqrt(difference)
 
     # Vectorize the ode_consistency_factor function
     ode_consistency_factors = jax.vmap(ode_consistency_factor)
@@ -208,7 +208,6 @@ class ConsistentModel:
         self.years = years
 
     def fit(self, df_data):
-        # expect this to take about 2 minutes to run
         group = ""
         ages, years = self.ages, self.years
         location = ""
@@ -232,21 +231,18 @@ class ConsistentModel:
                 ages,
                 years,
                 knot_val_dict["p"],
-                method="constant",
             )
             delta_BBBM = at_param(
                 f"delta_BBBM",
                 ages,
                 years,
                 knot_val_dict["delta_BBBM"],
-                method="constant",
             )
             delta_MCI = at_param(
                 f"delta_MCI",
                 ages,
                 years,
                 knot_val_dict["delta_MCI"],
-                method="constant",
             )
 
             def p_dementia(a, t):
@@ -259,7 +255,6 @@ class ConsistentModel:
                 ages,
                 years,
                 knot_val_dict["h_S_to_BBBM"],
-                method="constant",
             )
 
             i = at_param(
@@ -285,7 +280,7 @@ class ConsistentModel:
             if include_consistency_constraints:
                 ode_model(group, 
                           p, i, delta_BBBM, delta_MCI, h_S_to_BBBM, p_dementia, f, m,
-                          sigma=0.005, ages=ages, years=[2025, 2100])
+                          sigma=0.01, ages=ages, years=[2025, 2100])
 
 
         sampler = infer.MCMC(
@@ -357,7 +352,7 @@ def generate_consistent_rates(art: Artifact, location: str):
     # TODO: check if the consistent rates are already in the artifact, and if so, skip rest of this function
     ages = np.arange(30, 101, 10)
     years = [2025]
-    sexes = ["Male"]#, "Female"]
+    sexes = ["Male", "Female"]
     load_key = {
         "p_dementia": "cause.alzheimers.prevalence",
         "i_dementia": "cause.alzheimers.population_incidence_rate",
@@ -372,6 +367,7 @@ def generate_consistent_rates(art: Artifact, location: str):
         "f": "cause.alzheimers_consistent.excess_mortality_rate",
         "delta_BBBM": "cause.alzheimers_consistent.bbbm_conditional_prevalence",
         "delta_MCI": "cause.alzheimers_consistent.mci_conditional_prevalence",
+        "ode_errors": "cause.alzheimers_consistent.ode_errors",
     }
 
     def etl_data(sex):
