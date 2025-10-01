@@ -298,9 +298,11 @@ class ConsistentModel:
                 f"f", ages, years, knot_val_dict["f"],
             )
             data_model('f', f, df_data.query('measure == "f"'))
+
             m = at_param(
                 f"m", ages, years, knot_val_dict["m"]
             )
+            
             def m_all(a, t):
                 # Population all-cause mortality: m * (1 - p_dementia) + (m + f) * p_dementia = m + f * p_dementia
                 return m(a, t) + f(a, t) * p_dementia(a, t)
@@ -390,10 +392,10 @@ def generate_consistent_rates(art: Artifact, location: str):
         "m_all": "cause.all_causes.cause_specific_mortality_rate",
     }
     save_key = {
-        "h_S_to_BBBM": "cause.alzheimers_consistent.population_incidence_rate",
+        "h_S_to_BBBM": "cause.alzheimers_consistent.population_incidence_any",
         "p": "cause.alzheimers_consistent.prevalence_any",
         # "p_dementia": "cause.alzheimers_consistent.prevalence_dementia",  # not in samples
-        "i": "cause.alzheimers_consistent.incidence",
+        "i": "cause.alzheimers_consistent.population_incidence_dementia",
         "f": "cause.alzheimers_consistent.excess_mortality_rate",
         "delta_BBBM": "cause.alzheimers_consistent.bbbm_conditional_prevalence",
         "delta_MCI": "cause.alzheimers_consistent.mci_conditional_prevalence",
