@@ -5,6 +5,7 @@ import pandas as pd
 import scipy
 
 from vivarium_csu_alzheimers.constants.data_keys import TESTING_RATES
+from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
 
 ############################
 # Disease Model Parameters #
@@ -59,13 +60,17 @@ GBD_AGE_GROUPS_WIDTH = 5
 
 
 class __Columns(NamedTuple):
+    DISEASE_STATE: str = ALZHEIMERS_DISEASE_MODEL.NAME
+    PREVIOUS_DISEASE_STATE: str = "previous_" + ALZHEIMERS_DISEASE_MODEL.NAME
     BBBM_ENTRANCE_TIME: str = "bbbm_entrance_time"
     ENTRANCE_TIME: str = "entrance_time"
     TESTING_PROPENSITY: str = "testing_propensity"
-    TESTED_STATUS: str = "tested_status"
+    TESTING_STATE: str = "testing_state"
     BBBM_TEST_DATE: str = "bbbm_test_date"
     BBBM_TEST_RESULT: str = "bbbm_test_result"
     AGE: str = "age"
+    ALIVE: str = "alive"
+    TRACKED: str = "tracked"
 
 
 COLUMNS = __Columns()
@@ -138,6 +143,7 @@ BBBM_POSITIVE_DIAGNOSIS_PROBABILITY = 0.9
 
 
 class __BBBMTestResults(NamedTuple):
+    UNTESTED: str = "untested"
     POSITIVE: str = "positive"
     NEGATIVE: str = "negative"
 

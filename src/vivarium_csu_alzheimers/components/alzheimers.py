@@ -154,7 +154,7 @@ class Alzheimers(Component):
         )
 
         return DiseaseModel(
-            ALZHEIMERS_DISEASE_MODEL.MODEL_NAME,
+            ALZHEIMERS_DISEASE_MODEL.NAME,
             initial_state=bbbm_state,
             states=[bbbm_state, mci_state, alzheimers_state],
         )

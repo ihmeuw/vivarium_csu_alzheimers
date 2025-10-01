@@ -2,7 +2,14 @@ import pandas as pd
 from vivarium.framework.engine import Builder
 from vivarium.framework.results import Observer
 from vivarium_public_health import ResultsStratifier as ResultsStratifier_
-from vivarium_public_health.results import DiseaseObserver
+from vivarium_public_health.results import DiseaseObserver, PublicHealthObserver
+
+from vivarium_csu_alzheimers.constants.data_values import (
+    BBBM_TEST_RESULTS,
+    COLUMNS,
+    TESTING_STATES,
+)
+from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
 
 
 class ResultsStratifier(ResultsStratifier_):
@@ -93,3 +100,48 @@ class NewSimulantsObserver(Observer):
         """Counts the number of new simulants added to the population this time step."""
         new = sims["entrance_time"] == self.clock()
         return new.sum()
+
+
+class BaselineTestingObserver(PublicHealthObserver):
+    """Observer to track baseline testing for Alzheimer's disease."""
+
+    @property
+    def columns_required(self) -> list[str]:
+        return [
+            COLUMNS.ALIVE,
+            COLUMNS.TRACKED,
+            COLUMNS.DISEASE_STATE,
+            COLUMNS.PREVIOUS_DISEASE_STATE,
+            COLUMNS.TESTING_STATE,
+            COLUMNS.BBBM_TEST_RESULT,
+        ]
+
+    def register_observations(self, builder: Builder) -> None:
+        # Register stratification
+        builder.results.register_stratification(
+            name="testing_state",
+            categories=list(TESTING_STATES),
+            requires_columns=[COLUMNS.TESTING_STATE],
+        )
+
+        # Register observation
+        pop_filter = (
+            'alive == "alive" and tracked == True '
+            f'and {COLUMNS.PREVIOUS_DISEASE_STATE} == "{ALZHEIMERS_DISEASE_MODEL.BBBM_STATE}" '
+            f'and {COLUMNS.DISEASE_STATE} != "{ALZHEIMERS_DISEASE_MODEL.BBBM_STATE}" '
+            f'and {COLUMNS.BBBM_TEST_RESULT} != "{BBBM_TEST_RESULTS.POSITIVE}"'
+        )
+        self.register_adding_observation(
+            builder=builder,
+            name="baseline_testing_counts",
+            pop_filter=pop_filter,
+            requires_columns=self.columns_required,
+            additional_stratifications=["testing_state"] + self.configuration.include,
+            excluded_stratifications=self.configuration.exclude,
+        )
+
+    def get_entity_type_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
+        return pd.Series("testing", index=results.index)
+
+    def get_entity_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
+        return pd.Series("baseline_testing", index=results.index)
