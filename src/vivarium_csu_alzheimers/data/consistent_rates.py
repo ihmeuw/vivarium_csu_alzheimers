@@ -1,6 +1,6 @@
 """NumPyro/JAX implementation of DisMod-AT, refactored from notebook 2024_07_28a_dismod_ipd_ai_refactor.ipynb
 """
-from typing import Callable
+from typing import Callable, Iterable
 
 import interpax
 import jax
@@ -11,15 +11,18 @@ import pandas as pd
 from diffrax import Dopri5, ODETerm, SaveAt, diffeqsolve
 from numpyro import distributions as dist
 from numpyro import infer
-from vivarium import Artifact
+from vivarium.framework.artifact import Artifact
 
-def transform_to_data(param, df_in, sex, ages, years):
+def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[int], years: Iterable[int]) -> pd.DataFrame:
     """Convert artifact data to a format suitable for DisMod-AT-NumPyro."""
     t = df_in.loc[sex]
     results = []  # fill with rows of data, then convert to a dataframe
 
     for a in ages:
         for y in years:
+            # Note: age_end and year_end here are meta fields used only for midpoints
+            # computation downstream; they do not affect which rows are selected from
+            # the artifact (selection is done via the query below).
             row = {
                 "age_start": a,
                 "age_end": a,
@@ -35,7 +38,7 @@ def transform_to_data(param, df_in, sex, ages, years):
             row["mean"] = np.mean(tt.iloc[0])
             row["standard_error"] = (
                 np.std(tt.iloc[0])
-                + 0.00000001  # add a little bit to the s2 for everything, just to avoid zeros
+                + 1e-8  # small epsilon to avoid zero standard errors
             )
 
             results.append(row)
@@ -61,11 +64,11 @@ def transform_to_prior(df, sex, ages, years, location):
     return mu, s2
 
 
-def at_param(name: str, ages, years, knot_val, method="constant") -> Callable:
+def at_param(name: str, ages, years, knot_val, method: str = "constant") -> Callable:
     """Create an age- and time-specific rate function for a DisMod model.
 
     This function generates a 2d-interpolated rate function
-    with a TruncatedNormal prior.
+    (the prior on knot values is defined elsewhere).
 
     It uses `searchsorted` as an efficient piecewise constant
     interpolation method.
@@ -81,7 +84,7 @@ def at_param(name: str, ages, years, knot_val, method="constant") -> Callable:
 
     Returns
     -------
-    function
+    Callable
         A function `f(a, t)` that takes array-like values age `a`
         and time `t` as inputs and returns the interpolated rate value
         specific to the given age and time.
@@ -123,31 +126,15 @@ def at_param(name: str, ages, years, knot_val, method="constant") -> Callable:
     return f
 
 
-def data_model(name, f, df_data):
-    if len(df_data) == 0:
-        return
+def data_model(name: str, f: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray], df_data: pd.DataFrame):
+    assert len(df_data) > 0, f'{name} should have some data'
 
     ages = jnp.array(0.5 * (df_data.age_start + df_data.age_end))
     years = jnp.array(0.5 * (df_data.year_start + df_data.year_end))
     rate_obs_loc = jnp.array(df_data["mean"])
     rate_obs_scale = jnp.array(df_data["standard_error"])
 
-    # refactor the following to use jax.vmap and to include population weights
-    rate_pred = jnp.zeros(len(df_data))
-    n_points = 5
-    for alpha in np.linspace(0, 1, n_points):
-        ages = jnp.array(alpha * df_data.age_start + (1 - alpha) * df_data.age_end)
-        rate_pred += f(ages, years)
-    rate_pred /= n_points
-
-    if len(df_data.filter(like="x_").columns) != 0:
-        # include fixed effects
-        X = jnp.array(df_data.filter(like="x_").fillna(0))
-        beta = numpyro.sample(
-            f"{name}_beta",
-            dist.Normal(loc=jnp.zeros(len(X[0])), scale=1.0),
-        )
-        rate_pred = jnp.exp(jnp.dot(X, beta)) * rate_pred
+    rate_pred = f(ages, years)
 
     rate_obs = numpyro.sample(
         f"{name}_obs", dist.Normal(loc=rate_pred, scale=rate_obs_scale), obs=rate_obs_loc
@@ -155,19 +142,10 @@ def data_model(name, f, df_data):
     return rate_obs
 
 
-def at_param_w_data(param, ages, years, knot_val, df_data, method="constant"):
-    rate_function = at_param(param, ages, years, knot_val, method)
-    rate_data_obs = data_model(param, rate_function, df_data)
-    return rate_function
-
-
-def group_name(sex, location):
-    return f"{sex}_{location}".replace(" ", "_").lower()
-
-
-def ode_model(group,
-              p, i, delta_BBBM, delta_MCI, h_S_to_BBBM, f, m,
-              sigma, ages, years):
+def ode_model(group: str,
+              p: Callable, i: Callable, delta_BBBM: Callable, delta_MCI: Callable,
+              h_S_to_BBBM: Callable, f: Callable, m: Callable,
+              sigma: float, ages, years):
     def dismod_f(t, y, args):
         S, BBBM, MCI, D, new_D = y
         h_S_to_BBBM, h_BBBM_to_MCI, h_MCI_to_dementia, f, m = args
@@ -214,8 +192,21 @@ def ode_model(group,
         )
 
         S, BBBM, MCI, D, new_D = solution.ys
-        difference = jnp.log(D / (S + BBBM + MCI + D)) - jnp.log(p(a + dt, t + dt))
-        difference += jnp.log(new_D / (dt * (S + BBBM + MCI + D))) - jnp.log(i(a + dt/2, t + dt/2)) 
+        # Numerical stability for log terms
+        eps = 1e-12
+        denom_alive = S + BBBM + MCI + D
+        denom_noS = BBBM + MCI + D
+        # Clip to avoid log(0)
+        r_bbbm = jnp.clip(BBBM / (denom_noS + eps), eps)
+        r_mci = jnp.clip(MCI / (denom_noS + eps), eps)
+        r_prev = jnp.clip(D / (denom_alive + eps), eps)
+        r_inc = jnp.clip(new_D / (dt * (denom_alive + eps)), eps)
+
+        difference = 0.0
+        difference += jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps))
+        difference += jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps))
+        difference += jnp.log(r_prev) - jnp.log(jnp.clip(p(a + dt, t + dt), eps))
+        difference += jnp.log(r_inc) - jnp.log(jnp.clip(i(a + dt/2, t + dt/2), eps))
         return difference
 
     # Vectorize the ode_consistency_factor function
@@ -258,6 +249,7 @@ class ConsistentModel:
                         loc=jnp.zeros((len(ages), len(years))),
                         scale=jnp.ones((len(ages), len(years))),
                         low=0.0,
+                        high=1.0,
                     ),
                 )
 
@@ -283,10 +275,10 @@ class ConsistentModel:
                 method="constant",
             )
 
-            def p_dementia(a,t):
-                return p(a,t) * jnp.clip(1 - delta_BBBM(a,t) - delta_MCI(a,t), 0, 1)
+            def p_dementia(a, t):
+                return p(a, t) * jnp.clip(1 - delta_BBBM(a, t) - delta_MCI(a, t), 0, 1)
 
-            data_model("p_dementia", p_dementia, df_data)
+            data_model("p_dementia", p_dementia, df_data.query("measure == 'p_dementia'"))
 
             h_S_to_BBBM = at_param(
                 f"h_S_to_BBBM",
@@ -296,15 +288,22 @@ class ConsistentModel:
                 method="constant",
             )
 
-            i = at_param_w_data(
-                f"i_{group}", ages, years, knot_val_dict["i"], df_data[df_data.measure == "i_dementia"]
+            i = at_param(
+                f"i", ages, years, knot_val_dict["i"]
             )
-            f = at_param_w_data(
-                f"f_{group}", ages, years, knot_val_dict["f"], df_data[df_data.measure == "f"]
+            data_model("i", i, df_data.query('measure == "i_dementia"'))
+            
+            f = at_param(
+                f"f", ages, years, knot_val_dict["f"],
             )
+            data_model('f', f, df_data.query('measure == "f"'))
             m = at_param(
-                f"m_{group}", ages, years, knot_val_dict["m"]
+                f"m", ages, years, knot_val_dict["m"]
             )
+            def m_all(a, t):
+                # Population all-cause mortality: m * (1 - p_dementia) + (m + f) * p_dementia = m + f * p_dementia
+                return m(a, t) + f(a, t) * p_dementia(a, t)
+            data_model("m_all", m_all, df_data.query('measure == "m_all"'))
 
             include_consistency_constraints = True
             if include_consistency_constraints:
@@ -407,6 +406,10 @@ def generate_consistent_rates(art: Artifact, location: str):
                 transform_to_data("m_all", art.load(load_key["m_all"]), sex, ages, years),
             ]
         )
+
+        for key in load_key.keys():
+            assert key in set(df_data.measure)
+
         return df_data
 
     def get_rates(model_dict, rate_type, year):
@@ -423,16 +426,17 @@ def generate_consistent_rates(art: Artifact, location: str):
         m[sex].fit(etl_data(sex))
 
     # store consistent rates in artifact
-    for rate_type in ["p", "delta_BBBM", "delta_MCI", "h_S_to_BBBM", "f", "i"]:
-        # generate data for k
+    for rate_type in save_key.keys():
+        # generate data for this rate_type
         df_out = get_rates(m, rate_type, 2025)
         # store generated data in artifact
         rate_name = save_key[rate_type]
         write_or_replace(art, rate_name, df_out)
 
 
-def write_or_replace(art, key, data):
-    if key in art.keys:
+def write_or_replace(art: Artifact, key: str, data: pd.DataFrame):
+    # Use artifact containment check for compatibility
+    if key in art:
         art.replace(key, data)
     else:
         art.write(key, data)
