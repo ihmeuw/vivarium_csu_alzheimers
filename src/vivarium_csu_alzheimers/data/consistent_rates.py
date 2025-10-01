@@ -48,24 +48,6 @@ def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[
     return pd.DataFrame(results)
 
 
-def transform_to_prior(df, sex, ages, years, location):
-    """Convert artifact data to a format suitable for DisMod-AT-NumPyro."""
-    t = df.loc[(location, sex)]
-    mu = pd.DataFrame(index=ages, columns=years, dtype=float)
-    s2 = pd.DataFrame(index=ages, columns=years, dtype=float)
-
-    for a in ages:
-        for y in years:
-            tt = t.query(
-                "age_start <= @a and @a < age_end and year_start <= @y and @y < year_end"
-            )
-            assert len(tt) == 1
-            mu.loc[a, y] = np.mean(tt.iloc[0])
-            s2.loc[a, y] = np.var(tt.iloc[0])
-
-    return mu, s2
-
-
 def at_param(name: str, ages, years, knot_val, method: str = "constant") -> Callable:
     """Create an age- and time-specific rate function for a DisMod model.
 
@@ -82,7 +64,6 @@ def at_param(name: str, ages, years, knot_val, method: str = "constant") -> Call
     ages : array-like
     years : array-like
     knot_val : array-like with rows for ages and columns for years
-    method : str, interpolation method of "constant" or "linear"
 
     Returns
     -------
@@ -97,34 +78,26 @@ def at_param(name: str, ages, years, knot_val, method: str = "constant") -> Call
       'scan', which is allegedly efficient for GPU computation.
 
     """
-
-    if method == "constant":
-
-        def f(a: jnp.ndarray, t: jnp.ndarray) -> jnp.ndarray:
-            method = "scan"  # 'scan_unrolled' can be more performant on GPU at the
-            # expense of additional compile time
-            a_index = jnp.searchsorted(
-                jnp.asarray(ages[1:]),  # Start from ages[1]
-                # so that ages less than ages[1] map to
-                # index 0
-                jnp.asarray(a),
-                method=method,
-                side="right",
-            )
-            t_index = jnp.searchsorted(
-                jnp.asarray(years[1:]),  # Start from years[1]
-                # so that years less than years[1] map to
-                # index 0
-                jnp.asarray(t),
-                method=method,
-                side="right",
-            )
-            return knot_val[a_index, t_index]
-
-    elif method == "linear":
-        f = interpax.Interpolator2D(ages, years, knot_val, method="linear", extrap=True)
-    else:
-        assert 0, f'Method "{method}" unrecognized, should be "constant" or "linear"'
+    def f(a: jnp.ndarray, t: jnp.ndarray) -> jnp.ndarray:
+        method = "scan"  # 'scan_unrolled' can be more performant on GPU at the
+        # expense of additional compile time
+        a_index = jnp.searchsorted(
+            jnp.asarray(ages[1:]),  # Start from ages[1]
+            # so that ages less than ages[1] map to
+            # index 0
+            jnp.asarray(a),
+            method=method,
+            side="right",
+        )
+        t_index = jnp.searchsorted(
+            jnp.asarray(years[1:]),  # Start from years[1]
+            # so that years less than years[1] map to
+            # index 0
+            jnp.asarray(t),
+            method=method,
+            side="right",
+        )
+        return knot_val[a_index, t_index]
     return f
 
 
@@ -257,21 +230,21 @@ class ConsistentModel:
             p = at_param(
                 f"p",
                 ages,
-                [2025],
+                years,
                 knot_val_dict["p"],
                 method="constant",
             )
             delta_BBBM = at_param(
                 f"delta_BBBM",
                 ages,
-                [2025],
+                years,
                 knot_val_dict["delta_BBBM"],
                 method="constant",
             )
             delta_MCI = at_param(
                 f"delta_MCI",
                 ages,
-                [2025],
+                years,
                 knot_val_dict["delta_MCI"],
                 method="constant",
             )
@@ -284,7 +257,7 @@ class ConsistentModel:
             h_S_to_BBBM = at_param(
                 f"h_S_to_BBBM",
                 ages,
-                [2025],
+                years,
                 knot_val_dict["h_S_to_BBBM"],
                 method="constant",
             )
@@ -312,7 +285,7 @@ class ConsistentModel:
             if include_consistency_constraints:
                 ode_model(group, 
                           p, i, delta_BBBM, delta_MCI, h_S_to_BBBM, p_dementia, f, m,
-                          sigma=0.01, ages=ages, years=years)
+                          sigma=0.005, ages=ages, years=[2025, 2100])
 
 
         sampler = infer.MCMC(
@@ -382,9 +355,9 @@ def generate_consistent_rates(art: Artifact, location: str):
 
     """
     # TODO: check if the consistent rates are already in the artifact, and if so, skip rest of this function
-    ages = np.arange(30, 101, 5)
-    years = [2025, 2030] # np.arange(2025, 2051, 5)
-    sexes = ["Male", "Female"]
+    ages = np.arange(30, 101, 10)
+    years = [2025]
+    sexes = ["Male"]#, "Female"]
     load_key = {
         "p_dementia": "cause.alzheimers.prevalence",
         "i_dementia": "cause.alzheimers.population_incidence_rate",
