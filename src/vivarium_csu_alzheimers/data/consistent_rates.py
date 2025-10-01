@@ -123,7 +123,7 @@ def at_param(name: str, ages, years, knot_val, method="constant") -> Callable:
     return f
 
 
-def data_model(name, f, df_data):  # FIXME: expose beta so it can be common across locations
+def data_model(name, f, df_data):
     if len(df_data) == 0:
         return
 
@@ -165,80 +165,37 @@ def group_name(sex, location):
     return f"{sex}_{location}".replace(" ", "_").lower()
 
 
-def single_location_model(
-    group,
-    sex,
-    location,
-    ages,
-    years,
-    knot_val_dict,
-    df_data,
-    include_consistency_constraints=True,
-):
-    group = group_name(sex, location)
-    i = at_param_w_data(
-        f"i_{group}", ages, years, knot_val_dict["i"], df_data[df_data.measure == "i"]
-    )
-    r = at_param_w_data(
-        f"r_{group}", ages, years, knot_val_dict["r"], df_data[df_data.measure == "r"]
-    )
-    ti = at_param_w_data(
-        f"ti_{group}", ages, years, knot_val_dict["ti"], df_data[df_data.measure == "ti"]
-    )
-    ts = at_param_w_data(
-        f"ts_{group}", ages, years, knot_val_dict["ts"], df_data[df_data.measure == "ts"]
-    )
-    tf = at_param_w_data(
-        f"tf_{group}", ages, years, knot_val_dict["tf"], df_data[df_data.measure == "tf"]
-    )
-    f = at_param_w_data(
-        f"f_{group}", ages, years, knot_val_dict["f"], df_data[df_data.measure == "f"]
-    )
-    m = at_param_w_data(
-        f"m_{group}", ages, years, knot_val_dict["m"], df_data[df_data.measure == "m"]
-    )
-
-    p = at_param_w_data(
-        f"p_{group}",
-        ages,
-        years,
-        knot_val_dict["p"],
-        df_data[df_data.measure == "p"],
-        method="constant",
-    )
-
-    tx = at_param_w_data(
-        f"tx_{group}",
-        ages,
-        years,
-        knot_val_dict["tx"],
-        df_data[df_data.measure == "tx"],
-        method="constant",
-    )
-
-    if include_consistency_constraints:
-        ode_model(group, p, tx, i, r, ti, ts, tf, f, m, sigma=0.01, ages=ages, years=years)
-    return dict(p=p, i=i, f=f, m=m, r=r, ti=ti, ts=ts, tf=tf)
-
-
-def ode_model(group, p, tx, i, r, ti, ts, tf, f, m, sigma, ages, years):
+def ode_model(group,
+              p, i, delta_BBBM, delta_MCI, h_S_to_BBBM, f, m,
+              sigma, ages, years):
     def dismod_f(t, y, args):
-        S, C, T = y
-        i, r, ti, ts, tf, f, m = args
+        S, BBBM, MCI, D, new_D = y
+        h_S_to_BBBM, h_BBBM_to_MCI, h_MCI_to_dementia, f, m = args
         return (
-            0 - m * S - i * S + r * C + ts * T,
-            0 - m * C - f * C + i * S - r * C - ti * C + tf * T,
-            0 - m * T - f * T + ti * C - ts * T - tf * T,
+            0 - m * S                                                       - h_S_to_BBBM * S,
+            0 - m * BBBM                             - h_BBBM_to_MCI * BBBM + h_S_to_BBBM * S,
+            0 - m * MCI    - h_MCI_to_dementia * MCI + h_BBBM_to_MCI * BBBM,
+            0 - (m+f) * D  + h_MCI_to_dementia * MCI,
+            h_MCI_to_dementia * MCI,
         )
 
     def ode_consistency_factor(at):
+        h_BBBM_to_MCI = 1/5 # FIXME
+        h_MCI_to_dementia = 1/5 # FIXME
+        
         a, t = at
         dt = 5
         term = ODETerm(dismod_f)
         solver = Dopri5()
         saveat = SaveAt(t0=False, t1=True)
 
-        y0 = (1 - p(a, t), p(a, t) * (1 - tx(a, t)), p(a, t) * tx(a, t))
+        y0 = (
+            1 - p(a, t),
+            p(a, t) * delta_BBBM(a, t), 
+            p(a, t) * delta_MCI(a, t),
+            p(a, t) * (1 - delta_BBBM(a, t) - delta_MCI(a, t)),
+            0
+        )
         solution = diffeqsolve(
             term,
             solver,
@@ -247,19 +204,26 @@ def ode_model(group, p, tx, i, r, ti, ts, tf, f, m, sigma, ages, years):
             dt0=0.5,
             y0=y0,
             saveat=saveat,
-            args=[i(a, t), r(a, t), ti(a, t), ts(a, t), tf(a, t), f(a, t), m(a, t)],
+            args=[
+                h_S_to_BBBM(a, t),
+                h_BBBM_to_MCI,
+                h_MCI_to_dementia,
+                f(a, t),
+                m(a, t)
+            ],
         )
 
-        S, C, T = solution.ys
-        difference = jnp.log((C + T) / (S + C + T)) - jnp.log(p(a + dt, t + dt))
-        difference += jnp.log(T / (T + C)) - jnp.log(tx(a + dt, t + dt))
+        S, BBBM, MCI, D, new_D = solution.ys
+        difference = jnp.log(D / (S + BBBM + MCI + D)) - jnp.log(p(a + dt, t + dt))
+        difference += jnp.log(new_D / (dt * (S + BBBM + MCI + D))) - jnp.log(i(a + dt/2, t + dt/2)) 
         return difference
 
     # Vectorize the ode_consistency_factor function
     ode_consistency_factors = jax.vmap(ode_consistency_factor)
 
     # Create a mesh grid of ages and years
-    age_mesh, year_mesh = jnp.meshgrid(ages[:-1], years[:-1])
+    age_mesh, year_mesh = jnp.meshgrid(jnp.array(ages[:-1]),
+                                       jnp.array(years[:-1]))
     at_list = jnp.stack([age_mesh.ravel(), year_mesh.ravel()], axis=-1)
 
     # Compute ODE errors for all age-time combinations at once
@@ -267,7 +231,7 @@ def ode_model(group, p, tx, i, r, ti, ts, tf, f, m, sigma, ages, years):
         f"ode_errors_{group}", ode_consistency_factors(at_list)
     )
 
-    # Add a normal penalty for difference between solution and SC
+    # Add a normal penalty for difference between solution and params
     log_pr = dist.Normal(0, sigma).log_prob(ode_errors).sum()
     numpyro.factor(f"ode_consistency_factor_{group}", log_pr)
 
@@ -287,7 +251,7 @@ class ConsistentModel:
 
         def model():
             knot_val_dict = {}
-            for param in ["p", "tx", "i", "f", "m", "r", "ti", "tf", "ts"]:
+            for param in ["p", "delta_BBBM", "delta_MCI", "h_S_to_BBBM", "i", "f", "m"]:
                 knot_val_dict[param] = numpyro.sample(
                     f"{param}_{group}",
                     dist.TruncatedNormal(
@@ -296,17 +260,58 @@ class ConsistentModel:
                         low=0.0,
                     ),
                 )
-            # TODO: consider moving knots of p to midpoints
-            rate_functions = single_location_model(
-                group,
-                sex,
-                location,
+
+            p = at_param(
+                f"p",
                 ages,
-                years,
-                knot_val_dict,
-                df_data,
-                include_consistency_constraints=True,
+                [2025],
+                knot_val_dict["p"],
+                method="constant",
             )
+            delta_BBBM = at_param(
+                f"delta_BBBM",
+                ages,
+                [2025],
+                knot_val_dict["delta_BBBM"],
+                method="constant",
+            )
+            delta_MCI = at_param(
+                f"delta_MCI",
+                ages,
+                [2025],
+                knot_val_dict["delta_MCI"],
+                method="constant",
+            )
+
+            def p_dementia(a,t):
+                return p(a,t) * jnp.clip(1 - delta_BBBM(a,t) - delta_MCI(a,t), 0, 1)
+
+            data_model("p_dementia", p_dementia, df_data)
+
+            h_S_to_BBBM = at_param(
+                f"h_S_to_BBBM",
+                ages,
+                [2025],
+                knot_val_dict["h_S_to_BBBM"],
+                method="constant",
+            )
+
+            i = at_param_w_data(
+                f"i_{group}", ages, years, knot_val_dict["i"], df_data[df_data.measure == "i_dementia"]
+            )
+            f = at_param_w_data(
+                f"f_{group}", ages, years, knot_val_dict["f"], df_data[df_data.measure == "f"]
+            )
+            m = at_param(
+                f"m_{group}", ages, years, knot_val_dict["m"]
+            )
+
+            include_consistency_constraints = True
+            if include_consistency_constraints:
+                ode_model(group, 
+                          p, i, delta_BBBM, delta_MCI, h_S_to_BBBM, f, m,
+                          sigma=0.01, ages=ages, years=years)
+
 
         sampler = infer.MCMC(
             infer.NUTS(
@@ -314,14 +319,12 @@ class ConsistentModel:
                 init_strategy=numpyro.infer.init_to_value(
                     values={
                         f"p_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"tx_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
+                        f"delta_BBBM_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
+                        f"delta_MCI_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
+                        f"h_S_to_BBBM_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
                         f"i_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
                         f"f_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
                         f"m_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"r_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"ti_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"ts_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"tf_{group}": jnp.ones([len(ages), len(years)]) * 0.05,
                     }
                 ),
             ),
@@ -378,34 +381,30 @@ def generate_consistent_rates(art: Artifact, location: str):
     """
     # TODO: check if the consistent rates are already in the artifact, and if so, skip rest of this function
     ages = np.arange(5, 96, 5)
-    years = np.arange(2025, 2051, 5)
+    years = [2025, 2030] # np.arange(2025, 2051, 5)
     sexes = ["Male", "Female"]
-    key = {
-        "i": "cause.opioid_use_disorders.incidence_rate",
-        "p": "cause.alzheimers.prevalence",
-        "f": "cause.opioid_use_disorders.excess_mortality_rate",
+    load_key = {
+        "p_dementia": "cause.alzheimers.prevalence",
+        "i_dementia": "cause.alzheimers.population_incidence_rate",
+        "f": "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate",
         "m_all": "cause.all_causes.cause_specific_mortality_rate",
-        "csmr_with": "cause.opioid_use_disorders.cause_specific_mortality_rate",
-        "pop": "population.structure",
+    }
+    save_key = {
+        "h_S_to_BBBM": "cause.alzheimers_consistent.population_incidence_rate",
+        "p": "cause.alzheimers_consistent.prevalence",
+        "i": "cause.alzheimers_consistent.incidence",
+        "f": "cause.alzheimers_consistent.excess_mortality_rate",
+        "delta_BBBM": "cause.alzheimers_consistent.bbbm_conditional_prevalence",
+        "delta_MCI": "cause.alzheimers_consistent.mci_conditional_prevalence",
     }
 
     def etl_data(sex):
         df_data = pd.concat(
             [
-                transform_to_data("p", art.load(key["p"]), sex, ages, [2023]),
-                # transform_to_data("i", art.load(key["i"]), sex, ages, [2021]),
-                # transform_to_data("f", art.load(key["f"]), sex, ages, [2021]),
-                # transform_to_data(
-                #     "m",
-                #     art.load(key["m_all"]) - art.load(key["csmr_with"]),
-                #     sex,
-                #     ages,
-                #     [2021],
-                # ),
-                # transform_to_data("ti", utils.generate_constant_data(0.0), sex, ages, [2021]), 
-                # transform_to_data("ts", utils.generate_constant_data(0.0), sex, ages, [2021]), 
-                # transform_to_data("tf", utils.generate_constant_data(1.0), sex, ages, [2021]), 
-                # transform_to_data("tx", utils.generate_constant_data(0.0), sex, ages, [2021]), 
+                transform_to_data("p_dementia", art.load(load_key["p_dementia"]), sex, ages, [2023]),
+                transform_to_data("i_dementia", art.load(load_key["i_dementia"]), sex, ages, [2023]),
+                transform_to_data("f", art.load(load_key["f"]), sex, ages, [2021]),
+                transform_to_data("m_all", art.load(load_key["m_all"]), sex, ages, years),
             ]
         )
         return df_data
@@ -420,18 +419,15 @@ def generate_consistent_rates(art: Artifact, location: str):
     # fit model separately for Male and Female
     m = {}
     for sex in sexes:
-        breakpoint()
-
         m[sex] = ConsistentModel(sex, ages, years)
         m[sex].fit(etl_data(sex))
 
     # store consistent rates in artifact
-    for rate_type in ["i", "p_bbbm", "p_mci", "p_ad"]:
+    for rate_type in ["p", "delta_BBBM", "delta_MCI", "h_S_to_BBBM", "f", "i"]:
         # generate data for k
-        df_out = get_rates(m, rate_type, 2020)
+        df_out = get_rates(m, rate_type, 2025)
         # store generated data in artifact
-        rate_name = key[rate_type]
-        rate_name = rate_name.replace("alzheimers", "ad_consistent")
+        rate_name = save_key[rate_type]
         write_or_replace(art, rate_name, df_out)
 
 
