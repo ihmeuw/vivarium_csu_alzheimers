@@ -11,8 +11,10 @@ import pandas as pd
 from diffrax import Dopri5, ODETerm, SaveAt, diffeqsolve
 from numpyro import distributions as dist
 from numpyro import infer
+
 from vivarium.framework.artifact import Artifact
 
+from vivarium_csu_alzheimers.constants.data_values import BBBM_AVG_DURATION, MCI_AVG_DURATION
 def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[int], years: Iterable[int]) -> pd.DataFrame:
     """Convert artifact data to a format suitable for DisMod-AT-NumPyro."""
     t = df_in.loc[sex]
@@ -144,7 +146,7 @@ def data_model(name: str, f: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray], 
 
 def ode_model(group: str,
               p: Callable, i: Callable, delta_BBBM: Callable, delta_MCI: Callable,
-              h_S_to_BBBM: Callable, f: Callable, m: Callable,
+              h_S_to_BBBM: Callable, p_dementia: Callable, f: Callable, m: Callable,
               sigma: float, ages, years):
     def dismod_f(t, y, args):
         S, BBBM, MCI, D, new_D = y
@@ -158,8 +160,8 @@ def ode_model(group: str,
         )
 
     def ode_consistency_factor(at):
-        h_BBBM_to_MCI = 1/5 # FIXME
-        h_MCI_to_dementia = 1/5 # FIXME
+        h_BBBM_to_MCI = 1/BBBM_AVG_DURATION
+        h_MCI_to_dementia = 1/MCI_AVG_DURATION
         
         a, t = at
         dt = 5
@@ -167,20 +169,19 @@ def ode_model(group: str,
         solver = Dopri5()
         saveat = SaveAt(t0=False, t1=True)
 
-        y0 = (
-            1 - p(a, t),
-            p(a, t) * delta_BBBM(a, t), 
-            p(a, t) * delta_MCI(a, t),
-            p(a, t) * (1 - delta_BBBM(a, t) - delta_MCI(a, t)),
-            0
-        )
         solution = diffeqsolve(
             term,
             solver,
             t0=t,
             t1=t + dt,
             dt0=0.5,
-            y0=y0,
+            y0=(
+                1 - p(a, t),
+                p(a, t) * delta_BBBM(a, t), 
+                p(a, t) * delta_MCI(a, t),
+                p(a, t) * jnp.clip(1 - delta_BBBM(a, t) - delta_MCI(a, t), 0, 1),
+                0
+            ),
             saveat=saveat,
             args=[
                 h_S_to_BBBM(a, t),
@@ -205,7 +206,7 @@ def ode_model(group: str,
         difference = 0.0
         difference += jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps))
         difference += jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps))
-        difference += jnp.log(r_prev) - jnp.log(jnp.clip(p(a + dt, t + dt), eps))
+        difference += jnp.log(r_prev) - jnp.log(jnp.clip(p_dementia(a + dt, t + dt), eps))
         difference += jnp.log(r_inc) - jnp.log(jnp.clip(i(a + dt/2, t + dt/2), eps))
         return difference
 
@@ -308,7 +309,7 @@ class ConsistentModel:
             include_consistency_constraints = True
             if include_consistency_constraints:
                 ode_model(group, 
-                          p, i, delta_BBBM, delta_MCI, h_S_to_BBBM, f, m,
+                          p, i, delta_BBBM, delta_MCI, h_S_to_BBBM, p_dementia, f, m,
                           sigma=0.01, ages=ages, years=years)
 
 
@@ -327,8 +328,8 @@ class ConsistentModel:
                     }
                 ),
             ),
-            num_warmup=1_000,
-            num_samples=1_000,
+            num_warmup=500,
+            num_samples=500,
             num_chains=1,
             progress_bar=True,
         )
@@ -379,7 +380,7 @@ def generate_consistent_rates(art: Artifact, location: str):
 
     """
     # TODO: check if the consistent rates are already in the artifact, and if so, skip rest of this function
-    ages = np.arange(5, 96, 5)
+    ages = np.arange(30, 101, 5)
     years = [2025, 2030] # np.arange(2025, 2051, 5)
     sexes = ["Male", "Female"]
     load_key = {
@@ -390,7 +391,8 @@ def generate_consistent_rates(art: Artifact, location: str):
     }
     save_key = {
         "h_S_to_BBBM": "cause.alzheimers_consistent.population_incidence_rate",
-        "p": "cause.alzheimers_consistent.prevalence",
+        "p": "cause.alzheimers_consistent.prevalence_any",
+        # "p_dementia": "cause.alzheimers_consistent.prevalence_dementia",  # not in samples
         "i": "cause.alzheimers_consistent.incidence",
         "f": "cause.alzheimers_consistent.excess_mortality_rate",
         "delta_BBBM": "cause.alzheimers_consistent.bbbm_conditional_prevalence",
