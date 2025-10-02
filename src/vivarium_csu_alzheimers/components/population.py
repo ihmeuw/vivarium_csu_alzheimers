@@ -87,7 +87,9 @@ class AlzheimersPopulation(ScaledPopulation):
         which means that simulants on age bin boundaries land in the older age bin
         than they should have.
         """
-        super().on_time_step(event)
+        population = self.population_view.get(event.index, query="alive == 'alive'")
+        population["age"] += utilities.to_years(event.step_size)
+        self.population_view.update(population)
 
     def _load_population_structure(self, builder: Builder) -> pd.DataFrame:
         """Overwriting this method to deal with multi-year population structure and custom age groups."""
