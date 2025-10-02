@@ -20,6 +20,11 @@ class AlzheimersPopulation(ScaledPopulation):
     The demography counts are created by the AlzheimersIncidence component, below.
     """
 
+    @property
+    def collect_metrics_priority(self) -> int:
+        """We want to age simulants after metrics are collected, so use highest priority."""
+        return 9
+
     def setup(self, builder: Builder) -> None:
         super().setup(builder)
         self.key_columns = builder.configuration.randomness.key_columns
@@ -70,6 +75,21 @@ class AlzheimersPopulation(ScaledPopulation):
         self.population_view.update(new_simulants)
         # NOTE: This only works with key_columns because this component creates age and entrance_time
         self.register_simulants(new_simulants[self.key_columns])
+
+    def on_time_step(self, event: Event) -> None:
+        """Overrides aging to do nothing instead."""
+        pass
+
+    def on_collect_metrics(self, event: Event) -> None:
+        """Ages simulants on the collect_metrics phase.
+
+        We want to do this because otherwise aging happens prior to collecting metrics
+        which means that simulants on age bin boundaries land in the older age bin
+        than they should have.
+        """
+        population = self.population_view.get(event.index, query="alive == 'alive'")
+        population["age"] += utilities.to_years(event.step_size)
+        self.population_view.update(population)
 
     def _load_population_structure(self, builder: Builder) -> pd.DataFrame:
         """Overwriting this method to deal with multi-year population structure and custom age groups."""
