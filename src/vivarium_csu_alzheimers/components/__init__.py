@@ -1,4 +1,9 @@
 from .alzheimers import Alzheimers
-from .observers import BaselineTestingObserver, NewSimulantsObserver, ResultsStratifier
+from .observers import (
+    BaselineTestingObserver,
+    BBBMTestCountObserver,
+    NewSimulantsObserver,
+    ResultsStratifier,
+)
 from .population import AlzheimersIncidence, AlzheimersPopulation
 from .testing import Testing

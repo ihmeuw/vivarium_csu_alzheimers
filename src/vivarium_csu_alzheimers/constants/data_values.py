@@ -68,6 +68,7 @@ class __Columns(NamedTuple):
     TESTING_STATE: str = "testing_state"
     BBBM_TEST_DATE: str = "bbbm_test_date"
     BBBM_TEST_RESULT: str = "bbbm_test_result"
+    PREVIOUS_BBBM_TEST_RESULT: str = "previous_bbbm_test_result"
     AGE: str = "age"
     ALIVE: str = "alive"
     TRACKED: str = "tracked"
@@ -143,7 +144,7 @@ BBBM_POSITIVE_DIAGNOSIS_PROBABILITY = 0.9
 
 
 class __BBBMTestResults(NamedTuple):
-    UNTESTED: str = "untested"
+    NOT_TESTED: str = "not_tested"
     POSITIVE: str = "positive"
     NEGATIVE: str = "negative"
 
