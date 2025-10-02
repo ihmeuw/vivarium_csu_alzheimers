@@ -68,7 +68,6 @@ class __Columns(NamedTuple):
     TESTING_STATE: str = "testing_state"
     BBBM_TEST_DATE: str = "bbbm_test_date"
     BBBM_TEST_RESULT: str = "bbbm_test_result"
-    PREVIOUS_BBBM_TEST_RESULT: str = "previous_bbbm_test_result"
     AGE: str = "age"
     ALIVE: str = "alive"
     TRACKED: str = "tracked"
