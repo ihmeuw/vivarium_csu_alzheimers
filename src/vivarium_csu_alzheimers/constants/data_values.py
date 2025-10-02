@@ -143,7 +143,7 @@ BBBM_POSITIVE_DIAGNOSIS_PROBABILITY = 0.9
 
 
 class __BBBMTestResults(NamedTuple):
-    UNTESTED: str = "untested"
+    NOT_TESTED: str = "not_tested"
     POSITIVE: str = "positive"
     NEGATIVE: str = "negative"
 

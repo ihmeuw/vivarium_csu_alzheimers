@@ -1,5 +1,8 @@
 import pandas as pd
 from vivarium.framework.engine import Builder
+from vivarium.framework.event import Event
+from vivarium.framework.population import SimulantData
+from vivarium.framework.resource import Resource
 from vivarium.framework.results import Observer
 from vivarium_public_health import ResultsStratifier as ResultsStratifier_
 from vivarium_public_health.results import DiseaseObserver, PublicHealthObserver
@@ -43,40 +46,25 @@ class ResultsStratifier(ResultsStratifier_):
 
         return age_bins
 
-
-class TestingDiseaseObserver(DiseaseObserver):
-    """Class to deal with the transient state in the disease model. Simulants immediately
-    transition from susceptible to transient to positive or negative states. This means
-    that this transitions go from susceptible to positive or negative states even though
-    simulants transition through the transient state and this must be correctly mapped.
-
-    """
-
-    def __init__(self) -> None:
-        super().__init__("testing_for_alzheimers")
-
-    def register_transition_stratification(self, builder: Builder) -> None:
-        # Hardcoding transitions to deal with the transient state since the
-        # transient state is never a value in the current or previous state columns.
-        transitions = [
-            "susceptible_to_testing_for_alzheimers_to_positive_test_for_alzheimers",
-            "susceptible_to_testing_for_alzheimers_to_negative_test_for_alzheimers",
-            "negative_test_for_alzheimers_to_susceptible_to_testing_for_alzheimers",
-            "no_transition",
-        ]
-        # manually append 'no_transition' as an excluded transition
-        excluded_categories = (
-            builder.configuration.stratification.excluded_categories.to_dict().get(
-                self.transition_stratification_name, []
-            )
-        ) + ["no_transition"]
+    def register_stratifications(self, builder):
+        super().register_stratifications(builder)
         builder.results.register_stratification(
-            self.transition_stratification_name,
-            categories=transitions,
-            excluded_categories=excluded_categories,
-            mapper=self.map_transitions,
-            requires_columns=[self.disease, self.previous_state_column_name],
+            name="event_year",
+            categories=[str(year) for year in range(self.start_year, self.end_year + 2)],
+            excluded_categories=[str(self.end_year + 1)],
+            mapper=self.map_year,
             is_vectorized=True,
+            requires_columns=["event_time"],
+        )
+        builder.results.register_stratification(
+            name="testing_state",
+            categories=list(TESTING_STATES),
+            requires_columns=[COLUMNS.TESTING_STATE],
+        )
+        builder.results.register_stratification(
+            name="bbbm_test_results",
+            categories=list(BBBM_TEST_RESULTS),
+            requires_columns=[COLUMNS.BBBM_TEST_RESULT],
         )
 
 
@@ -117,14 +105,6 @@ class BaselineTestingObserver(PublicHealthObserver):
         ]
 
     def register_observations(self, builder: Builder) -> None:
-        # Register stratification
-        builder.results.register_stratification(
-            name="testing_state",
-            categories=list(TESTING_STATES),
-            requires_columns=[COLUMNS.TESTING_STATE],
-        )
-
-        # Register observation
         pop_filter = (
             'alive == "alive" and tracked == True '
             f'and {COLUMNS.PREVIOUS_DISEASE_STATE} == "{ALZHEIMERS_DISEASE_MODEL.BBBM_STATE}" '
@@ -133,10 +113,10 @@ class BaselineTestingObserver(PublicHealthObserver):
         )
         self.register_adding_observation(
             builder=builder,
-            name="baseline_testing_counts",
+            name="baseline_test_counts_among_eligible",
             pop_filter=pop_filter,
             requires_columns=self.columns_required,
-            additional_stratifications=["testing_state"] + self.configuration.include,
+            additional_stratifications=self.configuration.include,
             excluded_stratifications=self.configuration.exclude,
         )
 
@@ -145,3 +125,47 @@ class BaselineTestingObserver(PublicHealthObserver):
 
     def get_entity_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
         return pd.Series("baseline_testing", index=results.index)
+
+
+class BBBMTestCountObserver(PublicHealthObserver):
+    """Observer to track BBBM testing counts."""
+
+    @property
+    def columns_required(self) -> list[str]:
+        return [
+            COLUMNS.ALIVE,
+            COLUMNS.TRACKED,
+            COLUMNS.BBBM_TEST_RESULT,
+            COLUMNS.BBBM_TEST_DATE,
+        ]
+
+    def setup(self, builder: Builder) -> None:
+        self.clock = builder.time.clock()
+        self.step_size = builder.time.step_size()
+
+    def register_observations(self, builder: Builder) -> None:
+        # TODO: clarify whether the default pop_filter to PublicHealthObserver
+        #   should include alive == "alive" (it currently doesn't)
+        pop_filter = 'alive == "alive" and tracked == True'
+        self.register_adding_observation(
+            builder=builder,
+            name="bbbm_test_counts",
+            pop_filter=pop_filter,
+            requires_columns=self.columns_required,
+            additional_stratifications=self.configuration.include,
+            excluded_stratifications=self.configuration.exclude,
+            aggregator=self.count_bbbm_tests,
+        )
+
+    @staticmethod
+    def map_year(pop: pd.DataFrame) -> pd.Series:
+        return pop.squeeze(axis=1).dt.year.apply(str)
+
+    def count_bbbm_tests(self, pop: pd.DataFrame) -> float:
+        return sum(pop[COLUMNS.BBBM_TEST_DATE] == self.clock() + self.step_size())
+
+    def get_entity_type_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
+        return pd.Series("testing", index=results.index)
+
+    def get_entity_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
+        return pd.Series("bbbm_testing", index=results.index)

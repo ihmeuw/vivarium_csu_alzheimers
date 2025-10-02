@@ -8,6 +8,7 @@ components:
           - Alzheimers()
           - Testing()
           - BaselineTestingObserver()
+          - BBBMTestCountObserver()
             
     vivarium_public_health:
         population:
@@ -36,8 +37,8 @@ configuration:
             year: 2100
             month: 12
             day: 31
-        step_size: 183  # days 365/2 = 182.5. 183 days gaurantees 2 steps per year for the 
-                        # 76 year simulation period including leap years
+        step_size: 182  # days 365/2 = 182.5. 182 days guarantees 2 events per year for the 
+                        # 76-year simulation period (including leap years)
     population:
         population_size: 20_000
         initialization_age_min: 25
@@ -48,6 +49,12 @@ configuration:
         default:
             - 'age_group'
             - 'sex'
-            - 'current_year' 
+            - 'event_year'
+        baseline_testing:
+            include:
+                - 'testing_state'
+        bbbm_test_count:
+            include:
+                - 'bbbm_test_results'
     intervention:
         scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'treatment'

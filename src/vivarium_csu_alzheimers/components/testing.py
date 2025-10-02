@@ -69,7 +69,7 @@ class Testing(Component):
         )
         pop[COLUMNS.TESTING_STATE] = TESTING_STATES.NOT_TESTED
         pop[COLUMNS.BBBM_TEST_DATE] = pd.NaT
-        pop[COLUMNS.BBBM_TEST_RESULT] = pd.NA
+        pop[COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NOT_TESTED
 
         self._update_baseline_testing(pop)
         self._update_bbbm_testing(pop, event_time=pop_data.creation_time)
