@@ -1,13 +1,14 @@
 import pandas as pd
 from vivarium.framework.engine import Builder
-from vivarium.framework.event import Event
-from vivarium.framework.population import SimulantData
-from vivarium.framework.resource import Resource
 from vivarium.framework.results import Observer
+from vivarium.framework.time import get_time_stamp
 from vivarium_public_health import ResultsStratifier as ResultsStratifier_
-from vivarium_public_health.results import DiseaseObserver, PublicHealthObserver
+from vivarium_public_health.results import PublicHealthObserver
 
 from vivarium_csu_alzheimers.constants.data_values import (
+    BBBM_AGE_MAX,
+    BBBM_AGE_MIN,
+    BBBM_OLD_TIME,
     BBBM_TEST_RESULTS,
     COLUMNS,
     TESTING_STATES,
@@ -93,17 +94,6 @@ class NewSimulantsObserver(Observer):
 class BaselineTestingObserver(PublicHealthObserver):
     """Observer to track baseline testing for Alzheimer's disease."""
 
-    @property
-    def columns_required(self) -> list[str]:
-        return [
-            COLUMNS.ALIVE,
-            COLUMNS.TRACKED,
-            COLUMNS.DISEASE_STATE,
-            COLUMNS.PREVIOUS_DISEASE_STATE,
-            COLUMNS.TESTING_STATE,
-            COLUMNS.BBBM_TEST_RESULT,
-        ]
-
     def register_observations(self, builder: Builder) -> None:
         pop_filter = (
             'alive == "alive" and tracked == True '
@@ -115,7 +105,6 @@ class BaselineTestingObserver(PublicHealthObserver):
             builder=builder,
             name="baseline_test_counts_among_eligible",
             pop_filter=pop_filter,
-            requires_columns=self.columns_required,
             additional_stratifications=self.configuration.include,
             excluded_stratifications=self.configuration.exclude,
         )
@@ -132,12 +121,7 @@ class BBBMTestCountObserver(PublicHealthObserver):
 
     @property
     def columns_required(self) -> list[str]:
-        return [
-            COLUMNS.ALIVE,
-            COLUMNS.TRACKED,
-            COLUMNS.BBBM_TEST_RESULT,
-            COLUMNS.BBBM_TEST_DATE,
-        ]
+        return [COLUMNS.BBBM_TEST_DATE]
 
     def setup(self, builder: Builder) -> None:
         self.clock = builder.time.clock()
@@ -157,12 +141,85 @@ class BBBMTestCountObserver(PublicHealthObserver):
             aggregator=self.count_bbbm_tests,
         )
 
-    @staticmethod
-    def map_year(pop: pd.DataFrame) -> pd.Series:
-        return pop.squeeze(axis=1).dt.year.apply(str)
-
     def count_bbbm_tests(self, pop: pd.DataFrame) -> float:
         return sum(pop[COLUMNS.BBBM_TEST_DATE] == self.clock() + self.step_size())
+
+    def get_entity_type_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
+        return pd.Series("testing", index=results.index)
+
+    def get_entity_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
+        return pd.Series("bbbm_testing", index=results.index)
+
+
+class BBBMTestEligibilityObserver(PublicHealthObserver):
+    """Observer to track BBBM testing eligible simulant counts."""
+
+    @property
+    def columns_required(self) -> list[str]:
+        return [
+            COLUMNS.DISEASE_STATE,
+            COLUMNS.AGE,
+            COLUMNS.BBBM_TEST_RESULT,
+            COLUMNS.ENTRANCE_TIME,
+            COLUMNS.BBBM_TEST_DATE,
+        ]
+
+    def setup(self, builder: Builder) -> None:
+        self.config = builder.configuration
+        self.clock = builder.time.clock()
+        self.step_size = builder.time.step_size()
+
+    def register_observations(self, builder: Builder) -> None:
+        pop_filter = 'alive == "alive" and tracked == True'
+        self.register_adding_observation(
+            builder=builder,
+            name="bbbm_test_eligibility_counts",
+            pop_filter=pop_filter,
+            requires_columns=self.columns_required,
+            additional_stratifications=self.configuration.include,
+            excluded_stratifications=self.configuration.exclude,
+            aggregator=self.count_eligible_simulants,
+        )
+
+    def count_eligible_simulants(self, pop: pd.DataFrame) -> float:
+        """Counts the number of simulants eligible for BBBM testing this time step.
+
+        There are three groups of eligible simulants:
+        - those who enter the simulation and are already eligible
+        - those who become eligible on a time step
+        - those who got tested exactly three years ago and are eligible for a retest
+        """
+        eligible_state = pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
+        eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
+        eligible_test_result = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
+        eligible_baseline = eligible_state & eligible_age & eligible_test_result
+
+        if not eligible_baseline.any():
+            return 0.0
+
+        sim_start_date = get_time_stamp(self.config.time.start)
+        step_size_in_years = self.step_size().days / 365.25
+
+        new_entrants = pd.Series(False, index=pop.index)
+
+        # Handle initialized population
+        if self.clock() == sim_start_date:
+            # everyone is a new entrant (either from sim initialization or introduced on first time step)
+            new_entrants = pd.Series(
+                pop[COLUMNS.ENTRANCE_TIME] < sim_start_date, index=pop.index
+            )
+
+        new_entrants |= pop[COLUMNS.ENTRANCE_TIME] == self.clock()
+        # NOTE: this is not precisely handling the ages of simulants who entered
+        # on simulation initialization
+        aged_in = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (
+            pop[COLUMNS.AGE] < BBBM_AGE_MIN + step_size_in_years
+        )
+        retest = (
+            pop[COLUMNS.BBBM_TEST_DATE] == self.clock() + self.step_size() - BBBM_OLD_TIME
+        )
+
+        return sum(eligible_baseline & (new_entrants | aged_in | retest))
 
     def get_entity_type_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
         return pd.Series("testing", index=results.index)
