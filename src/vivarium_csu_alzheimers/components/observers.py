@@ -216,8 +216,8 @@ class BBBMTestEligibilityObserver(PublicHealthObserver):
             pop[COLUMNS.AGE] < BBBM_AGE_MIN + step_size_in_years
         )
         three_years_ago = self.clock() + self.step_size() - BBBM_OLD_TIME
-        retest = (pop[COLUMNS.BBBM_TEST_DATE] <= three_years_ago) & (
-            pop[COLUMNS.BBBM_TEST_DATE] > three_years_ago - self.step_size()
+        retest = (
+            pop[COLUMNS.BBBM_TEST_DATE] == self.clock() + self.step_size() - BBBM_OLD_TIME
         )
 
         return sum(eligible_baseline & (new_entrants | aged_in | retest))
