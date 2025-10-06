@@ -12,7 +12,6 @@ from vivarium_csu_alzheimers.constants.data_keys import TESTING_RATES
 from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AGE_MAX,
     BBBM_AGE_MIN,
-    BBBM_OLD_TIME,
     BBBM_POSITIVE_DIAGNOSIS_PROBABILITY,
     BBBM_TEST_RESULTS,
     BBBM_TESTING_RATES,
@@ -20,6 +19,7 @@ from vivarium_csu_alzheimers.constants.data_values import (
     TESTING_STATES,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
+from vivarium_csu_alzheimers.utilities import get_bbbm_retest_timedelta
 
 
 class Testing(Component):
@@ -53,6 +53,7 @@ class Testing(Component):
         self.scenario = scenarios.INTERVENTION_SCENARIOS[
             builder.configuration.intervention.scenario
         ]
+        self.step_size = builder.configuration.time.step_size
 
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         """Initialize testing propensity and testing history for new simulants."""
@@ -131,7 +132,8 @@ class Testing(Component):
         eligible_state = pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
         eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
         eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
-            pop[COLUMNS.BBBM_TEST_DATE] <= event_time - BBBM_OLD_TIME
+            pop[COLUMNS.BBBM_TEST_DATE]
+            <= event_time - get_bbbm_retest_timedelta(self.step_size)
         )
         eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != "positive"
         eligible_propensity = pop[COLUMNS.TESTING_PROPENSITY] < testing_rate

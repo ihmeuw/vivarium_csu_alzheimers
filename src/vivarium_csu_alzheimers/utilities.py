@@ -9,6 +9,7 @@ from vivarium.framework.randomness import get_hash
 from vivarium_public_health.risks.data_transformations import pivot_categorical
 
 from vivarium_csu_alzheimers.constants import metadata
+from vivarium_csu_alzheimers.constants.data_values import BBBM_TIMESTEPS_UNTIL_RETEST
 
 
 def len_longest_location() -> int:
@@ -175,3 +176,7 @@ def get_random_variable_draws(
 def get_random_variable(draw: int, seed: str, distribution: stats.rv_continuous) -> float:
     np.random.seed(get_hash(f"{seed}_draw_{draw}"))
     return distribution.rvs()
+
+
+def get_bbbm_retest_timedelta(step_size: int) -> pd.Timedelta:
+    return pd.Timedelta(days=BBBM_TIMESTEPS_UNTIL_RETEST * step_size)
