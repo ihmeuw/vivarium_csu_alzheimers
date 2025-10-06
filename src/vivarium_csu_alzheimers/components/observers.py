@@ -8,12 +8,12 @@ from vivarium_public_health.results import PublicHealthObserver
 from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AGE_MAX,
     BBBM_AGE_MIN,
-    BBBM_OLD_TIME,
     BBBM_TEST_RESULTS,
     COLUMNS,
     TESTING_STATES,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
+from vivarium_csu_alzheimers.utilities import get_bbbm_retest_timedelta
 
 
 class ResultsStratifier(ResultsStratifier_):
@@ -215,8 +215,10 @@ class BBBMTestEligibilityObserver(PublicHealthObserver):
         aged_in = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (
             pop[COLUMNS.AGE] < BBBM_AGE_MIN + step_size_in_years
         )
-        retest = (
-            pop[COLUMNS.BBBM_TEST_DATE] == self.clock() + self.step_size() - BBBM_OLD_TIME
+        retest = pop[
+            COLUMNS.BBBM_TEST_DATE
+        ] == self.clock() + self.step_size() - get_bbbm_retest_timedelta(
+            self.config.time.step_size
         )
 
         return sum(eligible_baseline & (new_entrants | aged_in | retest))
