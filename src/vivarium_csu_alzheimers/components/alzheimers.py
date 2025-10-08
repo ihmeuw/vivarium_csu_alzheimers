@@ -116,7 +116,7 @@ class Alzheimers(Component):
 
         self.population_view.update(new_simulants)
 
-    def _create_disease_model(self):
+    def _create_disease_model(self) -> DiseaseModel:
         bbbm_state = BBBMDiseaseState(
             ALZHEIMERS_DISEASE_MODEL.BBBM_STATE,
             allow_self_transition=True,

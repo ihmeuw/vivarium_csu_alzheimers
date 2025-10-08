@@ -15,11 +15,12 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_POSITIVE_DIAGNOSIS_PROBABILITY,
     BBBM_TEST_RESULTS,
     BBBM_TESTING_RATES,
+    BBBM_TIMESTEPS_UNTIL_RETEST,
     COLUMNS,
     TESTING_STATES,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
-from vivarium_csu_alzheimers.utilities import get_bbbm_retest_timedelta
+from vivarium_csu_alzheimers.utilities import get_timedelta_from_step_size
 
 
 class Testing(Component):
@@ -27,6 +28,7 @@ class Testing(Component):
 
     @property
     def time_step_priority(self) -> int:
+        """We want testing to occur after disease state updates."""
         return 6
 
     @property
@@ -131,9 +133,10 @@ class Testing(Component):
         eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
         eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
             pop[COLUMNS.BBBM_TEST_DATE]
-            <= event_time - get_bbbm_retest_timedelta(self.step_size)
+            <= event_time
+            - get_timedelta_from_step_size(self.step_size, BBBM_TIMESTEPS_UNTIL_RETEST)
         )
-        eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != "positive"
+        eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
         eligible = eligible_state & eligible_age & eligible_history & eligible_results
 
         # Update the ever-eligible column
@@ -147,7 +150,7 @@ class Testing(Component):
 
         test_results = self.randomness.choice(
             index=pop[tested_mask].index,
-            choices=["positive", "negative"],
+            choices=[BBBM_TEST_RESULTS.POSITIVE, BBBM_TEST_RESULTS.NEGATIVE],
             p=[BBBM_POSITIVE_DIAGNOSIS_PROBABILITY, 1 - BBBM_POSITIVE_DIAGNOSIS_PROBABILITY],
             additional_key="bbbm_test_result",
         )

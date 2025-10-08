@@ -6,6 +6,7 @@ branches:
       scenario:
         - baseline
         - bbbm_testing
+        - bbbm_testing_and_treatment
     input_data:
       artifact_path:
         - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model6.0/united_states_of_america.hdf'
