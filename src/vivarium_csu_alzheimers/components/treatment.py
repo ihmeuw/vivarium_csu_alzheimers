@@ -248,15 +248,6 @@ class Treatment(Component):
         return probs
 
 
-class TreatmentTransition(Transition):
-    @property
-    def columns_required(self) -> list[str]:
-        return [COLUMNS.BBBM_TEST_RESULT]
-
-    def probability(self, index: pd.Index[int]) -> pd.Series[float]:
-        return self._probability(index)
-
-
 # TODO
 class RiskEffect:
     ...
