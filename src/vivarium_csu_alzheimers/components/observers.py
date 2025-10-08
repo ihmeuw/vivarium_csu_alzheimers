@@ -54,8 +54,6 @@ class ResultsStratifier(ResultsStratifier_):
         return age_bins
 
     def map_semester(self, pop: pd.DataFrame) -> pd.Series:
-        assert len(set(pop.event_time)) == 1, "All event_time values should be the same"
-
         def semesterize(date):
             day_number = (
                 pd.Timestamp(date) - pd.Timestamp(year=date.year, month=1, day=1)
@@ -140,21 +138,29 @@ class BaselineTestingObserver(PublicHealthObserver):
         return pd.Series("baseline_testing", index=results.index)
 
 
-class BBBMTestCountObserver(PublicHealthObserver):
-    """Observer to track BBBM testing counts."""
+class BBBMTestingObserver(PublicHealthObserver):
+    """Observer to track BBBM testing metrics."""
 
     @property
     def columns_required(self) -> list[str]:
-        return [COLUMNS.BBBM_TEST_DATE]
+        return [
+            COLUMNS.BBBM_TEST_DATE,
+            COLUMNS.DISEASE_STATE,
+            COLUMNS.AGE,
+            COLUMNS.BBBM_TEST_RESULT,
+            COLUMNS.ENTRANCE_TIME,
+        ]
 
     def setup(self, builder: Builder) -> None:
         self.clock = builder.time.clock()
         self.step_size = builder.time.step_size()
+        self.config = builder.configuration
 
     def register_observations(self, builder: Builder) -> None:
         # TODO: clarify whether the default pop_filter to PublicHealthObserver
         #   should include alive == "alive" (it currently doesn't)
         pop_filter = 'alive == "alive" and tracked == True'
+
         self.register_adding_observation(
             builder=builder,
             name="counts_bbbm_tests",
@@ -164,37 +170,6 @@ class BBBMTestCountObserver(PublicHealthObserver):
             excluded_stratifications=self.configuration.exclude,
             aggregator=self.count_bbbm_tests,
         )
-
-    def count_bbbm_tests(self, pop: pd.DataFrame) -> float:
-        return sum(pop[COLUMNS.BBBM_TEST_DATE] == self.clock() + self.step_size())
-
-    def get_entity_type_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
-        return pd.Series("testing", index=results.index)
-
-    def get_entity_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
-        return pd.Series("bbbm_testing", index=results.index)
-
-
-class BBBMTestNewlyEligibleObserver(PublicHealthObserver):
-    """Observer to track count of simulants who are newly eligible for BBBM testing."""
-
-    @property
-    def columns_required(self) -> list[str]:
-        return [
-            COLUMNS.DISEASE_STATE,
-            COLUMNS.AGE,
-            COLUMNS.BBBM_TEST_RESULT,
-            COLUMNS.ENTRANCE_TIME,
-            COLUMNS.BBBM_TEST_DATE,
-        ]
-
-    def setup(self, builder: Builder) -> None:
-        self.config = builder.configuration
-        self.clock = builder.time.clock()
-        self.step_size = builder.time.step_size()
-
-    def register_observations(self, builder: Builder) -> None:
-        pop_filter = 'alive == "alive" and tracked == True'
         self.register_adding_observation(
             builder=builder,
             name="counts_newly_eligible_for_bbbm_testing",
@@ -204,6 +179,22 @@ class BBBMTestNewlyEligibleObserver(PublicHealthObserver):
             excluded_stratifications=self.configuration.exclude,
             aggregator=self.count_newly_eligible_simulants,
         )
+        self.register_adding_observation(
+            builder=builder,
+            name="person_time_eligible_for_bbbm_testing",
+            pop_filter=pop_filter,
+            requires_columns=self.columns_required,
+            additional_stratifications=self.configuration.include,
+            excluded_stratifications=self.configuration.exclude,
+            aggregator=self.aggregate_eligible_person_time,
+        )
+
+    ###############
+    # Aggregators #
+    ###############
+
+    def count_bbbm_tests(self, pop: pd.DataFrame) -> float:
+        return sum(pop[COLUMNS.BBBM_TEST_DATE] == self.clock() + self.step_size())
 
     def count_newly_eligible_simulants(self, pop: pd.DataFrame) -> float:
         """Counts the number of simulants eligible for BBBM testing this time step.
@@ -247,41 +238,6 @@ class BBBMTestNewlyEligibleObserver(PublicHealthObserver):
 
         return sum(eligible_baseline & (new_entrants | aged_in | retest))
 
-    def get_entity_type_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
-        return pd.Series("testing", index=results.index)
-
-    def get_entity_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
-        return pd.Series("bbbm_testing", index=results.index)
-
-
-class BBBMTestEligibleObserver(PublicHealthObserver):
-    """Observer to track person-time of simulants who are eligible for BBBM testing."""
-
-    @property
-    def columns_required(self) -> list[str]:
-        return [
-            COLUMNS.DISEASE_STATE,
-            COLUMNS.AGE,
-            COLUMNS.BBBM_TEST_DATE,
-            COLUMNS.BBBM_TEST_RESULT,
-        ]
-
-    def setup(self, builder: Builder) -> None:
-        self.clock = builder.time.clock()
-        self.step_size = builder.time.step_size()
-
-    def register_observations(self, builder: Builder) -> None:
-        pop_filter = 'alive == "alive" and tracked == True'
-        self.register_adding_observation(
-            builder=builder,
-            name="person_time_eligible_for_bbbm_testing",
-            pop_filter=pop_filter,
-            requires_columns=self.columns_required,
-            additional_stratifications=self.configuration.include,
-            excluded_stratifications=self.configuration.exclude,
-            aggregator=self.aggregate_eligible_person_time,
-        )
-
     def aggregate_eligible_person_time(self, pop: pd.DataFrame) -> float:
         # Dates are finnicky in the pop_filter, so we just filter here to eligibility
         eligible_state = pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
@@ -296,6 +252,10 @@ class BBBMTestEligibleObserver(PublicHealthObserver):
         eligible = eligible_state & eligible_age & eligible_history & eligible_results
 
         return sum(eligible) * to_years(self.step_size())
+
+    ##############
+    # Formatting #
+    ##############
 
     def get_entity_type_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
         return pd.Series("testing", index=results.index)

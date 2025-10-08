@@ -1,9 +1,7 @@
 from .alzheimers import Alzheimers
 from .observers import (
     BaselineTestingObserver,
-    BBBMTestCountObserver,
-    BBBMTestEligibleObserver,
-    BBBMTestNewlyEligibleObserver,
+    BBBMTestingObserver,
     NewSimulantsObserver,
     ResultsStratifier,
 )

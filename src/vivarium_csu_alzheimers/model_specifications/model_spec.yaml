@@ -8,9 +8,7 @@ components:
           - Alzheimers()
           - Testing()
           - BaselineTestingObserver()
-          - BBBMTestCountObserver()
-          - BBBMTestNewlyEligibleObserver()
-          - BBBMTestEligibleObserver()
+          - BBBMTestingObserver()
             
     vivarium_public_health:
         population:
@@ -55,16 +53,9 @@ configuration:
         baseline_testing:
             include:
                 - 'testing_state'
-        bbbm_test_count:
+        bbbm_testing:
             include:
                 - 'bbbm_test_results'
-                - 'semester'
-        bbbm_test_newly_eligible:
-            include:
-                - 'bbbm_test_results'
-        bbbm_test_eligible: 
-            include:
-                - 'alzheimers_disease_and_other_dementias'
                 - 'semester'
     intervention:
         scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'treatment'
