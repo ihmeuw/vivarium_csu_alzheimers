@@ -61,5 +61,9 @@ configuration:
             include:
                 - bbbm_test_results
                 - semester
+        treatment:
+            include:
+                - semester
+        
     intervention:
         scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
