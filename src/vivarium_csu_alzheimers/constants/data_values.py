@@ -69,8 +69,7 @@ class __Columns(NamedTuple):
     BBBM_TEST_DATE: str = "bbbm_test_date"
     BBBM_TEST_RESULT: str = "bbbm_test_result"
     AGE: str = "age"
-    ALIVE: str = "alive"
-    TRACKED: str = "tracked"
+    BBBM_TEST_EVER_ELIGIBLE: str = "bbbm_test_ever_eligible"
 
 
 COLUMNS = __Columns()

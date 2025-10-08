@@ -144,11 +144,14 @@ class BBBMTestingObserver(PublicHealthObserver):
     @property
     def columns_required(self) -> list[str]:
         return [
+            "alive",
+            "tracked",
             COLUMNS.BBBM_TEST_DATE,
             COLUMNS.DISEASE_STATE,
             COLUMNS.AGE,
             COLUMNS.BBBM_TEST_RESULT,
             COLUMNS.ENTRANCE_TIME,
+            COLUMNS.BBBM_TEST_EVER_ELIGIBLE,
         ]
 
     def setup(self, builder: Builder) -> None:
@@ -165,7 +168,7 @@ class BBBMTestingObserver(PublicHealthObserver):
             builder=builder,
             name="counts_bbbm_tests",
             pop_filter=pop_filter,
-            requires_columns=self.columns_required,
+            requires_columns=["alive", "tracked", COLUMNS.BBBM_TEST_DATE],
             additional_stratifications=self.configuration.include,
             excluded_stratifications=self.configuration.exclude,
             aggregator=self.count_bbbm_tests,
@@ -183,10 +186,27 @@ class BBBMTestingObserver(PublicHealthObserver):
             builder=builder,
             name="person_time_eligible_for_bbbm_testing",
             pop_filter=pop_filter,
-            requires_columns=self.columns_required,
+            requires_columns=[
+                "alive",
+                "tracked",
+                COLUMNS.DISEASE_STATE,
+                COLUMNS.AGE,
+                COLUMNS.BBBM_TEST_DATE,
+                COLUMNS.BBBM_TEST_RESULT,
+            ],
             additional_stratifications=self.configuration.include,
             excluded_stratifications=self.configuration.exclude,
             aggregator=self.aggregate_eligible_person_time,
+        )
+        self.register_adding_observation(
+            builder=builder,
+            name="person_time_ever_eligible_for_bbbm_testing",
+            pop_filter=pop_filter,
+            requires_columns=["alive", "tracked", COLUMNS.BBBM_TEST_EVER_ELIGIBLE],
+            additional_stratifications=self.configuration.include
+            + [ALZHEIMERS_DISEASE_MODEL.NAME],
+            excluded_stratifications=self.configuration.exclude,
+            aggregator=self.aggregate_ever_eligible_person_time,
         )
 
     ###############
@@ -247,11 +267,14 @@ class BBBMTestingObserver(PublicHealthObserver):
             pop[COLUMNS.BBBM_TEST_DATE]
             <= event_time - get_bbbm_retest_timedelta(self.step_size().days)
         )
-        eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != "positive"
+        eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
 
         eligible = eligible_state & eligible_age & eligible_history & eligible_results
 
         return sum(eligible) * to_years(self.step_size())
+
+    def aggregate_ever_eligible_person_time(self, pop: pd.DataFrame) -> float:
+        return sum(pop[COLUMNS.BBBM_TEST_EVER_ELIGIBLE]) * to_years(self.step_size())
 
     ##############
     # Formatting #

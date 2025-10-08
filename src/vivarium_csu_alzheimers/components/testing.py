@@ -36,6 +36,7 @@ class Testing(Component):
             COLUMNS.TESTING_STATE,
             COLUMNS.BBBM_TEST_DATE,
             COLUMNS.BBBM_TEST_RESULT,
+            COLUMNS.BBBM_TEST_EVER_ELIGIBLE,
         ]
 
     @property
@@ -71,6 +72,7 @@ class Testing(Component):
         pop[COLUMNS.TESTING_STATE] = TESTING_STATES.NOT_TESTED
         pop[COLUMNS.BBBM_TEST_DATE] = pd.NaT
         pop[COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NOT_TESTED
+        pop[COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = False
 
         self._update_baseline_testing(pop)
         self._update_bbbm_testing(pop, event_time=pop_data.creation_time)
@@ -124,10 +126,6 @@ class Testing(Component):
         if not self.scenario.bbbm_testing:
             return
 
-        testing_rate = self._get_bbbm_testing_rate(event_time)
-        if testing_rate == 0.0:
-            return
-
         # Define eligibility
         eligible_state = pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
         eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
@@ -136,16 +134,16 @@ class Testing(Component):
             <= event_time - get_bbbm_retest_timedelta(self.step_size)
         )
         eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != "positive"
-        eligible_propensity = pop[COLUMNS.TESTING_PROPENSITY] < testing_rate
+        eligible = eligible_state & eligible_age & eligible_history & eligible_results
+
+        # Update the ever-eligible column
+        pop.loc[eligible, COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = True
 
         # Calculate test results
-        tested_mask = (
-            eligible_state
-            & eligible_age
-            & eligible_history
-            & eligible_results
-            & eligible_propensity
-        )
+        testing_rate = self._get_bbbm_testing_rate(event_time)
+        if testing_rate == 0.0:
+            return
+        tested_mask = eligible & (pop[COLUMNS.TESTING_PROPENSITY] < testing_rate)
 
         test_results = self.randomness.choice(
             index=pop[tested_mask].index,
