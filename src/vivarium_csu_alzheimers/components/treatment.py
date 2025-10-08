@@ -44,13 +44,6 @@ class TreatmentModel(DiseaseModel):
         return 7
 
 
-#########################################################
-#########################################################
-# FIXME: NEED TO ONLY USE WHEN IN THE TREATMENT SCENARIO!
-#########################################################
-#########################################################
-
-
 class Treatment(Component):
     """Alzheimer's treatment model component."""
 
