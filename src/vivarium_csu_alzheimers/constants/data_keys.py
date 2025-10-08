@@ -33,15 +33,21 @@ class __Alzheimers(NamedTuple):
     PREVALENCE: str = "cause.alzheimers.prevalence"
     BBBM_CONDITIONAL_PREVALANCE: str = "cause.alzheimers.bbbm_conditional_prevalence"
     MCI_CONDITIONAL_PREVALENCE: str = "cause.alzheimers.mci_conditional_prevalence"
-    MCI_TO_DEMENTIA_TRANSITION_RATE: str = "cause.alzheimers.mci_to_dementia_transition_rate"
+    MCI_TO_DEMENTIA_TRANSITION_RATE: str = (
+        "cause.alzheimers.mci_to_dementia_transition_rate"
+    )
     SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: str = (
         "cause.alzheimers.susceptible_to_bbbm_transition_count"
     )
     # BBBM to MCI transition rate caluclated during sim using mci_hazard.py and time in state
     INCIDENCE_RATE_TOTAL_POPULATION: str = "cause.alzheimers.population_incidence_rate"
-    CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
+    CSMR: str = (
+        "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
+    )
     EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
-    DISABILITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"
+    DISABILITY_WEIGHT: str = (
+        "cause.alzheimers_disease_and_other_dementias.disability_weight"
+    )
     MCI_DISABILITY_WEIGHT: str = "cause.alzheimers.mci_disability_weight"
     RESTRICTIONS: str = "cause.alzheimers_disease_and_other_dementias.restrictions"
 
@@ -72,8 +78,24 @@ class __TestingRates(NamedTuple):
 
 TESTING_RATES = __TestingRates()
 
+
+class __TreatmentHazardRatios(NamedTuple):
+    EFFECT_SIZE: str = "treatment_hazard_ratios.effect_size"
+
+    @property
+    def name(self):
+        return "treatment hazard ratios"
+
+    @property
+    def log_name(self):
+        return self.name.replace(" ", "_")
+
+
+TREATMENT_HAZARD_RATIOS = __TreatmentHazardRatios()
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     ALZHEIMERS,
     TESTING_RATES,
+    TREATMENT_HAZARD_RATIOS,
 ]

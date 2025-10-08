@@ -157,3 +157,6 @@ BBBM_TESTING_RATES = [
     (pd.Timestamp("2040-01-01"), 0.4),
     (pd.Timestamp("2045-01-01"), 0.6),  # plateaus from here on out
 ]
+
+TREATMENT_HAZARD_RATIO_MIN = 0.4
+TREATMENT_HAZARD_RATIO_MAX = 0.6
