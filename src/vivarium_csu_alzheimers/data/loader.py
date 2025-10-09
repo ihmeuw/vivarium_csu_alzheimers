@@ -34,7 +34,11 @@ from vivarium_csu_alzheimers.data.extra_gbd import (
     load_prevalence_dismod,
 )
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
-from vivarium_csu_alzheimers.utilities import get_norm, get_random_variable_draws
+from vivarium_csu_alzheimers.utilities import (
+    get_norm,
+    get_random_variable_draws,
+    get_uniform,
+)
 
 
 def get_data(
@@ -78,6 +82,7 @@ def get_data(
         data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION: load_alzheimers_incidence_total_population,
         data_keys.TESTING_RATES.CSF: load_csf_pet_testing_rates,
         data_keys.TESTING_RATES.PET: load_csf_pet_testing_rates,
+        data_keys.TREATMENT.RR: load_treatment_rrs,
     }
     mapped_value = mapping[lookup_key](lookup_key, location, years)
 
@@ -526,3 +531,14 @@ def load_dementia_proportions(
     for col in df.columns:
         df[col] = merged.value
     return df
+
+
+def load_treatment_rrs(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    dist = get_uniform(
+        data_values.TREATMENT_RR_MIN,
+        data_values.TREATMENT_RR_MAX,
+    )
+    draws = get_random_variable_draws(ARTIFACT_COLUMNS, key, dist)
+    return pd.DataFrame([draws], columns=ARTIFACT_COLUMNS)

@@ -107,6 +107,10 @@ def get_truncnorm(
     return stats.truncnorm(loc=mean, scale=sd, a=a, b=b)
 
 
+def get_uniform(lower: float, upper: float) -> stats.uniform:
+    return stats.uniform(loc=lower, scale=upper - lower)
+
+
 def _get_standard_deviation(
     mean: float, sd: float, ninety_five_pct_confidence_interval: tuple[float, float]
 ) -> float:

@@ -11,8 +11,7 @@ components:
           - BBBMTestingObserver()
           - Treatment()
           - TreatmentObserver()
-        # TODO
-        #   - TreatmentRiskEffect('treatment', 'cause.bbbm_state_to_mci_state.transition_rate'). # something like this
+          - TreatmentRiskEffect('cause.alzheimers_blood_based_biomarker_state_to_alzheimers_mild_cognitive_impairment_state.transition_rate')
             
     vivarium_public_health:
         population:
@@ -25,7 +24,7 @@ components:
 configuration:
     input_data:
         input_draw_number: 0
-        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model6.0/united_states_of_america.hdf'
+        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model7.0/united_states_of_america.hdf'
     interpolation:
         order: 0
         extrapolate: True

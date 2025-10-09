@@ -8,4 +8,4 @@ from .observers import (
 )
 from .population import AlzheimersIncidence, AlzheimersPopulation
 from .testing import Testing
-from .treatment import Treatment
+from .treatment import Treatment, TreatmentRiskEffect
