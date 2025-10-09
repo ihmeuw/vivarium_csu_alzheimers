@@ -108,7 +108,7 @@ class Treatment(Component):
 
         # states
         susceptible = SusceptibleState(
-            TREATMENT_DISEASE_MODEL.SUSCEPTIBLE_STATE, allow_self_transition=True
+            TREATMENT_DISEASE_MODEL.NAME, allow_self_transition=True
         )
         positive_test = TransientDiseaseState(
             TREATMENT_DISEASE_MODEL.POSITIVE_TEST_TRANSIENT_STATE
@@ -375,7 +375,7 @@ class TreatmentRiskEffect(RiskEffect):
         waning_mask = exposure == waning_state
         if waning_mask.any():
             event_date = self.clock() + self.step_size()
-            short_waning_start_date = pd.to_datetime(
+            waning_start_date = pd.to_datetime(
                 (
                     self.population_view.subview(f"{waning_state}_event_time")
                     .get(waning_mask[waning_mask].index)
@@ -386,12 +386,11 @@ class TreatmentRiskEffect(RiskEffect):
                 TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE: DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS,
                 TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE: DWELL_TIME_WANING_EFFECT_LONG_TIMESTEPS,
             }[waning_state]
-            short_waning_end_date = short_waning_start_date + get_timedelta_from_step_size(
+            waning_end_date = waning_start_date + get_timedelta_from_step_size(
                 self.step_size().days, dwell_time
             )
             # Linearly interpolate between the source rr and 1 based on where the
             # event date is between the waning start date and the waning end date
             relative_risk[waning_mask] = rr_min + (1.0 - rr_min) * (
-                (event_date - short_waning_start_date)
-                / (short_waning_end_date - short_waning_start_date)
+                (event_date - waning_start_date) / (waning_end_date - waning_start_date)
             )
