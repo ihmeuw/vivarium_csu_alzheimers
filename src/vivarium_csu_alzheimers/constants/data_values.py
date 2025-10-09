@@ -160,7 +160,7 @@ BBBM_TESTING_RATES = [
 
 COMMON_TREATMENT_RAMP = [
     (pd.Timestamp("2030-01-01"), 0.4),  # step increase from 0 in 2030
-    (pd.Timestamp("2035-01-01"), 0.7),  # plateuas from here on out
+    (pd.Timestamp("2035-01-01"), 0.7),  # plateaus from here on out
 ]
 
 LOCATION_TREATMENT_PROBS = {

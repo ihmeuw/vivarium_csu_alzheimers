@@ -291,9 +291,11 @@ class TreatmentObserver(DiseaseObserver):
         This is a near copy/paste of the default VPH DiseaseObserver method except
         that it removes the postive_test TransientState from the list of categories.
         """
-        categories = [state.state_id for state in self.disease_model.states]
-        # Remove the positive_test TransientState
-        categories = [item for item in categories if item != "positive_test"]
+        categories = [
+            state.state_id
+            for state in self.disease_model.states
+            if state.state_id != "positive_test"
+        ]
         builder.results.register_stratification(
             self.disease,
             categories,
@@ -310,14 +312,14 @@ class TreatmentObserver(DiseaseObserver):
           - Remove the positve_test TransientState from the list of transitions.
         """
         transitions = [
-            str(transition) for transition in self.disease_model.transition_names
+            str(transition)
+            for transition in self.disease_model.transition_names
+            if "positive_test" not in str(transition)
         ] + [
             "no_transition",
             "susceptible_to_susceptible_to_start_treatment",
             "susceptible_to_susceptible_to_no_effect_never_treated",
         ]
-        # Remove the transient state transitions
-        transitions = [item for item in transitions if "positive_test" not in item]
         # manually append 'no_transition' as an excluded transition
         excluded_categories = (
             builder.configuration.stratification.excluded_categories.to_dict().get(

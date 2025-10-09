@@ -61,7 +61,7 @@ class Treatment(Component):
 
     @property
     def columns_required(self) -> list[str]:
-        return [COLUMNS.BBBM_TEST_RESULT, COLUMNS.BBBM_TEST_DATE]
+        return [COLUMNS.BBBM_TEST_RESULT]
 
     def __init__(self):
         super().__init__()
@@ -180,13 +180,13 @@ class Treatment(Component):
         start_treatment.add_proportion_transition(
             full_effect_long, proportion=TREATMENT_COMPLETION_PROBABILITY
         )
-        full_effect_long.add_proportion_transition(waning_effect_long, proportion=1.0)
-        waning_effect_long.add_proportion_transition(no_effect_after_long, proportion=1.0)
+        full_effect_long.add_transition(output_state=waning_effect_long)
+        waning_effect_long.add_transition(output_state=no_effect_after_long)
         start_treatment.add_proportion_transition(
             full_effect_short, proportion=(1 - TREATMENT_COMPLETION_PROBABILITY)
         )
-        full_effect_short.add_proportion_transition(waning_effect_short, proportion=1.0)
-        waning_effect_short.add_proportion_transition(no_effect_after_short, proportion=1.0)
+        full_effect_short.add_transition(output_state=waning_effect_short)
+        waning_effect_short.add_transition(output_state=no_effect_after_short)
 
         return TreatmentModel(
             "treatment",
@@ -214,7 +214,7 @@ class Treatment(Component):
         return is_positive
 
     def start_treatment_probs(self, index: pd.Index[int]) -> pd.Series[float]:
-        """Returns 1 if the propensity is less that treatment propensity, 0 otherwise."""
+        """Returns 1 if the propensity is less that treatment probability, 0 otherwise."""
         pop = self.population_view.subview(COLUMNS.TREATMENT_PROPENSITY).get(index)
         event_date = self.clock() + pd.Timedelta(days=self.step_size)
         probs = pd.Series(0.0, index=index)
@@ -237,8 +237,7 @@ class Treatment(Component):
             rates = [rate for _, rate in TREATMENT_PROBS]
             treatment_prob = np.interp(event_date.value, timestamps, rates)
 
-        propensity_mask = pop[COLUMNS.TREATMENT_PROPENSITY] < treatment_prob
-        probs[propensity_mask] = 1.0
+        probs[pop[COLUMNS.TREATMENT_PROPENSITY] < treatment_prob] = 1.0
         return probs
 
     def decline_treatment_probs(self, index: pd.Index[int]) -> pd.Series[float]:
