@@ -282,8 +282,6 @@ class TreatmentRiskEffect(RiskEffect):
     @property
     def columns_required(self) -> list[str]:
         return [
-            # f"{TREATMENT_DISEASE_MODEL.FULL_EFFECT_LONG_STATE}_event_time",
-            # f"{TREATMENT_DISEASE_MODEL.FULL_EFFECT_SHORT_STATE}_event_time",
             f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE}_event_time",
             f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE}_event_time",
         ]
