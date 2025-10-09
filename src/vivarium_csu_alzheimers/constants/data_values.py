@@ -5,7 +5,10 @@ import pandas as pd
 import scipy
 
 from vivarium_csu_alzheimers.constants.data_keys import TESTING_RATES
-from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
+from vivarium_csu_alzheimers.constants.models import (
+    ALZHEIMERS_DISEASE_MODEL,
+    TREATMENT_DISEASE_MODEL,
+)
 
 ############################
 # Disease Model Parameters #
@@ -70,6 +73,7 @@ class __Columns(NamedTuple):
     BBBM_TEST_RESULT: str = "bbbm_test_result"
     AGE: str = "age"
     BBBM_TEST_EVER_ELIGIBLE: str = "bbbm_test_ever_eligible"
+    TREATMENT_STATE: str = TREATMENT_DISEASE_MODEL.NAME
     TREATMENT_PROPENSITY: str = "treatment_propensity"
 
 
@@ -182,3 +186,6 @@ DWELL_TIME_WANING_EFFECT_LONG_TIMESTEPS = 18  # 9 years
 DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS = 5  # 2.5 years
 
 TREATMENT_COMPLETION_PROBABILITY = 0.9
+
+TREATMENT_RR_MIN = 0.4
+TREATMENT_RR_MAX = 0.6

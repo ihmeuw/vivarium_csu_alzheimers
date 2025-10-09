@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from vivarium import Component
+from vivarium.framework.engine import Builder
 from vivarium.framework.population import SimulantData
 from vivarium.framework.resource import Resource
-from vivarium.framework.state_machine import Transition
-from vivarium_public_health.disease import (
+from vivarium_public_health import (
     DiseaseModel,
     DiseaseState,
+    RiskEffect,
     SusceptibleState,
     TransientDiseaseState,
 )
@@ -27,6 +30,7 @@ from vivarium_csu_alzheimers.constants.data_values import (
     LOCATION_TREATMENT_PROBS,
     TREATMENT_COMPLETION_PROBABILITY,
 )
+from vivarium_csu_alzheimers.constants.models import TREATMENT_DISEASE_MODEL
 from vivarium_csu_alzheimers.utilities import get_timedelta_from_step_size
 
 
@@ -61,7 +65,7 @@ class Treatment(Component):
 
     @property
     def columns_required(self) -> list[str]:
-        return [COLUMNS.BBBM_TEST_RESULT]
+        return [COLUMNS.BBBM_TEST_RESULT, COLUMNS.TREATMENT_STATE]
 
     def __init__(self):
         super().__init__()
@@ -81,6 +85,31 @@ class Treatment(Component):
         self.scenario = scenarios.INTERVENTION_SCENARIOS[
             builder.configuration.intervention.scenario
         ]
+        # register an exposure pipeline that just turns around
+        builder.value.register_value_producer(
+            f"{COLUMNS.TREATMENT_STATE}.exposure",
+            source=self.get_treatment_states,
+            component=self,
+            required_resources=[COLUMNS.TREATMENT_STATE],
+        )
+
+    def get_treatment_states(self, index: pd.Index) -> pd.Series:
+        return self.population_view.subview(COLUMNS.TREATMENT_STATE).get(index).squeeze()
+
+        # OR REGISTER MODIFIERS DIRECTLY
+
+        # # Register a value modifer to the bbbm-mci transition rate
+        # builder.value.register_value_modifier(
+        #     'alzheimers_blood_based_biomarker_state_to_alzheimers_mild_cognitive_impairment_state.transition_rate',
+        #     modifier=self.modify_transition,
+        #     component=self,
+        # )
+
+    # def modify_transition(
+    #     self, index: pd.Index, target_pipeline: pd.Series[float]
+    # ) -> pd.Series:
+    #     breakpoint()
+    #     pop = self.population_view.get(index)
 
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         """Initialize treatment propensity for new simulants."""
@@ -93,10 +122,14 @@ class Treatment(Component):
     def _create_treatment_mode(self) -> TreatmentModel:
 
         # states
-        susceptible = SusceptibleState("susceptible", allow_self_transition=True)
-        positive_test = TransientDiseaseState("positive_test")
+        susceptible = SusceptibleState(
+            TREATMENT_DISEASE_MODEL.SUSCEPTIBLE_STATE, allow_self_transition=True
+        )
+        positive_test = TransientDiseaseState(
+            TREATMENT_DISEASE_MODEL.POSITIVE_TEST_TRANSIENT_STATE
+        )
         start_treatment = DiseaseState(
-            "start_treatment",
+            TREATMENT_DISEASE_MODEL.START_TREATMENT_STATE,
             allow_self_transition=True,
             prevalence=0.0,
             dwell_time=get_timedelta_from_step_size(
@@ -106,7 +139,7 @@ class Treatment(Component):
             excess_mortality_rate=0.0,
         )
         full_effect_long = DiseaseState(
-            "full_effect_long",
+            TREATMENT_DISEASE_MODEL.FULL_EFFECT_LONG_STATE,
             allow_self_transition=True,
             prevalence=0.0,
             dwell_time=get_timedelta_from_step_size(
@@ -116,7 +149,7 @@ class Treatment(Component):
             excess_mortality_rate=0.0,
         )
         full_effect_short = DiseaseState(
-            "full_effect_short",
+            TREATMENT_DISEASE_MODEL.FULL_EFFECT_SHORT_STATE,
             allow_self_transition=True,
             prevalence=0.0,
             dwell_time=get_timedelta_from_step_size(
@@ -126,7 +159,7 @@ class Treatment(Component):
             excess_mortality_rate=0.0,
         )
         waning_effect_long = DiseaseState(
-            "waning_effect_long",
+            TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE,
             allow_self_transition=True,
             prevalence=0.0,
             dwell_time=get_timedelta_from_step_size(
@@ -136,7 +169,7 @@ class Treatment(Component):
             excess_mortality_rate=0.0,
         )
         waning_effect_short = DiseaseState(
-            "waning_effect_short",
+            TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE,
             allow_self_transition=True,
             prevalence=0.0,
             dwell_time=get_timedelta_from_step_size(
@@ -146,21 +179,21 @@ class Treatment(Component):
             excess_mortality_rate=0.0,
         )
         no_effect_after_short = DiseaseState(
-            "no_effect_after_short",
+            TREATMENT_DISEASE_MODEL.NO_EFFECT_AFTER_SHORT_STATE,
             allow_self_transition=True,
             prevalence=0.0,
             disability_weight=0.0,
             excess_mortality_rate=0.0,
         )
         no_effect_after_long = DiseaseState(
-            "no_effect_after_long",
+            TREATMENT_DISEASE_MODEL.NO_EFFECT_AFTER_LONG_STATE,
             allow_self_transition=True,
             prevalence=0.0,
             disability_weight=0.0,
             excess_mortality_rate=0.0,
         )
         no_effect_never_treated = DiseaseState(
-            "no_effect_never_treated",
+            TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE,
             allow_self_transition=True,
             prevalence=0.0,
             disability_weight=0.0,
@@ -189,7 +222,7 @@ class Treatment(Component):
         waning_effect_short.add_transition(output_state=no_effect_after_short)
 
         return TreatmentModel(
-            "treatment",
+            TREATMENT_DISEASE_MODEL.NAME,
             initial_state=susceptible,
             states=[
                 susceptible,
@@ -247,14 +280,135 @@ class Treatment(Component):
         return probs
 
 
-# TODO
-class RiskEffect:
-    ...
+class TreatmentRiskEffect(RiskEffect):
+    """Risk effect for Alzheimer's treatment."""
 
-    # mostly the same as vph's, but if the exposure is waning, we need to interpolate
-    # This effect should be targeting the pipeline transition
-    # need to modify the RiskEffect.get_relative_risk_source. This is the thing
-    # that would return a callable that returns 1 if untreated or 0.4-0.6 (full treatment)
-    # or waning 0.4-0.6 - 1 (depending on waning).
+    @property
+    def name(self) -> str:
+        return f"risk_effect.{self.risk}_on_{self.target}"
 
-    # OR register a modifier to the pipeline.
+    @property
+    def configuration_defaults(self) -> dict[str, Any]:
+        """Overwrites the paf to be 0 (because treatment is the intervention)."""
+        defaults = super().configuration_defaults
+        defaults[self.name]["data_sources"]["population_attributable_fraction"] = 0.0
+        return defaults
+
+    @property
+    def columns_required(self) -> list[str]:
+        return [
+            # f"{TREATMENT_DISEASE_MODEL.FULL_EFFECT_LONG_STATE}_event_time",
+            # f"{TREATMENT_DISEASE_MODEL.FULL_EFFECT_SHORT_STATE}_event_time",
+            f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE}_event_time",
+            f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE}_event_time",
+        ]
+
+    def __init__(self, target: str):
+        super().__init__(risk="treatment.treatment", target=target)
+
+    def setup(self, builder: Builder) -> None:
+        super().setup(builder)
+        self.clock = builder.time.clock()
+        self.step_size = builder.time.step_size()
+
+    def get_distribution_type(self, builder: Builder) -> str:
+        """Returns the type of distribution for the exposure.
+
+        We overwrite this just to prevent runtime errors - we don't actually need it.
+        """
+        return "polytomous"
+
+    def load_relative_risk(
+        self,
+        builder: Builder,
+        configuration=None,
+    ) -> str | float | pd.DataFrame:
+        return builder.data.load("treatment.relative_risk")["value"][0]
+
+    def get_relative_risk_source(self, builder: Builder) -> Callable[[pd.Index], pd.Series]:
+        """Modifies the relative risk based on treatment exposure.
+
+        Notes
+        -----
+        The unaffected source should be 1.
+
+        The affected source should be between the relative risk loaded from the data
+        and 1, depending on whether the simulant is in full effect, waning, or none.
+        """
+
+        def generate_relative_risk(index: pd.Index) -> pd.Series:
+            rr = self.lookup_tables["relative_risk"](index)
+            if len(rr.unique()) != 1:
+                raise NotImplementedError("Only a single relative risk value is supported.")
+            rr_min = rr.iloc[0]
+
+            exposure = self.exposure(index)
+            relative_risk = pd.Series(index=index, dtype=float)
+
+            full_effect_states = [
+                TREATMENT_DISEASE_MODEL.FULL_EFFECT_LONG_STATE,
+                TREATMENT_DISEASE_MODEL.FULL_EFFECT_SHORT_STATE,
+            ]
+            waning_states = [
+                TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE,
+                TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE,
+            ]
+            affected_states = full_effect_states + waning_states
+
+            # Unaffected relative risks are 1
+            relative_risk[~exposure.isin(affected_states)] = 1.0
+
+            # Modify relative risks to be the minimum rr value for fully affected states
+            relative_risk[exposure.isin(full_effect_states)] = rr_min
+
+            # Modify relative risks to be interpolated values for waning states
+            self._interpolate_rr(
+                relative_risk,
+                rr_min,
+                exposure,
+                TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE,
+            )
+            self._interpolate_rr(
+                relative_risk,
+                rr_min,
+                exposure,
+                TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE,
+            )
+
+            if relative_risk.isna().any():
+                raise ValueError("NaN values found in relative risk.")
+
+            return relative_risk
+
+        return generate_relative_risk
+
+    def _interpolate_rr(
+        self,
+        relative_risk: pd.Series[float],
+        rr_min: float,
+        exposure: pd.Series[str],
+        waning_state: str,
+    ) -> None:
+        waning_mask = exposure == waning_state
+        if waning_mask.any():
+            event_date = self.clock() + self.step_size()
+            short_waning_start_date = pd.to_datetime(
+                (
+                    self.population_view.subview(f"{waning_state}_event_time")
+                    .get(waning_mask[waning_mask].index)
+                    .squeeze()
+                )
+            )
+            dwell_time = {
+                TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE: DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS,
+                TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE: DWELL_TIME_WANING_EFFECT_LONG_TIMESTEPS,
+            }[waning_state]
+            short_waning_end_date = short_waning_start_date + get_timedelta_from_step_size(
+                self.step_size().days, dwell_time
+            )
+            # Linearly interpolate between the source rr and 1 based on where the
+            # event date is between the waning start date and the waning end date
+            relative_risk[waning_mask] = rr_min + (1.0 - rr_min) * (
+                (event_date - short_waning_start_date)
+                / (short_waning_end_date - short_waning_start_date)
+            )
