@@ -3,18 +3,19 @@ from vivarium.framework.engine import Builder
 from vivarium.framework.results import Observer
 from vivarium.framework.time import get_time_stamp
 from vivarium_public_health import ResultsStratifier as ResultsStratifier_
-from vivarium_public_health.results import PublicHealthObserver
+from vivarium_public_health.results import DiseaseObserver, PublicHealthObserver
 from vivarium_public_health.utilities import to_years
 
 from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AGE_MAX,
     BBBM_AGE_MIN,
     BBBM_TEST_RESULTS,
+    BBBM_TIMESTEPS_UNTIL_RETEST,
     COLUMNS,
     TESTING_STATES,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
-from vivarium_csu_alzheimers.utilities import get_bbbm_retest_timedelta
+from vivarium_csu_alzheimers.utilities import get_timedelta_from_step_size
 
 
 class ResultsStratifier(ResultsStratifier_):
@@ -64,14 +65,6 @@ class ResultsStratifier(ResultsStratifier_):
 
     def register_stratifications(self, builder):
         super().register_stratifications(builder)
-        builder.results.register_stratification(
-            name="event_year",
-            categories=[str(year) for year in range(self.start_year, self.end_year + 2)],
-            excluded_categories=[str(self.end_year + 1)],
-            mapper=self.map_year,
-            is_vectorized=True,
-            requires_columns=["event_time"],
-        )
         builder.results.register_stratification(
             name="testing_state",
             categories=list(TESTING_STATES),
@@ -157,7 +150,7 @@ class BBBMTestingObserver(PublicHealthObserver):
     def setup(self, builder: Builder) -> None:
         self.clock = builder.time.clock()
         self.step_size = builder.time.step_size()
-        self.config = builder.configuration
+        self.sim_start_date = builder.configuration.time.start
 
     def register_observations(self, builder: Builder) -> None:
         # TODO: clarify whether the default pop_filter to PublicHealthObserver
@@ -232,7 +225,7 @@ class BBBMTestingObserver(PublicHealthObserver):
         if not eligible_baseline.any():
             return 0.0
 
-        sim_start_date = get_time_stamp(self.config.time.start)
+        sim_start_date = get_time_stamp(self.sim_start_date)
         step_size_in_years = self.step_size().days / 365.25
 
         new_entrants = pd.Series(False, index=pop.index)
@@ -252,8 +245,8 @@ class BBBMTestingObserver(PublicHealthObserver):
         )
         retest = pop[
             COLUMNS.BBBM_TEST_DATE
-        ] == self.clock() + self.step_size() - get_bbbm_retest_timedelta(
-            self.step_size().days
+        ] == self.clock() + self.step_size() - get_timedelta_from_step_size(
+            self.step_size().days, BBBM_TIMESTEPS_UNTIL_RETEST
         )
 
         return sum(eligible_baseline & (new_entrants | aged_in | retest))
@@ -265,7 +258,8 @@ class BBBMTestingObserver(PublicHealthObserver):
         event_time = self.clock() + self.step_size()
         eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
             pop[COLUMNS.BBBM_TEST_DATE]
-            <= event_time - get_bbbm_retest_timedelta(self.step_size().days)
+            <= event_time
+            - get_timedelta_from_step_size(self.step_size().days, BBBM_TIMESTEPS_UNTIL_RETEST)
         )
         eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
 
@@ -285,3 +279,58 @@ class BBBMTestingObserver(PublicHealthObserver):
 
     def get_entity_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
         return pd.Series("bbbm_testing", index=results.index)
+
+
+class TreatmentObserver(DiseaseObserver):
+    def __init__(self) -> None:
+        super().__init__("treatment")
+
+    def register_disease_state_stratification(self, builder: Builder) -> None:
+        """Register the disease state stratification.
+
+        This is a near copy/paste of the default VPH DiseaseObserver method except
+        that it removes the postive_test TransientState from the list of categories.
+        """
+        categories = [
+            state.state_id
+            for state in self.disease_model.states
+            if state.state_id != "positive_test"
+        ]
+        builder.results.register_stratification(
+            self.disease,
+            categories,
+            requires_columns=[self.disease],
+        )
+
+    def register_transition_stratification(self, builder: Builder) -> None:
+        """Register the transition stratification.
+
+        This is a near copy/paste of the default VPH DiseaseObserver method.
+        The only differences:
+          - Add the transition categories that start in susceptible (these get lost
+            when passing through the positve_test TransientState).
+          - Remove the positve_test TransientState from the list of transitions.
+        """
+        transitions = [
+            str(transition)
+            for transition in self.disease_model.transition_names
+            if "positive_test" not in str(transition)
+        ] + [
+            "no_transition",
+            "susceptible_to_susceptible_to_start_treatment",
+            "susceptible_to_susceptible_to_no_effect_never_treated",
+        ]
+        # manually append 'no_transition' as an excluded transition
+        excluded_categories = (
+            builder.configuration.stratification.excluded_categories.to_dict().get(
+                self.transition_stratification_name, []
+            )
+        ) + ["no_transition"]
+        builder.results.register_stratification(
+            self.transition_stratification_name,
+            categories=transitions,
+            excluded_categories=excluded_categories,
+            mapper=self.map_transitions,
+            requires_columns=[self.disease, self.previous_state_column_name],
+            is_vectorized=True,
+        )

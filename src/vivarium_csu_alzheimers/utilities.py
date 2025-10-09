@@ -178,5 +178,5 @@ def get_random_variable(draw: int, seed: str, distribution: stats.rv_continuous)
     return distribution.rvs()
 
 
-def get_bbbm_retest_timedelta(step_size: int) -> pd.Timedelta:
-    return pd.Timedelta(days=BBBM_TIMESTEPS_UNTIL_RETEST * step_size)
+def get_timedelta_from_step_size(step_size: int, time_steps: int) -> pd.Timedelta:
+    return pd.Timedelta(days=time_steps * step_size)

@@ -70,6 +70,7 @@ class __Columns(NamedTuple):
     BBBM_TEST_RESULT: str = "bbbm_test_result"
     AGE: str = "age"
     BBBM_TEST_EVER_ELIGIBLE: str = "bbbm_test_ever_eligible"
+    TREATMENT_PROPENSITY: str = "treatment_propensity"
 
 
 COLUMNS = __Columns()
@@ -156,3 +157,28 @@ BBBM_TESTING_RATES = [
     (pd.Timestamp("2040-01-01"), 0.4),
     (pd.Timestamp("2045-01-01"), 0.6),  # plateaus from here on out
 ]
+
+COMMON_TREATMENT_RAMP = [
+    (pd.Timestamp("2030-01-01"), 0.4),  # step increase from 0 in 2030
+    (pd.Timestamp("2035-01-01"), 0.7),  # plateaus from here on out
+]
+
+LOCATION_TREATMENT_PROBS = {
+    "united_states_of_america": 0.3,
+    "germany": COMMON_TREATMENT_RAMP,
+    "spain": COMMON_TREATMENT_RAMP,
+    "sweden": COMMON_TREATMENT_RAMP,
+    "united_kingdom": COMMON_TREATMENT_RAMP,
+    "japan": 0.8,
+    "israel": COMMON_TREATMENT_RAMP,
+    "taiwan_(province_of_china)": COMMON_TREATMENT_RAMP,
+    "brazil": COMMON_TREATMENT_RAMP,
+    "china": COMMON_TREATMENT_RAMP,
+}
+DWELL_TIME_AWAITING_EFFECT_TIMESTEPS = 1  # 6 months
+DWELL_TIME_FULL_EFFECT_LONG_TIMESTEPS = 10  # 5 years
+DWELL_TIME_FULL_EFFECT_SHORT_TIMESTEPS = 1  # 6 months
+DWELL_TIME_WANING_EFFECT_LONG_TIMESTEPS = 18  # 9 years
+DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS = 5  # 2.5 years
+
+TREATMENT_COMPLETION_PROBABILITY = 0.9

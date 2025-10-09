@@ -24,7 +24,7 @@ class __InterventionScenarios(NamedTuple):
         bbbm_testing=True,
     )
     BBBM_TESTING_AND_TREATMENT: InterventionScenario = InterventionScenario(
-        "treatment",
+        "bbbm_testing_and_treatment",
         bbbm_testing=True,
         treatment=True,
     )

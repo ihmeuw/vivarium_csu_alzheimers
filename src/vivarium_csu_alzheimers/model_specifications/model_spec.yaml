@@ -9,6 +9,10 @@ components:
           - Testing()
           - BaselineTestingObserver()
           - BBBMTestingObserver()
+          - Treatment()
+          - TreatmentObserver()
+        # TODO
+        #   - TreatmentRiskEffect('treatment', 'cause.bbbm_state_to_mci_state.transition_rate'). # something like this
             
     vivarium_public_health:
         population:
@@ -27,7 +31,7 @@ configuration:
         extrapolate: True
     randomness:
         map_size: 10_000_000
-        key_columns: ['entrance_time', 'age']
+        key_columns: [entrance_time, age]
     time: 
         start:
             year: 2025
@@ -47,15 +51,19 @@ configuration:
         untracking_age: 200
     stratification:
         default:
-            - 'age_group'
-            - 'sex'
-            - 'event_year'
+            - age_group
+            - sex
+            - event_year
         baseline_testing:
             include:
-                - 'testing_state'
+                - testing_state
         bbbm_testing:
             include:
-                - 'bbbm_test_results'
-                - 'semester'
+                - bbbm_test_results
+                - semester
+        treatment:
+            include:
+                - semester
+        
     intervention:
-        scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'treatment'
+        scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
