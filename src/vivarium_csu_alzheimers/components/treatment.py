@@ -96,21 +96,6 @@ class Treatment(Component):
     def get_treatment_states(self, index: pd.Index) -> pd.Series:
         return self.population_view.subview(COLUMNS.TREATMENT_STATE).get(index).squeeze()
 
-        # OR REGISTER MODIFIERS DIRECTLY
-
-        # # Register a value modifer to the bbbm-mci transition rate
-        # builder.value.register_value_modifier(
-        #     'alzheimers_blood_based_biomarker_state_to_alzheimers_mild_cognitive_impairment_state.transition_rate',
-        #     modifier=self.modify_transition,
-        #     component=self,
-        # )
-
-    # def modify_transition(
-    #     self, index: pd.Index, target_pipeline: pd.Series[float]
-    # ) -> pd.Series:
-    #     breakpoint()
-    #     pop = self.population_view.get(index)
-
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         """Initialize treatment propensity for new simulants."""
         propensity = self.randomness.get_draw(
