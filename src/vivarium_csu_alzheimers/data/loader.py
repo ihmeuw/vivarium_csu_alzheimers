@@ -61,11 +61,11 @@ def get_data(
     """
     mapping = {
         data_keys.POPULATION.LOCATION: load_population_location,
-        data_keys.POPULATION.STRUCTURE: load_forecasted_population_structure,
+        # data_keys.POPULATION.STRUCTURE: load_forecasted_population_structure,
         data_keys.POPULATION.AGE_BINS: load_age_bins,
-        data_keys.POPULATION.DEMOGRAPHY: load_demographic_dimensions,
-        data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
-        data_keys.POPULATION.ACMR: load_forecasted_mortality,
+        # data_keys.POPULATION.DEMOGRAPHY: load_demographic_dimensions,
+        # data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
+        # data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: interface.load_standard_data,
         # data_keys.POPULATION.SCALING_FACTOR: load_alzheimers_all_states_prevalence,
         # data_keys.ALZHEIMERS.PREVALENCE: load_prevalence,
