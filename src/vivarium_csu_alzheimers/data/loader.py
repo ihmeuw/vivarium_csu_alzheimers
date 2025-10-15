@@ -66,7 +66,7 @@ def get_data(
         data_keys.POPULATION.DEMOGRAPHY: load_demographic_dimensions,
         data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
         data_keys.POPULATION.ACMR: load_forecasted_mortality,
-        data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
+        data_keys.POPULATION.LIVE_BIRTH_RATE: interface.load_standard_data,
         data_keys.POPULATION.SCALING_FACTOR: load_alzheimers_all_states_prevalence,
         data_keys.ALZHEIMERS.PREVALENCE: load_prevalence,
         data_keys.ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE: load_bbbm_conditional_prevalence,
@@ -74,9 +74,9 @@ def get_data(
         data_keys.ALZHEIMERS.MCI_TO_DEMENTIA_TRANSITION_RATE: load_mci_to_dementia_transition_rate,
         data_keys.ALZHEIMERS.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: load_susceptible_to_bbbm_transition_count,
         # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
-        data_keys.ALZHEIMERS.CSMR: load_standard_data,
-        data_keys.ALZHEIMERS.EMR: load_standard_data,
-        data_keys.ALZHEIMERS.DISABILITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.CSMR: interface.load_standard_data,
+        data_keys.ALZHEIMERS.EMR: interface.load_standard_data,
+        data_keys.ALZHEIMERS.DISABILITY_WEIGHT: interface.load_standard_data,
         data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
         data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION: load_alzheimers_incidence_total_population,
@@ -147,12 +147,12 @@ def load_theoretical_minimum_risk_life_expectancy(
     return interface.get_theoretical_minimum_risk_life_expectancy()
 
 
-def load_standard_data(
-    key: str, location: str, years: int | str | list[int] | None = None
-) -> pd.DataFrame:
-    key = EntityKey(key)
-    entity = get_entity(key)
-    return interface.get_measure(entity, key.measure, location, years).droplevel("location")
+# def load_standard_data(
+#     key: str, location: str, years: int | str | list[int] | None = None
+# ) -> pd.DataFrame:
+#     key = EntityKey(key)
+#     entity = get_entity(key)
+#     return interface.get_measure(entity, key.measure, location, years).droplevel("location")
 
 
 def load_metadata(key: str, location: str, years: int | str | list[int] | None = None):
