@@ -72,8 +72,24 @@ class __TestingRates(NamedTuple):
 
 TESTING_RATES = __TestingRates()
 
+
+class __Treatment(NamedTuple):
+    RR: str = "treatment.relative_risk"
+
+    @property
+    def name(self):
+        return "treatment"
+
+    @property
+    def log_name(self):
+        return self.name.replace(" ", "_")
+
+
+TREATMENT = __Treatment()
+
 MAKE_ARTIFACT_KEY_GROUPS = [
     POPULATION,
     ALZHEIMERS,
     TESTING_RATES,
+    TREATMENT,
 ]

@@ -9,6 +9,7 @@ from vivarium.framework.randomness import get_hash
 from vivarium_public_health.risks.data_transformations import pivot_categorical
 
 from vivarium_csu_alzheimers.constants import metadata
+from vivarium_csu_alzheimers.constants.data_values import BBBM_TIMESTEPS_UNTIL_RETEST
 
 
 def len_longest_location() -> int:
@@ -106,6 +107,10 @@ def get_truncnorm(
     return stats.truncnorm(loc=mean, scale=sd, a=a, b=b)
 
 
+def get_uniform(lower: float, upper: float) -> stats.uniform:
+    return stats.uniform(loc=lower, scale=upper - lower)
+
+
 def _get_standard_deviation(
     mean: float, sd: float, ninety_five_pct_confidence_interval: tuple[float, float]
 ) -> float:
@@ -175,3 +180,7 @@ def get_random_variable_draws(
 def get_random_variable(draw: int, seed: str, distribution: stats.rv_continuous) -> float:
     np.random.seed(get_hash(f"{seed}_draw_{draw}"))
     return distribution.rvs()
+
+
+def get_timedelta_from_step_size(step_size: int, time_steps: int) -> pd.Timedelta:
+    return pd.Timedelta(days=time_steps * step_size)

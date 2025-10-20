@@ -24,16 +24,13 @@ class __InterventionScenarios(NamedTuple):
         bbbm_testing=True,
     )
     BBBM_TESTING_AND_TREATMENT: InterventionScenario = InterventionScenario(
-        "treatment",
+        "bbbm_testing_and_treatment",
         bbbm_testing=True,
         treatment=True,
     )
 
     def __getitem__(self, item) -> InterventionScenario:
-        for scenario in self:
-            if scenario.name == item:
-                return scenario
-        raise KeyError(item)
+        return self._asdict()[item.upper()]
 
 
 INTERVENTION_SCENARIOS = __InterventionScenarios()

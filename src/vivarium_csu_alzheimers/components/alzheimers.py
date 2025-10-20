@@ -116,7 +116,7 @@ class Alzheimers(Component):
 
         self.population_view.update(new_simulants)
 
-    def _create_disease_model(self):
+    def _create_disease_model(self) -> DiseaseModel:
         bbbm_state = BBBMDiseaseState(
             ALZHEIMERS_DISEASE_MODEL.BBBM_STATE,
             allow_self_transition=True,
@@ -154,7 +154,7 @@ class Alzheimers(Component):
         )
 
         return DiseaseModel(
-            ALZHEIMERS_DISEASE_MODEL.MODEL_NAME,
+            ALZHEIMERS_DISEASE_MODEL.NAME,
             initial_state=bbbm_state,
             states=[bbbm_state, mci_state, alzheimers_state],
         )
