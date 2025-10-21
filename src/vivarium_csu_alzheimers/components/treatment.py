@@ -93,10 +93,10 @@ class Treatment(Component):
         return [
             COLUMNS.TREATMENT_PROPENSITY,
             COLUMNS.TREATMENT_STATE,
-            "waiting_for_treatment_event_time",
-            "waiting_for_treatment_event_count",
-            "no_effect_never_treated_event_time",
-            "no_effect_never_treated_event_count",
+            COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME,
+            COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT,
+            COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_TIME,
+            COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_COUNT,
         ]
 
     @property
