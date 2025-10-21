@@ -163,11 +163,6 @@ class Treatment(Component):
         start_treatment_idx = (start_treatment_probs[start_treatment_probs == 1]).index
         decline_treatment_idx = positive_results_idx.difference(start_treatment_idx)
         event_time = pop_data.creation_time + get_timedelta_from_step_size(self.step_size)
-        # update = self.population_view.subview([COLUMNS.TREATMENT_STATE]).get(pop_data.index)
-        # update["waiting_for_treatment_event_time"] = pd.NaT
-        # update["waiting_for_treatment_event_count"] = 0
-        # update["no_effect_never_treated_event_time"] = pd.NaT
-        # update["no_effect_never_treated_event_count"] = 0
         update = pd.DataFrame(
             data={
                 COLUMNS.TREATMENT_STATE: f"{TREATMENT_DISEASE_MODEL.SUSCEPTIBLE_STATE}_to_treatment",
