@@ -209,7 +209,7 @@ class AlzheimersIncidence(Component):
 
     def load_bbbm_incidence_counts(self, builder: Builder) -> pd.Series:
         incidence_counts = builder.data.load(
-            data_keys.ALZHEIMERS.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT
+            data_keys.ALZHEIMERS_CONSISTENT.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT
         )
         # Updating age_end to match configuration since some simulants are living past 125
         incidence_counts.loc[incidence_counts["age_end"] == 125, "age_end"] = self.age_end

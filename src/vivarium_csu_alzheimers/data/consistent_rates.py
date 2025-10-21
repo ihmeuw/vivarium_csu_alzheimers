@@ -395,7 +395,32 @@ def write_or_replace(art: Artifact, key: str, data: pd.DataFrame):
     else:
         art.write(key, data)
 
+def generate_consistent_susceptible_to_bbbm_transition_count(art):
+    """use the cause.alzheimers_consistent.population_incidence_any and the time-varying population
+    to create a SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT value
+    """
+
+    pop = art.load('population.structure')
+    transition_rate = art.load('cause.alzheimers_consistent.population_incidence_any')
+
+    df = pd.merge(pop.reset_index().drop(['location'], axis=1),
+            transition_rate.reset_index().drop(['year_start', 'year_end'], axis=1),
+            on=['sex', 'age_start', 'age_end'],
+            suffixes=('', '_rate'),
+            ).set_index(['sex', 'age_start', 'age_end', 'year_start', 'year_end'])
+
+    for i in range(500):
+        df[f'draw_{i}'] *= df[f'draw_{i}_rate']
+        del df[f'draw_{i}_rate']
+
+    write_or_replace(art, 'cause.alzheimers_consistent.susceptible_to_bbbm_transition_count', df)
 
 if __name__ == "__main__":
+    # TODO: instead of running this from the command-line on a hard-coded location
+    # it should be integrated into tools/make_artifacts.py (perhaps?); this is the approach
+    # I took in vivarium_nih_moud, see:
+    # https://github.com/ihmeuw/vivarium_nih_moud/blob/60f82cd9559772dc6fb3649f8967c640ad33299b/src/vivarium_nih_moud/tools/make_artifacts.py#L239
+    
     art = Artifact("united_states_of_america.hdf")
     generate_consistent_rates(art)
+    generate_consistent_susceptible_to_bbbm_transition_count(art)

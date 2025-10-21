@@ -10,7 +10,7 @@ from vivarium_public_health.disease import (
     RateTransition,
 )
 
-from vivarium_csu_alzheimers.constants.data_keys import ALZHEIMERS
+from vivarium_csu_alzheimers.constants.data_keys import ALZHEIMERS_CONSISTENT as ALZHEIMERS
 from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AVG_DURATION,
     COLUMNS,
