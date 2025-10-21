@@ -47,6 +47,35 @@ class TreatmentModel(DiseaseModel):
         """We want treatment to occur after testing updates."""
         return 7
 
+    @property
+    def columns_created(self) -> list[str]:
+        """Override because we create the column in Treatment."""
+        return []
+
+    @property
+    def columns_required(self) -> list[str]:
+        """Need to add the column that we removed from column_created here."""
+        cols = super().columns_required
+        cols += [COLUMNS.TREATMENT_STATE]
+        return cols
+
+    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
+        """Typical DiseaseModel initialization except we do not initialize the state column.
+
+        We skip the super's (Machine's) on_initialize_simulants call because we do
+        not want to initialize the disease states here since we are handling that
+        in the Treatment component.
+        """
+        if pop_data.user_data.get("age_end", self.configuration_age_end) == 0:
+            initialization_table_name = "birth_prevalence"
+        else:
+            initialization_table_name = "prevalence"
+
+        for state in self.states:
+            state.lookup_tables["initialization_weights"] = state.lookup_tables[
+                initialization_table_name
+            ]
+
 
 class Treatment(Component):
     """Alzheimer's treatment model component."""
@@ -61,11 +90,18 @@ class Treatment(Component):
 
     @property
     def columns_created(self) -> list[str]:
-        return [COLUMNS.TREATMENT_PROPENSITY]
+        return [
+            COLUMNS.TREATMENT_PROPENSITY,
+            COLUMNS.TREATMENT_STATE,
+            "waiting_for_treatment_event_time",
+            "waiting_for_treatment_event_count",
+            "no_effect_never_treated_event_time",
+            "no_effect_never_treated_event_count",
+        ]
 
     @property
     def columns_required(self) -> list[str]:
-        return [COLUMNS.BBBM_TEST_RESULT, COLUMNS.TREATMENT_STATE]
+        return [COLUMNS.BBBM_TEST_RESULT]
 
     def __init__(self):
         super().__init__()
@@ -98,11 +134,68 @@ class Treatment(Component):
 
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         """Initialize treatment propensity for new simulants."""
+        # Create the propensity column
         propensity = self.randomness.get_draw(
             pop_data.index, additional_key=COLUMNS.TREATMENT_PROPENSITY
         )
         propensity.name = COLUMNS.TREATMENT_PROPENSITY
+        # We need the propensity column to exist in the population view in the
+        # `start_treatment_probs` call below, so update now.
         self.population_view.update(propensity)
+
+        # Create the waiting_for_treatment and no_effect_never_treated event time/count columns
+        # HACK: We do this here rather than in the DiseaseState for these two classes
+        #   because we need innitialized simulants to be treated as well as tested.
+        #   It would be better to do this in the TreatmentModel itself, but it's not
+        #   trivial to handle since we need to know the location to apply the appropriate
+        #   treatment probabilities which requires access to the builder.
+        #   Note that we are only special-casing the waiting_for_treatment and
+        #   no_effect_never_treated states here because it's critical that we not
+        #   skip potential treatment for initialized simulants; all other states
+        #   in the disease model (aside from Susceptible) are downstream of starting
+        #   treatment and since no simulants are initialized having already started
+        #   treatment, they can be handled in the normal way.
+        positive_results = self.has_positive_results(pop_data.index)
+        positive_results_idx = positive_results[positive_results == 1].index
+        start_treatment_probs = self.start_treatment_probs(positive_results_idx)
+        # During initialization, we can only update the entire pop_data and so we cannot
+        # just get the positive_results idx here.
+        start_treatment_idx = (start_treatment_probs[start_treatment_probs == 1]).index
+        decline_treatment_idx = positive_results_idx.difference(start_treatment_idx)
+        event_time = pop_data.creation_time + get_timedelta_from_step_size(self.step_size)
+        # update = self.population_view.subview([COLUMNS.TREATMENT_STATE]).get(pop_data.index)
+        # update["waiting_for_treatment_event_time"] = pd.NaT
+        # update["waiting_for_treatment_event_count"] = 0
+        # update["no_effect_never_treated_event_time"] = pd.NaT
+        # update["no_effect_never_treated_event_count"] = 0
+        update = pd.DataFrame(
+            data={
+                COLUMNS.TREATMENT_STATE: f"{TREATMENT_DISEASE_MODEL.SUSCEPTIBLE_STATE}_to_treatment",
+                "waiting_for_treatment_event_time": pd.NaT,
+                "waiting_for_treatment_event_count": 0,
+                "no_effect_never_treated_event_time": pd.NaT,
+                "no_effect_never_treated_event_count": 0,
+            },
+            index=pop_data.index,
+        )
+        update.loc[
+            update.index.isin(start_treatment_idx),
+            [
+                COLUMNS.TREATMENT_STATE,
+                "waiting_for_treatment_event_time",
+                "waiting_for_treatment_event_count",
+            ],
+        ] = [TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE, event_time, 1]
+        update.loc[
+            update.index.isin(decline_treatment_idx),
+            [
+                COLUMNS.TREATMENT_STATE,
+                "no_effect_never_treated_event_time",
+                "no_effect_never_treated_event_count",
+            ],
+        ] = [TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE, event_time, 1]
+
+        self.population_view.update(update)
 
     def _create_treatment_mode(self) -> TreatmentModel:
 
@@ -113,8 +206,8 @@ class Treatment(Component):
         positive_test = TransientDiseaseState(
             TREATMENT_DISEASE_MODEL.POSITIVE_TEST_TRANSIENT_STATE
         )
-        start_treatment = DiseaseState(
-            TREATMENT_DISEASE_MODEL.START_TREATMENT_STATE,
+        waiting_for_treatment = PositiveTestDecisionState(
+            TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE,
             allow_self_transition=True,
             prevalence=0.0,
             dwell_time=get_timedelta_from_step_size(
@@ -177,7 +270,7 @@ class Treatment(Component):
             disability_weight=0.0,
             excess_mortality_rate=0.0,
         )
-        no_effect_never_treated = DiseaseState(
+        no_effect_never_treated = PositiveTestDecisionState(
             TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE,
             allow_self_transition=True,
             prevalence=0.0,
@@ -189,18 +282,19 @@ class Treatment(Component):
             output_state=positive_test, probability_function=self.has_positive_results
         )
         positive_test.add_transition(
-            output_state=start_treatment, probability_function=self.start_treatment_probs
+            output_state=waiting_for_treatment,
+            probability_function=self.start_treatment_probs,
         )
         positive_test.add_transition(
             output_state=no_effect_never_treated,
             probability_function=self.decline_treatment_probs,
         )
-        start_treatment.add_proportion_transition(
+        waiting_for_treatment.add_proportion_transition(
             full_effect_long, proportion=TREATMENT_COMPLETION_PROBABILITY
         )
         full_effect_long.add_transition(output_state=waning_effect_long)
         waning_effect_long.add_transition(output_state=no_effect_after_long)
-        start_treatment.add_proportion_transition(
+        waiting_for_treatment.add_proportion_transition(
             full_effect_short, proportion=(1 - TREATMENT_COMPLETION_PROBABILITY)
         )
         full_effect_short.add_transition(output_state=waning_effect_short)
@@ -212,7 +306,7 @@ class Treatment(Component):
             states=[
                 susceptible,
                 positive_test,
-                start_treatment,
+                waiting_for_treatment,
                 full_effect_long,
                 full_effect_short,
                 waning_effect_long,
@@ -234,7 +328,7 @@ class Treatment(Component):
     def start_treatment_probs(self, index: pd.Index[int]) -> pd.Series[float]:
         """Returns 1 if the propensity is less that treatment probability, 0 otherwise."""
         pop = self.population_view.subview(COLUMNS.TREATMENT_PROPENSITY).get(index)
-        event_date = self.clock() + pd.Timedelta(days=self.step_size)
+        event_date = self.clock() + get_timedelta_from_step_size(self.step_size)
         probs = pd.Series(0.0, index=index)
 
         if not self.scenario.treatment:
@@ -263,6 +357,29 @@ class Treatment(Component):
         start_treatment_probs = self.start_treatment_probs(index)
         probs = 1 - start_treatment_probs
         return probs
+
+
+class PositiveTestDecisionState(DiseaseState):
+    """Override initialization of the columns so that Treatment can handle it."""
+
+    @property
+    def columns_created(self):
+        # Remove the columns created during DiseaseState since they will be
+        # created in Treatment
+        return []
+
+    @property
+    def columns_required(self):
+        # Need to add the columns that we removed from column_created here
+        cols = super().columns_required
+        cols += [self.event_count_column, self.event_time_column]
+        return cols
+
+    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
+        """Adds this state's columns to the simulation state table."""
+        for transition in self.transition_set:
+            if transition.start_active:
+                transition.set_active(pop_data.index)
 
 
 class TreatmentRiskEffect(RiskEffect):
