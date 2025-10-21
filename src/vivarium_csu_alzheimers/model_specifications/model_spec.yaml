@@ -53,16 +53,15 @@ configuration:
             - age_group
             - sex
             - event_year
+        alzheimers_disease_and_other_dementias:
+            include:
+                - "treatment"
         baseline_testing:
             include:
                 - testing_state
         bbbm_testing:
             include:
                 - bbbm_test_results
-                - semester
-        treatment:
-            include:
-                - semester
         
     intervention:
         scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
