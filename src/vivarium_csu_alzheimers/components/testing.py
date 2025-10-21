@@ -103,28 +103,28 @@ class Testing(Component):
                 ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE,
             ]
         )
-        eligible_csf_propensity = pop[COLUMNS.TESTING_PROPENSITY] < self.csf_testing_rate
-        eligible_pet_propensity = (
-            pop[COLUMNS.TESTING_PROPENSITY] >= self.csf_testing_rate
-        ) & (pop[COLUMNS.TESTING_PROPENSITY] < self.csf_testing_rate + self.pet_testing_rate)
+        eligible_test_propensity = pop[COLUMNS.TESTING_PROPENSITY] < (
+            self.csf_testing_rate + self.pet_testing_rate
+        )
         eligible_untested = ~pop[COLUMNS.TESTING_STATE].isin(
             [TESTING_STATES.CSF, TESTING_STATES.PET]
         )
         eligible_bbbm_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
 
-        eligible_baseline_testing = eligible_state & eligible_untested & eligible_bbbm_results
+        eligible_baseline_testing = (
+            eligible_state
+            & eligible_test_propensity
+            & eligible_untested
+            & eligible_bbbm_results
+        )
 
-        # Update tested status with those who had CSF tests
-        pop.loc[
-            eligible_baseline_testing & eligible_csf_propensity,
-            COLUMNS.TESTING_STATE,
-        ] = TESTING_STATES.CSF
-
-        # Update testing status with those who had PET tests
-        pop.loc[
-            eligible_baseline_testing & eligible_pet_propensity,
-            COLUMNS.TESTING_STATE,
-        ] = TESTING_STATES.PET
+        # Update tested status
+        pop.loc[eligible_baseline_testing, COLUMNS.TESTING_STATE] = self.randomness.choice(
+            index=pop[eligible_baseline_testing].index,
+            choices=[TESTING_STATES.CSF, TESTING_STATES.PET],
+            p=[self.csf_testing_rate, self.pet_testing_rate],
+            additional_key=COLUMNS.TESTING_STATE,
+        )
 
     def _update_bbbm_testing(self, pop: pd.DataFrame, event_time: pd.Timestamp) -> None:
 
