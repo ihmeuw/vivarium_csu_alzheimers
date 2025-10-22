@@ -143,9 +143,10 @@ class Treatment(Component):
         # `start_treatment_probs` call below, so update now.
         self.population_view.update(propensity)
 
-        # Create the waiting_for_treatment and no_effect_never_treated event time/count columns
+        # Initialize the treatment state column as well as treatment decision
+        # event time and count columns
         # HACK: We do this here rather than in the DiseaseState for these two classes
-        #   because we need innitialized simulants to be treated as well as tested.
+        #   because we need initialized simulants to be treated as well as tested.
         #   It would be better to do this in the TreatmentModel itself, but it's not
         #   trivial to handle since we need to know the location to apply the appropriate
         #   treatment probabilities which requires access to the builder.
@@ -166,10 +167,10 @@ class Treatment(Component):
         update = pd.DataFrame(
             data={
                 COLUMNS.TREATMENT_STATE: f"{TREATMENT_DISEASE_MODEL.SUSCEPTIBLE_STATE}_to_treatment",
-                "waiting_for_treatment_event_time": pd.NaT,
-                "waiting_for_treatment_event_count": 0,
-                "no_effect_never_treated_event_time": pd.NaT,
-                "no_effect_never_treated_event_count": 0,
+                COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME: pd.NaT,
+                COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT: 0,
+                COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_TIME: pd.NaT,
+                COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_COUNT: 0,
             },
             index=pop_data.index,
         )
@@ -177,16 +178,16 @@ class Treatment(Component):
             update.index.isin(start_treatment_idx),
             [
                 COLUMNS.TREATMENT_STATE,
-                "waiting_for_treatment_event_time",
-                "waiting_for_treatment_event_count",
+                COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME,
+                COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT,
             ],
         ] = [TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE, event_time, 1]
         update.loc[
             update.index.isin(decline_treatment_idx),
             [
                 COLUMNS.TREATMENT_STATE,
-                "no_effect_never_treated_event_time",
-                "no_effect_never_treated_event_count",
+                COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_TIME,
+                COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_COUNT,
             ],
         ] = [TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE, event_time, 1]
 
