@@ -145,12 +145,18 @@ class Treatment(Component):
 
         # Initialize the treatment state column as well as treatment decision
         # event time and count columns
-        # HACK: We do this here rather than in the DiseaseState for these two classes
-        #   because we need initialized simulants to be treated as well as tested.
-        #   It would be better to do this in the TreatmentModel itself, but it's not
-        #   trivial to handle since we need to know the location to apply the appropriate
+        # HACK: We need to manually do this here rather than relying on the TreatmentModel
+        #   and DiseaseState classes because vivarium simulations by default do not
+        #   include newly-initialized simulants when making decisions for a given
+        #   time step, i.e. simulants need to be both tested and treated during
+        #   initialization (without this they would be tested on initialization but
+        #   not run through the treatment logic until the following time step).
+        # 
+        #   NOTE: We do this here in Treatment rather than in the TreatmentModel 
+        #   Because we need to know the location to apply the appropriate
         #   treatment probabilities which requires access to the builder.
-        #   Note that we are only special-casing the waiting_for_treatment and
+        #
+        #   NOTE: We are only special-casing the waiting_for_treatment and
         #   no_effect_never_treated states here because it's critical that we not
         #   skip potential treatment for initialized simulants; all other states
         #   in the disease model (aside from Susceptible) are downstream of starting
