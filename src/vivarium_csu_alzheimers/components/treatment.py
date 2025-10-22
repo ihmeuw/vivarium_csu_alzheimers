@@ -55,9 +55,7 @@ class TreatmentModel(DiseaseModel):
     @property
     def columns_required(self) -> list[str]:
         """Need to add the column that we removed from column_created here."""
-        cols = super().columns_required
-        cols += [COLUMNS.TREATMENT_STATE]
-        return cols
+        return super().columns_required + [COLUMNS.TREATMENT_STATE]
 
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         """Typical DiseaseModel initialization except we do not initialize the state column.
@@ -151,8 +149,8 @@ class Treatment(Component):
         #   time step, i.e. simulants need to be both tested and treated during
         #   initialization (without this they would be tested on initialization but
         #   not run through the treatment logic until the following time step).
-        # 
-        #   NOTE: We do this here in Treatment rather than in the TreatmentModel 
+        #
+        #   NOTE: We do this here in Treatment rather than in the TreatmentModel
         #   Because we need to know the location to apply the appropriate
         #   treatment probabilities which requires access to the builder.
         #
@@ -373,9 +371,7 @@ class PositiveTestDecisionState(DiseaseState):
     @property
     def columns_required(self):
         # Need to add the columns that we removed from column_created here
-        cols = super().columns_required
-        cols += [self.event_count_column, self.event_time_column]
-        return cols
+        return super().columns_required + [self.event_count_column, self.event_time_column]
 
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         """Adds this state's columns to the simulation state table."""
