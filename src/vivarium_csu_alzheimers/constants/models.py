@@ -26,7 +26,7 @@ class __TreatmentDiseaseModel(NamedTuple):
     NAME: str = "treatment"
     SUSCEPTIBLE_STATE: str = "susceptible"
     POSITIVE_TEST_TRANSIENT_STATE: str = "positive_test"
-    START_TREATMENT_STATE: str = "start_treatment"
+    WAITING_FOR_TREATMENT_STATE: str = "waiting_for_treatment"
     FULL_EFFECT_LONG_STATE: str = "full_effect_long"
     FULL_EFFECT_SHORT_STATE: str = "full_effect_short"
     WANING_EFFECT_LONG_STATE: str = "waning_effect_long"

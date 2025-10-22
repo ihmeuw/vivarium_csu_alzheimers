@@ -77,7 +77,10 @@ class Testing(Component):
         pop[COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = False
 
         self._update_baseline_testing(pop)
-        self._update_bbbm_testing(pop, event_time=pop_data.creation_time)
+        self._update_bbbm_testing(
+            pop,
+            event_time=pop_data.creation_time + get_timedelta_from_step_size(self.step_size),
+        )
 
         self.population_view.update(pop)
 
