@@ -317,7 +317,7 @@ class TreatmentObserver(DiseaseObserver):
             if "positive_test" not in str(transition)
         ] + [
             "no_transition",
-            "susceptible_to_treatment_to_start_treatment",
+            "susceptible_to_treatment_to_waiting_for_treatment",
             "susceptible_to_treatment_to_no_effect_never_treated",
         ]
         # manually append 'no_transition' as an excluded transition

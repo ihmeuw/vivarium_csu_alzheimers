@@ -13,13 +13,14 @@ from vivarium_public_health.disease import (
 from vivarium_csu_alzheimers.constants.data_keys import ALZHEIMERS_CONSISTENT as ALZHEIMERS
 from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AVG_DURATION,
+    BBBM_HAZARD_DIST,
     COLUMNS,
     DW_BBBM,
     EMR_BBBM,
     EMR_MCI,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
-from vivarium_csu_alzheimers.data.mci_hazard import gamma_hazard
+from vivarium_csu_alzheimers.data.mci_hazard import hazard
 
 
 class BBBMTransitionRate(RateTransition):
@@ -50,11 +51,11 @@ class BBBMTransitionRate(RateTransition):
     def compute_transition_rate(self, index: pd.Index) -> pd.Series:
         entrance_time = self.population_view.get(index)["bbbm_entrance_time"]
         current_time = self.clock()
-        time_diff_numeric = (current_time - entrance_time).dt.total_seconds() / (
+        time_diff_numeric_years = (current_time - entrance_time).dt.total_seconds() / (
             365.0 * 24 * 3600
-        )  # years
+        )
 
-        return gamma_hazard(time_diff_numeric) * self.step_size
+        return hazard(time_diff_numeric_years, BBBM_HAZARD_DIST)
 
 
 class BBBMDiseaseState(DiseaseState):
