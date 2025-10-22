@@ -182,5 +182,5 @@ def get_random_variable(draw: int, seed: str, distribution: stats.rv_continuous)
     return distribution.rvs()
 
 
-def get_timedelta_from_step_size(step_size: int, time_steps: int) -> pd.Timedelta:
+def get_timedelta_from_step_size(step_size: int, time_steps: int = 1) -> pd.Timedelta:
     return pd.Timedelta(days=time_steps * step_size)
