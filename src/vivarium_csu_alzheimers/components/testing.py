@@ -6,6 +6,7 @@ from vivarium import Component
 from vivarium.framework.event import Event
 from vivarium.framework.population import SimulantData
 from vivarium.framework.resource import Resource
+from vivarium.types import Time
 
 from vivarium_csu_alzheimers.constants import scenarios
 from vivarium_csu_alzheimers.constants.data_keys import TESTING_RATES
@@ -72,7 +73,10 @@ class Testing(Component):
             pop_data.index, additional_key=COLUMNS.TESTING_PROPENSITY
         )
         pop[COLUMNS.TESTING_STATE] = TESTING_STATES.NOT_TESTED
-        pop[COLUMNS.BBBM_TEST_DATE] = pd.NaT
+        pop[COLUMNS.BBBM_TEST_DATE] = self._generate_bbbm_testing_history(
+            pop, pop_data.creation_time
+        )
+        # TODO: Update to reflect history
         pop[COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NOT_TESTED
         pop[COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = False
 
@@ -132,16 +136,7 @@ class Testing(Component):
             return
 
         # Define eligibility
-        eligible_state = pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
-        eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
-        eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
-            pop[COLUMNS.BBBM_TEST_DATE]
-            <= event_time
-            - get_timedelta_from_step_size(self.step_size, BBBM_TIMESTEPS_UNTIL_RETEST)
-        )
-        eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
-        eligible = eligible_state & eligible_age & eligible_history & eligible_results
-
+        eligible = self.get_bbbm_eligible_simulants(pop, event_time)
         # Update the ever-eligible column
         pop.loc[eligible, COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = True
 
@@ -163,6 +158,18 @@ class Testing(Component):
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_RESULT] = test_results
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_DATE] = event_time
 
+    def get_bbbm_eligible_simulants(self, pop, event_time):
+        eligible_state = pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
+        eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
+        eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
+            pop[COLUMNS.BBBM_TEST_DATE]
+            <= event_time
+            - get_timedelta_from_step_size(self.step_size, BBBM_TIMESTEPS_UNTIL_RETEST)
+        )
+        eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
+        eligible = eligible_state & eligible_age & eligible_history & eligible_results
+        return eligible
+
     def _get_bbbm_testing_rate(self, event_time: pd.Timestamp) -> float:
         """Gets the BBBM testing rate for a given timestamp using piecewise linear interpolation."""
 
@@ -179,3 +186,26 @@ class Testing(Component):
         rates = [rate for _, rate in BBBM_TESTING_RATES]
 
         return np.interp(event_time.value, timestamps, rates)
+
+    def _generate_bbbm_testing_history(
+        self, simulants: pd.DataFrame, time_of_event: Time
+    ) -> pd.Series:
+        """Generates previous BBBM test data for new simulants between 0 and 3 years prior
+        to entering the simulation."""
+        test_dates = pd.Series(data=pd.NaT, index=simulants.index)
+        if not self.scenario.bbbm_testing:
+            return test_dates
+
+        # Find eligible simulants and assign previous test date
+        eligible = self.get_bbbm_eligible_simulants(simulants, time_of_event)
+        test_date_options = [
+            time_step * pd.Timedelta(days=self.step_size) + time_of_event
+            for time_step in range(-1, -7, -1)
+        ]
+        test_dates.loc[eligible] = self.randomness.choice(
+            index=simulants[eligible].index,
+            choices=test_date_options,
+            additional_key="bbbm_test_date_history",
+        )
+
+        return test_dates
