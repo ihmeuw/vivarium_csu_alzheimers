@@ -142,11 +142,13 @@ class AlzheimersIncidence(Component):
         sub_pop = self.pop_structure.loc[
             self.pop_structure.index.get_level_values("year_start") == start_year
         ]
-        # NOTE: we only have prevalence for 2021-2022 so the year_start/year_end will be difference
+        # NOTE: we only have prevalence for a single year so the year_start/year_end will be difference
         # in the index levels but their structure is the same
         # Model scale = (population_size / (pop_structure * prevalence).sum())
+        merged_df = pd.merge(sub_pop, prevalence, left_index=True, right_index=True, suffixes=('_pop', '_prev'))
+
         self.model_scale = builder.configuration.population.population_size / (
-            (sub_pop.values * prevalence.values).sum()
+            (merged_df.value_pop*merged_df.value_prev).sum()
         )
         self.simulant_creator = builder.population.get_simulant_creator()
 
@@ -224,7 +226,8 @@ class AlzheimersIncidence(Component):
         return pop_structure
 
     def load_prevalence(self, builder: Builder) -> pd.Series:
-        prevalence = builder.data.load(data_keys.POPULATION.SCALING_FACTOR)
+        prevalence = builder.data.load(data_keys.ALZHEIMERS_CONSISTENT.PREVALENCE_ANY)
+
         # Updating age_end to match configuration since some simulants are living past 125
         prevalence.loc[prevalence["age_end"] == 125, "age_end"] = self.age_end
         prevalence = prevalence.set_index(ARTIFACT_INDEX_COLUMNS).squeeze()

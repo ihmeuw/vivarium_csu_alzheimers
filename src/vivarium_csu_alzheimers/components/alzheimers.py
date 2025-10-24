@@ -140,7 +140,7 @@ class Alzheimers(Component):
         )
         alzheimers_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE,
-            prevalence=lambda builder: builder.data.load(ALZHEIMERS.PREVALENCE),
+            prevalence=lambda builder: builder.data.load(ALZHEIMERS.DEMENTIA_CONDITIONAL_PREVALENCE),
             disability_weight=lambda builder: builder.data.load(ALZHEIMERS.DISABILITY_WEIGHT),
             excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR),
         )

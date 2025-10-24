@@ -57,9 +57,11 @@ class __Alzheimers(NamedTuple):
 ALZHEIMERS = __Alzheimers()
 
 class __AlzheimersConsistent(NamedTuple):
+    PREVALENCE_ANY: str = "cause.alzheimers_consistent.prevalence_any"
     PREVALENCE: str = "cause.alzheimers.prevalence"
     BBBM_CONDITIONAL_PREVALANCE: str = "cause.alzheimers_consistent.bbbm_conditional_prevalence"
     MCI_CONDITIONAL_PREVALENCE: str = "cause.alzheimers_consistent.mci_conditional_prevalence"
+    DEMENTIA_CONDITIONAL_PREVALENCE: str = "cause.alzheimers_consistent.dementia_conditional_prevalence"
     MCI_TO_DEMENTIA_TRANSITION_RATE: str = "cause.alzheimers.mci_to_dementia_transition_rate"
     SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: str = (
         "cause.alzheimers_consistent.susceptible_to_bbbm_transition_count"

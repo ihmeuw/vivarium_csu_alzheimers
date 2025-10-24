@@ -415,12 +415,21 @@ def generate_consistent_susceptible_to_bbbm_transition_count(art):
 
     write_or_replace(art, 'cause.alzheimers_consistent.susceptible_to_bbbm_transition_count', df)
 
-# if __name__ == "__main__":
-#     # TODO: instead of running this from the command-line on a hard-coded location
-#     # it should be integrated into tools/make_artifacts.py (perhaps?); this is the approach
-#     # I took in vivarium_nih_moud, see:
-#     # https://github.com/ihmeuw/vivarium_nih_moud/blob/60f82cd9559772dc6fb3649f8967c640ad33299b/src/vivarium_nih_moud/tools/make_artifacts.py#L239
-    
-#     art = Artifact("united_states_of_america.hdf")
+def generate_consistent_dementia_conditional_prevalence(art):
+    bbbm_conditional_prevalence = art.load('cause.alzheimers_consistent.bbbm_conditional_prevalence')
+    mci_conditional_prevalence = art.load('cause.alzheimers_consistent.mci_conditional_prevalence')
+
+    dementia_conditional_prevalence = np.clip(
+        1 - (bbbm_conditional_prevalence + mci_conditional_prevalence),
+        0, 1
+    )
+
+    write_or_replace(art, 'cause.alzheimers_consistent.dementia_conditional_prevalence', dementia_conditional_prevalence)
+
+
+if __name__ == "__main__":
+   
+    art = Artifact("united_states_of_america.hdf")
 #     generate_consistent_rates(art)
 #     generate_consistent_susceptible_to_bbbm_transition_count(art)
+    generate_consistent_dementia_conditional_prevalence(art)
