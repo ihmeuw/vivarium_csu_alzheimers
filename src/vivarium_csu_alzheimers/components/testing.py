@@ -84,6 +84,7 @@ class Testing(Component):
         pop[COLUMNS.BBBM_TEST_DATE] = self._generate_bbbm_testing_history(
             pop, bbbm_eligible_mask, event_time
         )
+        # All previous BBBM tests are negative
         pop.loc[bbbm_eligible_mask, COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NEGATIVE
         pop.loc[bbbm_eligible_mask, COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = True
         pop.loc[bbbm_eligible_mask, COLUMNS.TESTING_STATE] = TESTING_STATES.BBBM
@@ -169,7 +170,9 @@ class Testing(Component):
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_RESULT] = test_results
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_DATE] = event_time
 
-    def _get_bbbm_eligible_simulants(self, pop: pd.DataFrame, event_time: Time) -> pd.Series:
+    def _get_bbbm_eligible_simulants(
+        self, pop: pd.DataFrame, event_time: Time
+    ) -> pd.Series[bool]:
         eligible_state = pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
         eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
         eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
@@ -178,8 +181,7 @@ class Testing(Component):
             - get_timedelta_from_step_size(self.step_size, BBBM_TIMESTEPS_UNTIL_RETEST)
         )
         eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
-        eligible = eligible_state & eligible_age & eligible_history & eligible_results
-        return eligible
+        return eligible_state & eligible_age & eligible_history & eligible_results
 
     def _get_bbbm_testing_rate(self, event_time: pd.Timestamp) -> float:
         """Gets the BBBM testing rate for a given timestamp using piecewise linear interpolation."""
@@ -200,12 +202,11 @@ class Testing(Component):
 
     def _generate_bbbm_testing_history(
         self, simulants: pd.DataFrame, eligible_sims: pd.Series, time_of_event: Time
-    ) -> pd.Series:
+    ) -> pd.Series[Time]:
         """Generates previous BBBM test data for new simulants between 0 and 2.5 years prior
-        to entering the simulation. Note that we immediately check if simulants get tested on
-        initialization, so this history does not include the time a simulant is initialized."""
+        to entering the simulation."""
 
-        test_dates = simulants[COLUMNS.BBBM_TEST_DATE].copy()
+        test_dates = simulants[COLUMNS.BBBM_TEST_DATE]
         if not self.scenario.bbbm_testing or time_of_event < BBBM_TESTING_START_DATE:
             return test_dates
 
