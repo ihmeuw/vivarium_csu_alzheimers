@@ -166,7 +166,6 @@ class Alzheimers(Component):
         mci_prevalence = builder.data.load(ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE)
         alz_prevalence = bbbm_prevalence.copy()
         alz_prevalence["value"] = 1.0
-        breakpoint()
         alz_prevalence["value"] = alz_prevalence["value"] - (
             bbbm_prevalence["value"] + mci_prevalence["value"]
         )
