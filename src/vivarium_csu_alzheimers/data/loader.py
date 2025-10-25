@@ -15,7 +15,7 @@ for an example.
 
 import numpy as np
 import pandas as pd
-from gbd_mapping import causes, covariates, risk_factors
+from gbd_mapping import causes, covariates, risk_factors, sequelae
 from vivarium.framework.artifact import EntityKey
 from vivarium_inputs import globals as vi_globals
 from vivarium_inputs import interface
@@ -79,6 +79,9 @@ def get_data(
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
         data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION: load_alzheimers_incidence_total_population,
         data_keys.ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_mixed_dementia_incidence_total_population,
+        data_keys.ALZHEIMERS.MILD: load_standard_data,
+        data_keys.ALZHEIMERS.MODERATE: load_standard_data,
+        data_keys.ALZHEIMERS.SEVERE: load_standard_data,
         data_keys.TESTING_RATES.CSF: load_csf_pet_testing_rates,
         data_keys.TESTING_RATES.PET: load_csf_pet_testing_rates,
         data_keys.TREATMENT.RR: load_treatment_rrs,
@@ -265,6 +268,7 @@ def get_entity(key: str | EntityKey):
         "covariate": covariates,
         "risk_factor": risk_factors,
         "alternative_risk_factor": alternative_risk_factors,
+        "sequela": sequelae
     }
     key = EntityKey(key)
     return type_map[key.type][key.name]

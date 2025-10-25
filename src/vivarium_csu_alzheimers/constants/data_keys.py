@@ -47,6 +47,10 @@ class __Alzheimers(NamedTuple):
     MCI_DISABILITY_WEIGHT: str = "cause.alzheimers.mci_disability_weight"
     RESTRICTIONS: str = "cause.alzheimers_disease_and_other_dementias.restrictions"
 
+    MILD: str = "sequela.mild_alzheimers_disease_and_other_dementias.prevalence"
+    MODERATE: str = "sequela.moderate_alzheimers_disease_and_other_dementias.prevalence"
+    SEVERE: str = "sequela.severe_alzheimers_disease_and_other_dementias.prevalence"
+
     @property
     def name(self):
         return "alzheimers disease and other dementias"
