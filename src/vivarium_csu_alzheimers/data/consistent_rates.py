@@ -44,6 +44,9 @@ def generate_consistent_rates(art: Artifact):
         "i_ad": data_keys.ALZHEIMERS_CONSISTENT.MILD_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION,
         "i_mixed": data_keys.ALZHEIMERS_CONSISTENT.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION,
         "h_S_to_BBBM" : data_keys.ALZHEIMERS_CONSISTENT.BBBM_AD_INCIDENCE_RATE,
+        "h_mild_to_moderate" : data_keys.ALZHEIMERS_CONSISTENT.MILD_TO_MODERATE_DEMENTIA_TRANSITION_RATE,
+        "h_moderate_to_severe" : data_keys.ALZHEIMERS_CONSISTENT.MODERATE_TO_SEVERE_DEMENTIA_TRANSITION_RATE,
+        # FIXME: include additional transition rates here
         "f": data_keys.ALZHEIMERS_CONSISTENT.EMR,
         "delta_BBBM": data_keys.ALZHEIMERS_CONSISTENT.BBBM_CONDITIONAL_PREVALANCE,
         "delta_MCI": data_keys.ALZHEIMERS_CONSISTENT.MCI_CONDITIONAL_PREVALENCE,
@@ -139,12 +142,6 @@ class BBBM_AD_Model:
                 years,
                 knot_val_dict["delta_MCI"],
             )
-            delta_MCI = at_param(
-                f"delta_MCI",
-                ages,
-                years,
-                knot_val_dict["delta_MCI"],
-            )
             delta_mild = at_param(
                 f"delta_mild",
                 ages,
@@ -163,7 +160,14 @@ class BBBM_AD_Model:
                 years,
                 knot_val_dict["delta_severe"],
             )
-            
+
+
+            # deltas-sum-to-one constraint
+            # Add a normal penalty for difference between sum and 1.0
+            knot_sum = knot_val_dict["delta_BBBM"] + knot_val_dict["delta_MCI"] + knot_val_dict["delta_mild"] + knot_val_dict["delta_moderate"] + knot_val_dict["delta_severe"]
+            delta_sum = dist.Normal(1, 0.005).log_prob(knot_sum).sum()
+            numpyro.factor(f"sum_to_one_factor", delta_sum)
+
 
             def p_dementia(a, t):
                 return p(a, t) * (1 - delta_BBBM(a, t) - delta_MCI(a, t))
@@ -236,7 +240,7 @@ class BBBM_AD_Model:
                         0 - m * BBBM                         - h_BBBM_to_MCI * BBBM + h_S_to_BBBM * S - i_mixed * BBBM,
                         0 - m * MCI    - h_MCI_to_mild * MCI + h_BBBM_to_MCI * BBBM                   - i_mixed * MCI,
                         0 - m * D_mild + h_MCI_to_mild * MCI      - h_mild_to_moderate * D_mild       + i_mixed * (S + BBBM + MCI),
-                        0 - m * D_moderate + h_mild_to_moderate * D_mild - h_moderate_to_severe * D_moderate,
+                        0 - (m+f) * D_moderate + h_mild_to_moderate * D_mild - h_moderate_to_severe * D_moderate,
                         0 - (m+f) * D_severe                                 + h_moderate_to_severe * D_moderate,
                         h_MCI_to_mild * MCI,
                         i_mixed * (S + BBBM + MCI),
