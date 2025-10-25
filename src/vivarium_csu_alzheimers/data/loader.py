@@ -64,24 +64,24 @@ def get_data(
         data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
         data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
-        data_keys.POPULATION.SCALING_FACTOR: load_alzheimers_all_states_prevalence,
-        data_keys.ALZHEIMERS.PREVALENCE: load_prevalence,
-        data_keys.ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE: load_bbbm_conditional_prevalence,
-        data_keys.ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE: load_mci_conditional_prevalence,
-        data_keys.ALZHEIMERS.MCI_TO_DEMENTIA_TRANSITION_RATE: load_mci_to_dementia_transition_rate,
-        data_keys.ALZHEIMERS.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: load_susceptible_to_bbbm_transition_count,
-        # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
-        data_keys.ALZHEIMERS.CSMR: load_standard_data,
-        data_keys.ALZHEIMERS.EMR: load_standard_data,
-        data_keys.ALZHEIMERS.EMR_DISMOD: load_emr_dismod,
-        data_keys.ALZHEIMERS.DISABILITY_WEIGHT: load_standard_data,
-        data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
-        data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
-        data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION: load_alzheimers_incidence_total_population,
+        
+        data_keys.ALZHEIMERS.AD_AND_MIXED_DEMENTIA_PREVALENCE: load_ad_and_mixed_dementia_prevalence,
+        data_keys.ALZHEIMERS.AD_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_ad_dementia_incidence_total_population,
         data_keys.ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_mixed_dementia_incidence_total_population,
-        data_keys.ALZHEIMERS.MILD: load_standard_data,
-        data_keys.ALZHEIMERS.MODERATE: load_standard_data,
-        data_keys.ALZHEIMERS.SEVERE: load_standard_data,
+
+        data_keys.ALZHEIMERS.EMR_COMO: load_standard_data,
+        data_keys.ALZHEIMERS.EMR_DISMOD: load_emr_dismod,
+        
+        data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
+        data_keys.ALZHEIMERS.MILD_DEMENTIA_DISABILITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.MODERATE_DEMENTIA_DISABILITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.SEVERE_DEMENTIA_DISABILITY_WEIGHT: load_standard_data,
+
+        data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
+        data_keys.ALZHEIMERS.MILD_DEMENTIA_PREVALENCE: load_standard_data,
+        data_keys.ALZHEIMERS.MODERATE_DEMENTIA_PREVALENCE: load_standard_data,
+        data_keys.ALZHEIMERS.SEVERE_DEMENTIA_PREVALENCE: load_standard_data,
+
         data_keys.TESTING_RATES.CSF: load_csf_pet_testing_rates,
         data_keys.TESTING_RATES.PET: load_csf_pet_testing_rates,
         data_keys.TREATMENT.RR: load_treatment_rrs,
@@ -200,7 +200,7 @@ def load_categorical_paf(
     return paf
 
 
-def load_alzheimers_incidence_total_population(
+def load_ad_dementia_incidence_total_population(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     """Load raw Alzheimers incidence rates from GBD. The incidence rate we pull through vivarium framework
@@ -232,7 +232,7 @@ def load_mixed_dementia_incidence_total_population(
     return incidence * load_dementia_proportions(None, location, years, "Mixed dementia")
 
 
-def load_prevalence(
+def load_ad_and_mixed_dementia_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
 
