@@ -250,7 +250,8 @@ def build_single_location_artifact(
 
     consistent_rates.generate_consistent_rates(artifact)
     consistent_rates.generate_consistent_data_for_population_components(artifact)
-
+    consistent_rates.generate_consistent_data_for_disease_components(artifact)
+    
     logger.info(f"**Done building -- {location}**")
 
 
