@@ -239,9 +239,8 @@ class BBBM_AD_Model:
                         0 - m * S                                                   - h_S_to_BBBM * S - i_mixed * S,
                         0 - m * BBBM                         - h_BBBM_to_MCI * BBBM + h_S_to_BBBM * S - i_mixed * BBBM,
                         0 - m * MCI    - h_MCI_to_mild * MCI + h_BBBM_to_MCI * BBBM                   - i_mixed * MCI,
-                        0 - m * D_mild + h_MCI_to_mild * MCI      - h_mild_to_moderate * D_mild       + i_mixed * (S + BBBM + MCI),
-                        0 - (m+f)
-                        * D_moderate + h_mild_to_moderate * D_mild - h_moderate_to_severe * D_moderate,
+                        0 - m * D_mild + h_MCI_to_mild * MCI      - h_mild_to_moderate * D_mild       + i_mixed * (S + BBBM),
+                        0 - (m+f) * D_moderate + h_mild_to_moderate * D_mild - h_moderate_to_severe * D_moderate + i_mixed * MCI,  # HACK: it is easier in vivarium if mixed dementia for MCI-AD goes directly to moderate
                         0 - (m+f) * D_severe                                 + h_moderate_to_severe * D_moderate,
                         h_MCI_to_mild * MCI,
                         i_mixed * (S + BBBM + MCI),

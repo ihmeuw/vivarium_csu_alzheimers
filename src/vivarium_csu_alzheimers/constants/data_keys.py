@@ -72,11 +72,8 @@ class __AlzheimersConsistent(NamedTuple):
     SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: str = (
         "cause.alzheimers_consistent.susceptible_to_bbbm_transition_count"
     )
-    SUSCEPTIBLE_TO_MILD_DEMENTIA_TRANSITION_COUNT: str = (
-        "cause.alzheimers_consistent.susceptible_to_mild_dementia_transition_count"
-    )
     # BBBM to MCI transition rate caluclated during sim using mci_hazard.py and time in state
-    MCI_TO_MILD_DEMENTIA_TRANSITION_RATE: str = "cause.alzheimers_consistent.mci_to_mild_dementia_transition_rate"
+    # MCI to MILD transition rate is specified in data_values.py
     MILD_TO_MODERATE_DEMENTIA_TRANSITION_RATE: str = "cause.alzheimers_consistent.mild_to_moderate_dementia_transition_rate"
     MODERATE_TO_SEVERE_DEMENTIA_TRANSITION_RATE: str = "cause.alzheimers_consistent.moderate_to_severe_dementia_transition_rate"
     
