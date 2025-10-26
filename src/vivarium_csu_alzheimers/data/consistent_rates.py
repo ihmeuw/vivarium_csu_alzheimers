@@ -62,7 +62,7 @@ def generate_consistent_rates(art: Artifact):
     for sex in ["Male", "Female"]:
         # ETL the data
         severity_sum = (art.load(load_key["p_mild"]) + art.load(load_key["p_moderate"]) + art.load(load_key["p_severe"]))
-        severity_sum += 1e-12 # offset denominator to avoid divide by zero
+        severity_sum += 1e-8 # offset denominator to avoid divide by zero
         
         df_data = pd.concat(
             [
@@ -230,7 +230,7 @@ class BBBM_AD_Model:
 
             include_consistency_constraints = True
             if include_consistency_constraints:
-                sigma=0.005
+                sigma=0.01
 
                 def odf_function(t, y, args):
                     S, BBBM, MCI, D_mild, D_moderate, D_severe, new_D_due_to_AD, new_D_due_to_mixed = y
@@ -287,7 +287,7 @@ class BBBM_AD_Model:
                     )
                     S, BBBM, MCI, D_mild, D_moderate, D_severe, new_D_due_to_AD, new_D_due_to_mixed = solution.ys
                     # Numerical stability for log terms
-                    eps = 1e-12
+                    eps = 1e-8
                     denom_alive = S + BBBM + MCI + D_mild + D_moderate + D_severe
                     denom_noS = BBBM + MCI + D_mild + D_moderate + D_severe
                     # Clip to avoid log(0)
@@ -492,13 +492,21 @@ def write_or_replace(art: Artifact, key: str, data: pd.DataFrame):
     else:
         art.write(key, data)
 
-def generate_consistent_susceptible_to_bbbm_transition_count(art):
-    """use the cause.alzheimers_consistent.population_incidence_any and the time-varying population
-    to create a SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT value
+def generate_consistent_data_for_population_components(art):
+    """use the cause.alzheimers_consistent.population_incidence_any and
+    the time-varying population to create a
+    SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT value
+
+    also copy data_keys.ALZHEIMERS_CONSISTENT.AD_PREVALENCE to
+    data_keys.POPULATION.SCALING_FACTOR because that is where the
+    Population component expects to find it
+
     """
+    prevalence = art.load(data_keys.ALZHEIMERS_CONSISTENT.AD_PREVALENCE)
+    write_or_replace(art, data_keys.POPULATION.SCALING_FACTOR, prevalence)
 
     pop = art.load(data_keys.POPULATION.STRUCTURE)
-    prevalence = art.load(data_keys.ALZHEIMERS_CONSISTENT.AD_PREVALENCE)
+    
     transition_rate = art.load(data_keys.ALZHEIMERS_CONSISTENT.BBBM_AD_INCIDENCE_RATE)
 
     df = pd.merge(pop.reset_index().drop(['location'], axis=1),
@@ -521,8 +529,19 @@ def generate_consistent_susceptible_to_bbbm_transition_count(art):
     write_or_replace(art, data_keys.ALZHEIMERS_CONSISTENT.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT, df)
 
 
+def generate_consistent_data_for_disease_components(art):
+    prevalence = art.load(data_keys.ALZHEIMERS_CONSISTENT.AD_PREVALENCE)
+    emr = art.load(data_keys.ALZHEIMERS_CONSISTENT.EMR)
+    delta_mild = art.load(data_keys.ALZHEIMERS_CONSISTENT.MILD_DEMENTIA_CONDITIONAL_PREVALENCE)
+    delta_moderate = art.load(data_keys.ALZHEIMERS_CONSISTENT.MODERATE_DEMENTIA_CONDITIONAL_PREVALENCE)
+    delta_severe = art.load(data_keys.ALZHEIMERS_CONSISTENT.SEVERE_DEMENTIA_CONDITIONAL_PREVALENCE)
+
+    csmr = emr * prevalence * (delta_moderate + delta_severe)
+    write_or_replace(art, data_keys.ALZHEIMERS_CONSISTENT.CSMR, csmr)
+
 if __name__ == "__main__":
    
-    art = Artifact("sweden.hdf")
+    art = Artifact("united_states_of_america.hdf")
     generate_consistent_rates(art)
-    generate_consistent_susceptible_to_bbbm_transition_count(art)
+    generate_consistent_data_for_population_components(art)
+    generate_consistent_data_for_disease_components(art)

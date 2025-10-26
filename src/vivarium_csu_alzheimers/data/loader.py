@@ -59,6 +59,7 @@ def get_data(
     mapping = {
         data_keys.POPULATION.LOCATION: load_population_location,
         data_keys.POPULATION.STRUCTURE: load_forecasted_population_structure,
+        data_keys.POPULATION.SCALING_FACTOR: load_ad_dementia_prevalence,  # this will be replaced by consistent model
         data_keys.POPULATION.AGE_BINS: load_age_bins,
         data_keys.POPULATION.DEMOGRAPHY: load_demographic_dimensions,
         data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,

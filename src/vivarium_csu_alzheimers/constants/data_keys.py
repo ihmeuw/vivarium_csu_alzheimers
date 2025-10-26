@@ -10,6 +10,7 @@ METADATA_LOCATIONS = "metadata.locations"
 class __Population(NamedTuple):
     LOCATION: str = "population.location"
     STRUCTURE: str = "population.structure"
+    SCALING_FACTOR: str = "population.scaling_factor"
     AGE_BINS: str = "population.age_bins"
     DEMOGRAPHY: str = "population.demographic_dimensions"
     TMRLE: str = "population.theoretical_minimum_risk_life_expectancy"
@@ -83,7 +84,7 @@ class __AlzheimersConsistent(NamedTuple):
     MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: str = "cause.alzheimers_consistent.mixed_dementia_population_incidence_rate"
     MILD_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: str = "cause.alzheimers_consistent.population_incidence_mild_dementia"
     
-    CSMR: str = "cause.alzheimers_consistent.cause_specific_mortality_rate"
+    CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
     EMR: str = "cause.alzheimers_consistent.excess_mortality_rate"
 
     MCI_DISABILITY_WEIGHT: str = "cause.alzheimers.mci_disability_weight"
