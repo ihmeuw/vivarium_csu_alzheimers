@@ -230,7 +230,7 @@ class BBBM_AD_Model:
 
             include_consistency_constraints = True
             if include_consistency_constraints:
-                sigma=0.01
+                sigma=0.005
 
                 def odf_function(t, y, args):
                     S, BBBM, MCI, D_mild, D_moderate, D_severe, new_D_due_to_AD, new_D_due_to_mixed = y
