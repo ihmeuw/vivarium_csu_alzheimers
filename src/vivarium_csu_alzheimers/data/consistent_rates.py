@@ -2,7 +2,6 @@
 """
 from typing import Callable, Iterable
 
-import interpax
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -29,7 +28,8 @@ def generate_consistent_rates(art: Artifact):
 
     """
     load_key = {
-        "p_dementia": data_keys.ALZHEIMERS.AD_AND_MIXED_DEMENTIA_PREVALENCE,
+        "p_ad_dementia": data_keys.ALZHEIMERS.AD_DEMENTIA_PREVALENCE,
+        "p_mixed_dementia": data_keys.ALZHEIMERS.MIXED_DEMENTIA_PREVALENCE,
         "p_mild": data_keys.ALZHEIMERS.MILD_DEMENTIA_PREVALENCE,
         "p_moderate": data_keys.ALZHEIMERS.MODERATE_DEMENTIA_PREVALENCE,
         "p_severe": data_keys.ALZHEIMERS.SEVERE_DEMENTIA_PREVALENCE,
@@ -40,7 +40,7 @@ def generate_consistent_rates(art: Artifact):
     }
     
     save_key = {
-        "p": data_keys.ALZHEIMERS_CONSISTENT.AD_AND_MIXED_DEMENTIA_PREVALENCE,
+        "p": data_keys.ALZHEIMERS_CONSISTENT.AD_PREVALENCE,
         "i_ad": data_keys.ALZHEIMERS_CONSISTENT.MILD_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION,
         "i_mixed": data_keys.ALZHEIMERS_CONSISTENT.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION,
         "h_S_to_BBBM" : data_keys.ALZHEIMERS_CONSISTENT.BBBM_AD_INCIDENCE_RATE,
@@ -48,7 +48,7 @@ def generate_consistent_rates(art: Artifact):
         "h_moderate_to_severe" : data_keys.ALZHEIMERS_CONSISTENT.MODERATE_TO_SEVERE_DEMENTIA_TRANSITION_RATE,
         # FIXME: include additional transition rates here
         "f": data_keys.ALZHEIMERS_CONSISTENT.EMR,
-        "delta_BBBM": data_keys.ALZHEIMERS_CONSISTENT.BBBM_CONDITIONAL_PREVALANCE,
+        "delta_BBBM": data_keys.ALZHEIMERS_CONSISTENT.BBBM_CONDITIONAL_PREVALENCE,
         "delta_MCI": data_keys.ALZHEIMERS_CONSISTENT.MCI_CONDITIONAL_PREVALENCE,
         "delta_mild": data_keys.ALZHEIMERS_CONSISTENT.MILD_DEMENTIA_CONDITIONAL_PREVALENCE,
         "delta_moderate": data_keys.ALZHEIMERS_CONSISTENT.MODERATE_DEMENTIA_CONDITIONAL_PREVALENCE,
@@ -66,7 +66,7 @@ def generate_consistent_rates(art: Artifact):
         
         df_data = pd.concat(
             [
-                transform_to_data("p_dementia", art.load(load_key["p_dementia"]), sex, ages, [2023]),
+                transform_to_data("p_dementia", art.load(load_key["p_ad_dementia"]) + art.load(load_key["p_mixed_dementia"]), sex, ages, [2023]),
                 transform_to_data("frac_mild", art.load(load_key["p_mild"])/severity_sum, sex, ages, [2021]),
                 transform_to_data("frac_moderate", art.load(load_key["p_moderate"])/severity_sum, sex, ages, [2021]),
                 transform_to_data("frac_severe", art.load(load_key["p_severe"])/severity_sum, sex, ages, [2021]),
@@ -225,12 +225,12 @@ class BBBM_AD_Model:
             
             def m_all(a, t):
                 # Population all-cause mortality: m * (1 - p_dementia) + (m + f) * p_dementia = m + f * p_dementia  # TODO: update eqn
-                return m(a, t) + f(a, t) * p_dementia(a, t) * frac_severe(a, t)
+                return m(a, t) + f(a, t) * p_dementia(a, t) * (frac_moderate(a, t) + frac_severe(a, t))
             data_model("m_all", m_all, df_data.query('measure == "m_all"'))
 
             include_consistency_constraints = True
             if include_consistency_constraints:
-                sigma=0.005
+                sigma=0.01
 
                 def odf_function(t, y, args):
                     S, BBBM, MCI, D_mild, D_moderate, D_severe, new_D_due_to_AD, new_D_due_to_mixed = y
@@ -240,7 +240,8 @@ class BBBM_AD_Model:
                         0 - m * BBBM                         - h_BBBM_to_MCI * BBBM + h_S_to_BBBM * S - i_mixed * BBBM,
                         0 - m * MCI    - h_MCI_to_mild * MCI + h_BBBM_to_MCI * BBBM                   - i_mixed * MCI,
                         0 - m * D_mild + h_MCI_to_mild * MCI      - h_mild_to_moderate * D_mild       + i_mixed * (S + BBBM + MCI),
-                        0 - (m+f) * D_moderate + h_mild_to_moderate * D_mild - h_moderate_to_severe * D_moderate,
+                        0 - (m+f)
+                        * D_moderate + h_mild_to_moderate * D_mild - h_moderate_to_severe * D_moderate,
                         0 - (m+f) * D_severe                                 + h_moderate_to_severe * D_moderate,
                         h_MCI_to_mild * MCI,
                         i_mixed * (S + BBBM + MCI),
@@ -292,9 +293,9 @@ class BBBM_AD_Model:
                     # Clip to avoid log(0)
                     r_bbbm = jnp.clip(BBBM / (denom_noS + eps), eps)
                     r_mci = jnp.clip(MCI / (denom_noS + eps), eps)
-                    r_mild = jnp.clip(D_mild / (denom_alive + eps), eps)
-                    r_moderate = jnp.clip(D_moderate / (denom_alive + eps), eps)
-                    r_severe = jnp.clip(D_severe / (denom_alive + eps), eps)
+                    r_mild = jnp.clip(D_mild / (denom_noS + eps), eps)
+                    r_moderate = jnp.clip(D_moderate / (denom_noS + eps), eps)
+                    r_severe = jnp.clip(D_severe / (denom_noS + eps), eps)
                     r_inc_ad = jnp.clip(new_D_due_to_AD / (dt * (denom_alive + eps)), eps)
                     r_inc_mixed = jnp.clip(new_D_due_to_mixed / (dt * (denom_alive + eps)), eps)
 
@@ -374,8 +375,8 @@ class BBBM_AD_Model:
                     year_end=t + 1,
                     sex=self.sex,
                 )
-                for i, r_i in enumerate(rate):
-                    row[f"draw_{i}"] = float(r_i)
+                for k, r_k in enumerate(rate):
+                    row[f"draw_{k}"] = float(r_k)
                 rate_table.append(row)
         return pd.DataFrame(rate_table).set_index(
             ["sex", "age_start", "age_end", "year_start", "year_end"]
@@ -497,7 +498,7 @@ def generate_consistent_susceptible_to_bbbm_transition_count(art):
     """
 
     pop = art.load(data_keys.POPULATION.STRUCTURE)
-    prevalence = art.load(data_keys.ALZHEIMERS_CONSISTENT.AD_AND_MIXED_DEMENTIA_PREVALENCE)
+    prevalence = art.load(data_keys.ALZHEIMERS_CONSISTENT.AD_PREVALENCE)
     transition_rate = art.load(data_keys.ALZHEIMERS_CONSISTENT.BBBM_AD_INCIDENCE_RATE)
 
     df = pd.merge(pop.reset_index().drop(['location'], axis=1),

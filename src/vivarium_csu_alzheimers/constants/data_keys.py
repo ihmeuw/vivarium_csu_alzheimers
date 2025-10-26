@@ -29,7 +29,8 @@ POPULATION = __Population()
 
 
 class __Alzheimers(NamedTuple):
-    AD_AND_MIXED_DEMENTIA_PREVALENCE: str = "cause.alzheimers.dementia_prevalence"
+    AD_DEMENTIA_PREVALENCE: str = "cause.alzheimers.ad_dementia_prevalence"
+    MIXED_DEMENTIA_PREVALENCE: str = "cause.alzheimers.mixed_dementia_prevalence"
 
     AD_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: str = "cause.alzheimers.ad_dementia_population_incidence_rate"
     MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: str = "cause.alzheimers.mixed_dementia_population_incidence_rate"
@@ -60,8 +61,8 @@ class __Alzheimers(NamedTuple):
 ALZHEIMERS = __Alzheimers()
 
 class __AlzheimersConsistent(NamedTuple):
-    AD_AND_MIXED_DEMENTIA_PREVALENCE: str = "cause.alzheimers_consistent.dementia_prevalence"
-    BBBM_CONDITIONAL_PREVALANCE: str = "cause.alzheimers_consistent.bbbm_conditional_prevalence"
+    AD_PREVALENCE: str = "cause.alzheimers_consistent.dementia_prevalence"
+    BBBM_CONDITIONAL_PREVALENCE: str = "cause.alzheimers_consistent.bbbm_conditional_prevalence"
     MCI_CONDITIONAL_PREVALENCE: str = "cause.alzheimers_consistent.mci_conditional_prevalence"
     MILD_DEMENTIA_CONDITIONAL_PREVALENCE: str = "cause.alzheimers_consistent.mild_dementia_conditional_prevalence"
     MODERATE_DEMENTIA_CONDITIONAL_PREVALENCE: str = "cause.alzheimers_consistent.moderate_dementia_conditional_prevalence"

@@ -65,7 +65,8 @@ def get_data(
         data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         
-        data_keys.ALZHEIMERS.AD_AND_MIXED_DEMENTIA_PREVALENCE: load_ad_and_mixed_dementia_prevalence,
+        data_keys.ALZHEIMERS.AD_DEMENTIA_PREVALENCE: load_ad_dementia_prevalence,
+        data_keys.ALZHEIMERS.MIXED_DEMENTIA_PREVALENCE: load_mixed_dementia_prevalence,
         data_keys.ALZHEIMERS.AD_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_ad_dementia_incidence_total_population,
         data_keys.ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_mixed_dementia_incidence_total_population,
 
@@ -232,7 +233,7 @@ def load_mixed_dementia_incidence_total_population(
     return incidence * load_dementia_proportions(None, location, years, "Mixed dementia")
 
 
-def load_ad_and_mixed_dementia_prevalence(
+def load_ad_dementia_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
 
@@ -243,7 +244,21 @@ def load_ad_and_mixed_dementia_prevalence(
     )
 
     relevant_fraction = load_dementia_proportions(None, location, years, "Alzheimer's disease")
-    relevant_fraction += load_dementia_proportions(None, location, years, "Mixed dementia")
+    
+    return prevalence * relevant_fraction
+
+
+def load_mixed_dementia_prevalence(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+
+    raw_prevalence = extra_gbd.load_prevalence_dismod(location)  # total population
+    prevalence = reshape_to_vivarium_format(raw_prevalence, location)
+    prevalence.index = prevalence.index.droplevel(
+        ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
+    )
+
+    relevant_fraction = load_dementia_proportions(None, location, years, "Mixed dementia")
     
     return prevalence * relevant_fraction
 
