@@ -159,3 +159,15 @@ class Alzheimers(Component):
             initial_state=bbbm_state,
             states=[bbbm_state, mci_state, alzheimers_state],
         )
+
+    def _get_alzheimers_disease_state_prevalence(self, builder: Builder) -> pd.DataFrame:
+        """Get the Alzheimer's disease state prevalence table."""
+        bbbm_prevalence = builder.data.load(ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE)
+        mci_prevalence = builder.data.load(ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE)
+        alz_prevalence = bbbm_prevalence.copy()
+        alz_prevalence["value"] = 1.0
+        alz_prevalence["value"] = alz_prevalence["value"] - (
+            bbbm_prevalence["value"] + mci_prevalence["value"]
+        )
+
+        return alz_prevalence
