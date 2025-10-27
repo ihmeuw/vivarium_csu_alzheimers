@@ -251,7 +251,8 @@ def build_single_location_artifact(
     consistent_rates.generate_consistent_rates(artifact)
     consistent_rates.generate_consistent_susceptible_to_bbbm_transition_count(artifact)
     consistent_rates.generate_consistent_dementia_conditional_prevalence(artifact)
-
+    consistent_rates.generate_consistent_csmr(artifact)
+    
     logger.info(f"**Done building -- {location}**")
 
 

@@ -28,7 +28,7 @@ def generate_consistent_rates(art: Artifact):
     load_key = {
         "p_dementia": "cause.alzheimers.prevalence",
         "i_dementia": "cause.alzheimers.population_incidence_rate",
-        "f": "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate",
+        "f": "cause.alzheimers.excess_mortality_rate",
         "m_all": "cause.all_causes.cause_specific_mortality_rate",
     }
     
@@ -52,7 +52,7 @@ def generate_consistent_rates(art: Artifact):
             [
                 transform_to_data("p_dementia", art.load(load_key["p_dementia"]), sex, ages, [2023]),
                 transform_to_data("i_dementia", art.load(load_key["i_dementia"]), sex, ages, [2023]),
-                transform_to_data("f", art.load(load_key["f"]), sex, ages, [2021]),
+                transform_to_data("f", art.load(load_key["f"]), sex, ages, [2023]),
                 transform_to_data("m_all", art.load(load_key["m_all"]), sex, ages, [2025]),
             ]
         )
@@ -426,10 +426,13 @@ def generate_consistent_dementia_conditional_prevalence(art):
 
     write_or_replace(art, 'cause.alzheimers_consistent.dementia_conditional_prevalence', dementia_conditional_prevalence)
 
+    
+def generate_consistent_csmr(art):
+    emr = art.load('cause.alzheimers_consistent.excess_mortality_rate')
+    p = art.load('cause.alzheimers_consistent.prevalence_any')
+    dementia_conditional_prevalence = art.load('cause.alzheimers_consistent.dementia_conditional_prevalence')
 
-if __name__ == "__main__":
-   
-    art = Artifact("united_states_of_america.hdf")
-#     generate_consistent_rates(art)
-#     generate_consistent_susceptible_to_bbbm_transition_count(art)
-    generate_consistent_dementia_conditional_prevalence(art)
+    csmr = emr * p * dementia_conditional_prevalence
+    write_or_replace(art, 'cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate', csmr)
+
+

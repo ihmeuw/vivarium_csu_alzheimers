@@ -40,7 +40,7 @@ class __Alzheimers(NamedTuple):
     # BBBM to MCI transition rate caluclated during sim using mci_hazard.py and time in state
     INCIDENCE_RATE_TOTAL_POPULATION: str = "cause.alzheimers.population_incidence_rate"
     CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
-    EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
+    EMR: str = "cause.alzheimers.excess_mortality_rate"
     DISABILITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"
     MCI_DISABILITY_WEIGHT: str = "cause.alzheimers.mci_disability_weight"
     RESTRICTIONS: str = "cause.alzheimers_disease_and_other_dementias.restrictions"
@@ -69,7 +69,7 @@ class __AlzheimersConsistent(NamedTuple):
     # BBBM to MCI transition rate caluclated during sim using mci_hazard.py and time in state
     INCIDENCE_RATE_TOTAL_POPULATION: str = "cause.alzheimers_consistent.population_incidence_dementia"
     CSMR: str = "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate"
-    EMR: str = "cause.alzheimers_disease_and_other_dementias.excess_mortality_rate"
+    EMR: str = "cause.alzheimers_consistent.excess_mortality_rate"
     DISABILITY_WEIGHT: str = "cause.alzheimers_disease_and_other_dementias.disability_weight"
     MCI_DISABILITY_WEIGHT: str = "cause.alzheimers.mci_disability_weight"
     RESTRICTIONS: str = "cause.alzheimers_disease_and_other_dementias.restrictions"
