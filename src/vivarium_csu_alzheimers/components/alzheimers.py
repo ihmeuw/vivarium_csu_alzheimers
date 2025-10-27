@@ -177,16 +177,6 @@ class Alzheimers(Component):
             transition_rate=lambda builder: builder.data.load(ALZHEIMERS.MODERATE_TO_SEVERE_DEMENTIA_TRANSITION_RATE),
         )
 
-        # mixed dementia transitions
-        bbbm_state.add_rate_transition(
-            output=mild_dementia_state,
-            transition_rate=lambda builder: builder.data.load(ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION),
-        )
-        mci_state.add_rate_transition(
-            output=moderate_dementia_state,  # FIXME: why can't this be moderate?
-            transition_rate=lambda builder: builder.data.load(ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION),
-        )
-
         return DiseaseModel(
             ALZHEIMERS_DISEASE_MODEL.NAME,
             initial_state=bbbm_state,
