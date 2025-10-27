@@ -14,6 +14,7 @@ class __AlzheimersDiseaseModel(NamedTuple):
     MILD_DEMENTIA_STATE: str = "alzheimers_mild_dementia_state"
     MODERATE_DEMENTIA_STATE: str = "alzheimers_moderate_dementia_state"
     SEVERE_DEMENTIA_STATE: str = "alzheimers_severe_dementia_state"
+    MIXED_DEMENTIA_STATE: str = "mixed_dementia_state"
 
     def __iter__(self):
         """Allow iteration over the named tuple field values."""

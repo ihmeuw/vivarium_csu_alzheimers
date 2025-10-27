@@ -161,6 +161,13 @@ class Alzheimers(Component):
             disability_weight=lambda builder: builder.data.load(ALZHEIMERS.SEVERE_DEMENTIA_DISABILITY_WEIGHT),
             excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR),
         )
+        mixed_dementia_state = DiseaseState(
+            ALZHEIMERS_DISEASE_MODEL.MIXED_DEMENTIA_STATE,
+            allow_self_transition=True,
+            prevalence=0,
+            disability_weight=lambda builder: builder.data.load(ALZHEIMERS.MILD_DEMENTIA_DISABILITY_WEIGHT),  # FIXME: load a more appropriate weight
+            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR),
+        )
 
         # AD progression transitions
         bbbm_state.add_bbbm_transition(output=mci_state)
@@ -177,8 +184,17 @@ class Alzheimers(Component):
             transition_rate=lambda builder: builder.data.load(ALZHEIMERS.MODERATE_TO_SEVERE_DEMENTIA_TRANSITION_RATE),
         )
 
+        bbbm_state.add_rate_transition(
+            output=mixed_dementia_state,
+            transition_rate=lambda builder: builder.data.load(ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION),
+        )
+        mci_state.add_rate_transition(
+            output=mixed_dementia_state,
+            transition_rate=lambda builder: builder.data.load(ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION),
+        )
+
         return DiseaseModel(
             ALZHEIMERS_DISEASE_MODEL.NAME,
             initial_state=bbbm_state,
-            states=[bbbm_state, mci_state, mild_dementia_state, moderate_dementia_state, severe_dementia_state],
+            states=[bbbm_state, mci_state, mild_dementia_state, moderate_dementia_state, severe_dementia_state, mixed_dementia_state],
         )

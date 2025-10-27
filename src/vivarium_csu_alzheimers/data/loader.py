@@ -67,9 +67,9 @@ def get_data(
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         
         data_keys.ALZHEIMERS.AD_DEMENTIA_PREVALENCE: load_ad_dementia_prevalence,
-        #data_keys.ALZHEIMERS.MIXED_DEMENTIA_PREVALENCE: load_mixed_dementia_prevalence,
+        data_keys.ALZHEIMERS.MIXED_DEMENTIA_PREVALENCE: load_mixed_dementia_prevalence,
         data_keys.ALZHEIMERS.AD_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_ad_dementia_incidence_total_population,
-        #data_keys.ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_mixed_dementia_incidence_total_population,
+        data_keys.ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_mixed_dementia_incidence_total_population,
 
         data_keys.ALZHEIMERS.EMR_COMO: load_standard_data,
         data_keys.ALZHEIMERS.EMR_DISMOD: load_emr_dismod,
