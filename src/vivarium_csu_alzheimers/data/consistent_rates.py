@@ -15,6 +15,7 @@ from numpyro import infer
 from vivarium.framework.artifact import Artifact
 
 from vivarium_csu_alzheimers.constants.data_values import BBBM_AVG_DURATION, MCI_AVG_DURATION
+from vivarium_csu_alzheimers.constants import data_keys
 
 def generate_consistent_rates(art: Artifact):
     """Generates consistent rates for sim of BBBM-AD
@@ -399,19 +400,29 @@ def generate_consistent_susceptible_to_bbbm_transition_count(art):
     """use the cause.alzheimers_consistent.population_incidence_any and the time-varying population
     to create a SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT value
     """
-
+    prevalence = art.load(data_keys.ALZHEIMERS_CONSISTENT.PREVALENCE_ANY)
+    write_or_replace(art, data_keys.POPULATION.SCALING_FACTOR, prevalence)
+    
     pop = art.load('population.structure')
+
     transition_rate = art.load('cause.alzheimers_consistent.population_incidence_any')
 
     df = pd.merge(pop.reset_index().drop(['location'], axis=1),
-            transition_rate.reset_index().drop(['year_start', 'year_end'], axis=1),
-            on=['sex', 'age_start', 'age_end'],
-            suffixes=('', '_rate'),
-            ).set_index(['sex', 'age_start', 'age_end', 'year_start', 'year_end'])
+                  transition_rate.reset_index().drop(['year_start', 'year_end'], axis=1),
+                  on=['sex', 'age_start', 'age_end'],
+                  suffixes=('', '_rate'),
+        ).set_index(['sex', 'age_start', 'age_end', 'year_start', 'year_end'])
+
+    df = pd.merge(df.reset_index(),
+                  prevalence.reset_index().drop(['year_start', 'year_end'], axis=1),
+                  on=['sex', 'age_start', 'age_end'],
+                  suffixes=('', '_prev'),
+        ).set_index(['sex', 'age_start', 'age_end', 'year_start', 'year_end'])
 
     for i in range(500):
-        df[f'draw_{i}'] *= df[f'draw_{i}_rate']
+        df[f'draw_{i}'] *= df[f'draw_{i}_rate'] * (1 - df[f'draw_{i}_prev'])
         del df[f'draw_{i}_rate']
+        del df[f'draw_{i}_prev']
 
     write_or_replace(art, 'cause.alzheimers_consistent.susceptible_to_bbbm_transition_count', df)
 
