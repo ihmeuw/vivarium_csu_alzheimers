@@ -122,7 +122,7 @@ class Alzheimers(Component):
             ALZHEIMERS_DISEASE_MODEL.BBBM_STATE,
             allow_self_transition=True,
             prevalence=lambda builder: builder.data.load(
-                ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE
+                ALZHEIMERS.BBBM_CONDITIONAL_PREVALENCE
             ),
             disability_weight=DW_BBBM,
             excess_mortality_rate=EMR_BBBM,
@@ -162,7 +162,7 @@ class Alzheimers(Component):
 
     def _get_alzheimers_disease_state_prevalence(self, builder: Builder) -> pd.DataFrame:
         """Get the Alzheimer's disease state prevalence table."""
-        bbbm_prevalence = builder.data.load(ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE)
+        bbbm_prevalence = builder.data.load(ALZHEIMERS.BBBM_CONDITIONAL_PREVALENCE)
         mci_prevalence = builder.data.load(ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE)
         alz_prevalence = bbbm_prevalence.copy()
         alz_prevalence["value"] = 1.0

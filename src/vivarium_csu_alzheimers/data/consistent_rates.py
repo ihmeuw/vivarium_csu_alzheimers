@@ -157,7 +157,7 @@ class BBBM_AD_Model:
             if include_consistency_constraints:
                 sigma=0.005
 
-                def odf_function(t, y, args):
+                def ode_function(t, y, args):
                     S, BBBM, MCI, D, new_D = y
                     h_S_to_BBBM, h_BBBM_to_MCI, h_MCI_to_dementia, f, m = args
                     return (
@@ -174,7 +174,7 @@ class BBBM_AD_Model:
                     
                     a, t = at
                     dt = 5
-                    term = ODETerm(odf_function)
+                    term = ODETerm(ode_function)
                     solver = Dopri5()
                     saveat = SaveAt(t0=False, t1=True)
 
@@ -367,10 +367,10 @@ def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[
             # computation downstream; they do not affect which rows are selected from
             # the artifact (selection is done via the query below).
             row = {
-                "age_start": a,
-                "age_end": a,
-                "year_start": y,
-                "year_end": y,
+                "age_start": a+2.5,
+                "age_end": a+2.5,
+                "year_start": y+.5,
+                "year_end": y+.5,
                 "sex": sex,
                 "measure": param,
             }
