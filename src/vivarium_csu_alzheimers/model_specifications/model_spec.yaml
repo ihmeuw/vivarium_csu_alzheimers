@@ -33,7 +33,7 @@ configuration:
         key_columns: [entrance_time, age]
     time: 
         start:
-            year: 2029
+            year: 2025
             month: 1
             day: 1
         end:
