@@ -64,4 +64,4 @@ configuration:
                 - bbbm_test_results
         
     intervention:
-        scenario: bbbm_testing  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
+        scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
