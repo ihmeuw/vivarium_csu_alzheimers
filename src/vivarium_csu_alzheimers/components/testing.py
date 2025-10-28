@@ -212,7 +212,7 @@ class Testing(Component):
         """Generates previous BBBM test data for new simulants between 0 and 2.5 years prior
         to entering the simulation."""
 
-        test_dates = simulants[COLUMNS.BBBM_TEST_DATE]
+        test_dates = simulants[COLUMNS.BBBM_TEST_DATE].copy()
         if not self.scenario.bbbm_testing or time_of_event < BBBM_TESTING_START_DATE:
             return test_dates
 
