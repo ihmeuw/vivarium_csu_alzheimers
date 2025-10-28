@@ -30,9 +30,9 @@ from vivarium_csu_alzheimers.constants.paths import (
     FORECAST_NC_DATA_FILEPATHS_DICT,
 )
 from vivarium_csu_alzheimers.data.extra_gbd import (
+    load_emr_dismod,
     load_incidence_dismod,
     load_prevalence_dismod,
-    load_emr_dismod,
 )
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
 from vivarium_csu_alzheimers.utilities import (
