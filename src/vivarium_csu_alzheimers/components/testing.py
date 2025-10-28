@@ -86,6 +86,7 @@ class Testing(Component):
             tested_mask = bbbm_eligible_mask & (
                 pop[COLUMNS.TESTING_PROPENSITY] < testing_rate
             )
+            breakpoint()
             pop[COLUMNS.BBBM_TEST_DATE] = self._generate_bbbm_testing_history(
                 pop, tested_mask, event_time
             )
@@ -219,7 +220,10 @@ class Testing(Component):
         test_date_options = [
             time_of_event + get_timedelta_from_step_size(self.step_size, time_step)
             for time_step in range(0, -6, -1)
+            if time_of_event + get_timedelta_from_step_size(self.step_size, time_step)
+            >= BBBM_TESTING_START_DATE
         ]
+        breakpoint()
         # Calculate test results
         test_dates.loc[eligible_sims] = self.randomness.choice(
             index=simulants[eligible_sims].index,
