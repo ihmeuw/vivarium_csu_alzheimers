@@ -45,5 +45,3 @@ def load_dementia_dismod(location, measure_name):
         n_draws=500,
     )
     return data
-
-

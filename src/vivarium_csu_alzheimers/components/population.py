@@ -145,10 +145,12 @@ class AlzheimersIncidence(Component):
         # NOTE: we only have prevalence for a single year so the year_start/year_end will be difference
         # in the index levels but their structure is the same
         # Model scale = (population_size / (pop_structure * prevalence).sum())
-        merged_df = pd.merge(sub_pop, prevalence, left_index=True, right_index=True, suffixes=('_pop', '_prev'))
+        merged_df = pd.merge(
+            sub_pop, prevalence, left_index=True, right_index=True, suffixes=("_pop", "_prev")
+        )
 
         self.model_scale = builder.configuration.population.population_size / (
-            (merged_df.value_pop*merged_df.value_prev).sum()
+            (merged_df.value_pop * merged_df.value_prev).sum()
         )
         self.simulant_creator = builder.population.get_simulant_creator()
 

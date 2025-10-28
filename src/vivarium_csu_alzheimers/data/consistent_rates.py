@@ -35,7 +35,7 @@ def generate_consistent_rates(art: Artifact):
         "f": "cause.alzheimers.excess_mortality_rate",
         "m_all": "cause.all_causes.cause_specific_mortality_rate",
     }
-    
+
     save_key = {
         "h_S_to_BBBM": "cause.alzheimers_consistent.population_incidence_any",
         "p": "cause.alzheimers_consistent.prevalence_any",
@@ -54,8 +54,12 @@ def generate_consistent_rates(art: Artifact):
         # ETL the data
         df_data = pd.concat(
             [
-                transform_to_data("p_dementia", art.load(load_key["p_dementia"]), sex, ages, [2023]),
-                transform_to_data("i_dementia", art.load(load_key["i_dementia"]), sex, ages, [2023]),
+                transform_to_data(
+                    "p_dementia", art.load(load_key["p_dementia"]), sex, ages, [2023]
+                ),
+                transform_to_data(
+                    "i_dementia", art.load(load_key["i_dementia"]), sex, ages, [2023]
+                ),
                 transform_to_data("f", art.load(load_key["f"]), sex, ages, [2023]),
                 transform_to_data("m_all", art.load(load_key["m_all"]), sex, ages, [2025]),
             ]
@@ -79,13 +83,12 @@ def generate_consistent_rates(art: Artifact):
 
 
 class BBBM_AD_Model:
-    """Class to create and fit a consistent model of BBBM-AD using MCMC with Numpyro
-    """
+    """Class to create and fit a consistent model of BBBM-AD using MCMC with Numpyro"""
+
     def __init__(self, ages, years, sex):
         self.ages = ages
         self.years = years
         self.sex = sex
-
 
     def fit(self, ages, df_data):
 
@@ -137,32 +140,33 @@ class BBBM_AD_Model:
                 knot_val_dict["h_S_to_BBBM"],
             )
 
-            i = at_param(
-                f"i", ages, years, knot_val_dict["i"]
-            )
+            i = at_param(f"i", ages, years, knot_val_dict["i"])
             data_model("i", i, df_data.query('measure == "i_dementia"'))
-            
-            f = at_param(
-                f"f", ages, years, knot_val_dict["f"],
-            )
-            data_model('f', f, df_data.query('measure == "f"'))
 
-            m = at_param(
-                f"m", ages, years, knot_val_dict["m"]
+            f = at_param(
+                f"f",
+                ages,
+                years,
+                knot_val_dict["f"],
             )
-            
+            data_model("f", f, df_data.query('measure == "f"'))
+
+            m = at_param(f"m", ages, years, knot_val_dict["m"])
+
             def m_all(a, t):
                 # Population all-cause mortality: m * (1 - p_dementia) + (m + f) * p_dementia = m + f * p_dementia
                 return m(a, t) + f(a, t) * p_dementia(a, t)
+
             data_model("m_all", m_all, df_data.query('measure == "m_all"'))
 
             include_consistency_constraints = True
             if include_consistency_constraints:
-                sigma=0.005
+                sigma = 0.005
 
                 def ode_function(t, y, args):
                     S, BBBM, MCI, D, new_D = y
                     h_S_to_BBBM, h_BBBM_to_MCI, h_MCI_to_dementia, f, m = args
+                    # fmt: off
                     return (
                         0 - m * S                                                       - h_S_to_BBBM * S,
                         0 - m * BBBM                             - h_BBBM_to_MCI * BBBM + h_S_to_BBBM * S,
@@ -170,11 +174,12 @@ class BBBM_AD_Model:
                         0 - (m+f) * D  + h_MCI_to_dementia * MCI,
                         h_MCI_to_dementia * MCI,
                     )
+                    # fmt: on
 
                 def ode_consistency_factor(at):
-                    h_BBBM_to_MCI = 1/BBBM_AVG_DURATION
-                    h_MCI_to_dementia = 1/MCI_AVG_DURATION
-                    
+                    h_BBBM_to_MCI = 1 / BBBM_AVG_DURATION
+                    h_MCI_to_dementia = 1 / MCI_AVG_DURATION
+
                     a, t = at
                     dt = 5
                     term = ODETerm(ode_function)
@@ -189,10 +194,10 @@ class BBBM_AD_Model:
                         dt0=0.5,
                         y0=(
                             1 - p(a, t),
-                            p(a, t) * delta_BBBM(a, t), 
+                            p(a, t) * delta_BBBM(a, t),
                             p(a, t) * delta_MCI(a, t),
                             p(a, t) * (1 - delta_BBBM(a, t) - delta_MCI(a, t)),
-                            0
+                            0,
                         ),
                         saveat=saveat,
                         args=[
@@ -200,7 +205,7 @@ class BBBM_AD_Model:
                             h_BBBM_to_MCI,
                             h_MCI_to_dementia,
                             f(a, t),
-                            m(a, t)
+                            m(a, t),
                         ],
                     )
 
@@ -216,18 +221,25 @@ class BBBM_AD_Model:
                     r_inc = jnp.clip(new_D / (dt * (denom_alive + eps)), eps)
 
                     sq_difference = 0.0
-                    sq_difference += (jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps)))**2
-                    sq_difference += (jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps)))**2
-                    sq_difference += (jnp.log(r_prev) - jnp.log(jnp.clip(p_dementia(a + dt, t + dt), eps)))**2
-                    sq_difference += (jnp.log(r_inc) - jnp.log(jnp.clip(i(a + dt/2, t + dt/2), eps)))**2
+                    sq_difference += (
+                        jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps))
+                    ) ** 2
+                    sq_difference += (
+                        jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps))
+                    ) ** 2
+                    sq_difference += (
+                        jnp.log(r_prev) - jnp.log(jnp.clip(p_dementia(a + dt, t + dt), eps))
+                    ) ** 2
+                    sq_difference += (
+                        jnp.log(r_inc) - jnp.log(jnp.clip(i(a + dt / 2, t + dt / 2), eps))
+                    ) ** 2
                     return jnp.sqrt(sq_difference)
 
                 # Vectorize the ode_consistency_factor function
                 ode_consistency_factors = jax.vmap(ode_consistency_factor)
 
                 # Create a mesh grid of ages and years
-                age_mesh, year_mesh = jnp.meshgrid(jnp.array(ages),
-                                                   jnp.array(years))
+                age_mesh, year_mesh = jnp.meshgrid(jnp.array(ages), jnp.array(years))
                 at_list = jnp.stack([age_mesh.ravel(), year_mesh.ravel()], axis=-1)
 
                 # Compute ODE errors for all age-time combinations at once
@@ -320,6 +332,7 @@ def at_param(name: str, ages, years, knot_val) -> Callable:
       'scan', which is allegedly efficient for GPU computation.
 
     """
+
     def f(a: jnp.ndarray, t: jnp.ndarray) -> jnp.ndarray:
         method = "scan"  # 'scan_unrolled' can be more performant on GPU at the
         # expense of additional compile time
@@ -340,11 +353,14 @@ def at_param(name: str, ages, years, knot_val) -> Callable:
             side="right",
         )
         return knot_val[a_index, t_index]
+
     return f
 
 
-def data_model(name: str, f: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray], df_data: pd.DataFrame):
-    assert len(df_data) > 0, f'{name} should have some data'
+def data_model(
+    name: str, f: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray], df_data: pd.DataFrame
+):
+    assert len(df_data) > 0, f"{name} should have some data"
 
     ages = jnp.array(0.5 * (df_data.age_start + df_data.age_end))
     years = jnp.array(0.5 * (df_data.year_start + df_data.year_end))
@@ -359,7 +375,9 @@ def data_model(name: str, f: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray], 
     return rate_obs
 
 
-def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[int], years: Iterable[int]) -> pd.DataFrame:
+def transform_to_data(
+    param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[int], years: Iterable[int]
+) -> pd.DataFrame:
     """Convert artifact data to a format suitable for DisMod-AT-NumPyro."""
     t = df_in.loc[sex]
     results = []  # fill with rows of data, then convert to a dataframe
@@ -370,10 +388,10 @@ def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[
             # computation downstream; they do not affect which rows are selected from
             # the artifact (selection is done via the query below).
             row = {
-                "age_start": a+2.5,
-                "age_end": a+2.5,
-                "year_start": y+.5,
-                "year_end": y+.5,
+                "age_start": a + 2.5,
+                "age_end": a + 2.5,
+                "year_start": y + 0.5,
+                "year_end": y + 0.5,
                 "sex": sex,
                 "measure": param,
             }
@@ -383,8 +401,7 @@ def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[
             assert len(tt) == 1
             row["mean"] = np.mean(tt.iloc[0])
             row["standard_error"] = (
-                np.std(tt.iloc[0])
-                + 1e-8  # small epsilon to avoid zero standard errors
+                np.std(tt.iloc[0]) + 1e-8  # small epsilon to avoid zero standard errors
             )
 
             results.append(row)
@@ -399,54 +416,71 @@ def write_or_replace(art: Artifact, key: str, data: pd.DataFrame):
     else:
         art.write(key, data)
 
+
 def generate_consistent_susceptible_to_bbbm_transition_count(art):
     """use the cause.alzheimers_consistent.population_incidence_any and the time-varying population
     to create a SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT value
     """
     prevalence = art.load(data_keys.ALZHEIMERS_CONSISTENT.PREVALENCE_ANY)
     write_or_replace(art, data_keys.POPULATION.SCALING_FACTOR, prevalence)
-    
-    pop = art.load('population.structure')
 
-    transition_rate = art.load('cause.alzheimers_consistent.population_incidence_any')
+    pop = art.load("population.structure")
 
-    df = pd.merge(pop.reset_index().drop(['location'], axis=1),
-                  transition_rate.reset_index().drop(['year_start', 'year_end'], axis=1),
-                  on=['sex', 'age_start', 'age_end'],
-                  suffixes=('', '_rate'),
-        ).set_index(['sex', 'age_start', 'age_end', 'year_start', 'year_end'])
+    transition_rate = art.load("cause.alzheimers_consistent.population_incidence_any")
 
-    df = pd.merge(df.reset_index(),
-                  prevalence.reset_index().drop(['year_start', 'year_end'], axis=1),
-                  on=['sex', 'age_start', 'age_end'],
-                  suffixes=('', '_prev'),
-        ).set_index(['sex', 'age_start', 'age_end', 'year_start', 'year_end'])
+    df = pd.merge(
+        pop.reset_index().drop(["location"], axis=1),
+        transition_rate.reset_index().drop(["year_start", "year_end"], axis=1),
+        on=["sex", "age_start", "age_end"],
+        suffixes=("", "_rate"),
+    ).set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
+
+    df = pd.merge(
+        df.reset_index(),
+        prevalence.reset_index().drop(["year_start", "year_end"], axis=1),
+        on=["sex", "age_start", "age_end"],
+        suffixes=("", "_prev"),
+    ).set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
 
     for i in range(500):
-        df[f'draw_{i}'] *= df[f'draw_{i}_rate'] * (1 - df[f'draw_{i}_prev'])
-        del df[f'draw_{i}_rate']
-        del df[f'draw_{i}_prev']
+        df[f"draw_{i}"] *= df[f"draw_{i}_rate"] * (1 - df[f"draw_{i}_prev"])
+        del df[f"draw_{i}_rate"]
+        del df[f"draw_{i}_prev"]
 
-    write_or_replace(art, 'cause.alzheimers_consistent.susceptible_to_bbbm_transition_count', df)
-
-def generate_consistent_dementia_conditional_prevalence(art):
-    bbbm_conditional_prevalence = art.load('cause.alzheimers_consistent.bbbm_conditional_prevalence')
-    mci_conditional_prevalence = art.load('cause.alzheimers_consistent.mci_conditional_prevalence')
-
-    dementia_conditional_prevalence = np.clip(
-        1 - (bbbm_conditional_prevalence + mci_conditional_prevalence),
-        0, 1
+    write_or_replace(
+        art, "cause.alzheimers_consistent.susceptible_to_bbbm_transition_count", df
     )
 
-    write_or_replace(art, 'cause.alzheimers_consistent.dementia_conditional_prevalence', dementia_conditional_prevalence)
 
-    
+def generate_consistent_dementia_conditional_prevalence(art):
+    bbbm_conditional_prevalence = art.load(
+        "cause.alzheimers_consistent.bbbm_conditional_prevalence"
+    )
+    mci_conditional_prevalence = art.load(
+        "cause.alzheimers_consistent.mci_conditional_prevalence"
+    )
+
+    dementia_conditional_prevalence = np.clip(
+        1 - (bbbm_conditional_prevalence + mci_conditional_prevalence), 0, 1
+    )
+
+    write_or_replace(
+        art,
+        "cause.alzheimers_consistent.dementia_conditional_prevalence",
+        dementia_conditional_prevalence,
+    )
+
+
 def generate_consistent_csmr(art):
-    emr = art.load('cause.alzheimers_consistent.excess_mortality_rate')
-    p = art.load('cause.alzheimers_consistent.prevalence_any')
-    dementia_conditional_prevalence = art.load('cause.alzheimers_consistent.dementia_conditional_prevalence')
+    emr = art.load("cause.alzheimers_consistent.excess_mortality_rate")
+    p = art.load("cause.alzheimers_consistent.prevalence_any")
+    dementia_conditional_prevalence = art.load(
+        "cause.alzheimers_consistent.dementia_conditional_prevalence"
+    )
 
     csmr = emr * p * dementia_conditional_prevalence
-    write_or_replace(art, 'cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate', csmr)
-
-
+    write_or_replace(
+        art,
+        "cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate",
+        csmr,
+    )
