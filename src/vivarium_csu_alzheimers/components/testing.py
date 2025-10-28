@@ -84,10 +84,13 @@ class Testing(Component):
         pop[COLUMNS.BBBM_TEST_DATE] = self._generate_bbbm_testing_history(
             pop, bbbm_eligible_mask, event_time
         )
-        # All previous BBBM tests are negative
-        pop.loc[bbbm_eligible_mask, COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NEGATIVE
-        pop.loc[bbbm_eligible_mask, COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = True
-        pop.loc[bbbm_eligible_mask, COLUMNS.TESTING_STATE] = TESTING_STATES.BBBM
+
+        if self.scenario.bbbm_testing:
+            # All previous BBBM tests are negative
+            pop.loc[bbbm_eligible_mask, COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NEGATIVE
+            pop.loc[bbbm_eligible_mask, COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = True
+            pop.loc[bbbm_eligible_mask, COLUMNS.TESTING_STATE] = TESTING_STATES.BBBM
+
         self._update_baseline_testing(pop)
 
         bbbm_tested_now_mask = pop[COLUMNS.BBBM_TEST_DATE] == event_time
