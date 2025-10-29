@@ -83,16 +83,12 @@ class Testing(Component):
         if self.scenario.bbbm_testing:
             bbbm_eligible_mask = self._get_bbbm_eligible_simulants(pop, event_time)
             testing_rate = self._get_bbbm_testing_rate(event_time)
-            tested_mask = bbbm_eligible_mask & (
+            test_history_mask = bbbm_eligible_mask & (
                 pop[COLUMNS.TESTING_PROPENSITY] < testing_rate
             )
             pop[COLUMNS.BBBM_TEST_DATE] = self._generate_bbbm_testing_history(
-                pop, tested_mask, event_time
+                pop, test_history_mask, event_time
             )
-            # All previous BBBM tests are negative
-            pop.loc[tested_mask, COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NEGATIVE
-            pop.loc[tested_mask, COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = True
-            pop.loc[tested_mask, COLUMNS.TESTING_STATE] = TESTING_STATES.BBBM
 
         self._update_baseline_testing(pop)
 
