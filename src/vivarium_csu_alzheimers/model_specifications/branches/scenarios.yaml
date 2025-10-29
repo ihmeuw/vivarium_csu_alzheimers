@@ -1,5 +1,16 @@
-input_draw_count: 1
-random_seed_count: 1
+# input_draw_count: 5
+random_seed_count: 100
+
+# Use batch draws instead of doing a psim restart
+input_draw: [457, 169, 323]  # batch 0
+# input_draw: [392, 346, 480]  # batch 1
+# input_draw: [258, 446, 356, 273]  # batch 2
+# input_draw: [158, 24, 265]  # batch 3
+# input_draw: [317, 177, 199]  # batch 4
+# input_draw: [2, 13, 46]  # batch 5
+# input_draw: [89, 41, 113]  # batch 6
+# input_draw: [262, 460, 499]  # batch 7
+
 
 branches:
   - intervention:
@@ -7,15 +18,15 @@ branches:
         - baseline
         - bbbm_testing
         - bbbm_testing_and_treatment
-    # input_data:
-    #   artifact_path:
-    #     - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/united_states_of_america.hdf'
-    #     - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/china.hdf'
-    #     - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/brazil.hdf'
-    #     - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/germany.hdf'
-    #     - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/israel.hdf'
-    #     - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/japan.hdf'
-    #     - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/spain.hdf'
-    #     - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/sweden.hdf'
-    #     - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/taiwan_(province_of_china).hdf'
-    #     - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/united_kingdom.hdf'
+    input_data:
+      artifact_path:
+        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/united_states_of_america.hdf'
+        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/china.hdf'
+        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/brazil.hdf'
+        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/germany.hdf'
+        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/israel.hdf'
+        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/japan.hdf'
+        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/spain.hdf'
+        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/sweden.hdf'
+        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/taiwan_(province_of_china).hdf'
+        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/united_kingdom.hdf'
