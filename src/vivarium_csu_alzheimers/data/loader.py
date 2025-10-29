@@ -30,6 +30,7 @@ from vivarium_csu_alzheimers.constants.paths import (
     FORECAST_NC_DATA_FILEPATHS_DICT,
 )
 from vivarium_csu_alzheimers.data.extra_gbd import (
+    load_emr_dismod,
     load_incidence_dismod,
     load_prevalence_dismod,
 )
@@ -69,13 +70,13 @@ def get_data(
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
         data_keys.POPULATION.SCALING_FACTOR: load_alzheimers_all_states_prevalence,
         data_keys.ALZHEIMERS.PREVALENCE: load_prevalence,
-        data_keys.ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE: load_bbbm_conditional_prevalence,
+        data_keys.ALZHEIMERS.BBBM_CONDITIONAL_PREVALENCE: load_bbbm_conditional_prevalence,
         data_keys.ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE: load_mci_conditional_prevalence,
         data_keys.ALZHEIMERS.MCI_TO_DEMENTIA_TRANSITION_RATE: load_mci_to_dementia_transition_rate,
         data_keys.ALZHEIMERS.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: load_susceptible_to_bbbm_transition_count,
         # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
         data_keys.ALZHEIMERS.CSMR: load_standard_data,
-        data_keys.ALZHEIMERS.EMR: load_standard_data,
+        data_keys.ALZHEIMERS.EMR: load_emr,
         data_keys.ALZHEIMERS.DISABILITY_WEIGHT: load_standard_data,
         data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
@@ -225,6 +226,19 @@ def load_prevalence(
     )
 
     return prevalence * load_dementia_proportions(None, location, years)
+
+
+def load_emr(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+
+    raw = load_emr_dismod(location)
+    processed = reshape_to_vivarium_format(raw, location)
+    processed.index = processed.index.droplevel(
+        ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
+    )
+
+    return processed
 
 
 def get_entity(key: str | EntityKey):

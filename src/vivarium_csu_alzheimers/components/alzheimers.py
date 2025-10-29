@@ -10,7 +10,9 @@ from vivarium_public_health.disease import (
     RateTransition,
 )
 
-from vivarium_csu_alzheimers.constants.data_keys import ALZHEIMERS
+from vivarium_csu_alzheimers.constants.data_keys import (
+    ALZHEIMERS_CONSISTENT as ALZHEIMERS,
+)
 from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AVG_DURATION,
     BBBM_HAZARD_DIST,
@@ -122,7 +124,7 @@ class Alzheimers(Component):
             ALZHEIMERS_DISEASE_MODEL.BBBM_STATE,
             allow_self_transition=True,
             prevalence=lambda builder: builder.data.load(
-                ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE
+                ALZHEIMERS.BBBM_CONDITIONAL_PREVALENCE
             ),
             disability_weight=DW_BBBM,
             excess_mortality_rate=EMR_BBBM,
@@ -140,7 +142,9 @@ class Alzheimers(Component):
         )
         alzheimers_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE,
-            prevalence=self._get_alzheimers_disease_state_prevalence,
+            prevalence=lambda builder: builder.data.load(
+                ALZHEIMERS.DEMENTIA_CONDITIONAL_PREVALENCE
+            ),
             disability_weight=lambda builder: builder.data.load(ALZHEIMERS.DISABILITY_WEIGHT),
             excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR),
         )
@@ -162,7 +166,7 @@ class Alzheimers(Component):
 
     def _get_alzheimers_disease_state_prevalence(self, builder: Builder) -> pd.DataFrame:
         """Get the Alzheimer's disease state prevalence table."""
-        bbbm_prevalence = builder.data.load(ALZHEIMERS.BBBM_CONDITIONAL_PREVALANCE)
+        bbbm_prevalence = builder.data.load(ALZHEIMERS.BBBM_CONDITIONAL_PREVALENCE)
         mci_prevalence = builder.data.load(ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE)
         alz_prevalence = bbbm_prevalence.copy()
         alz_prevalence["value"] = 1.0

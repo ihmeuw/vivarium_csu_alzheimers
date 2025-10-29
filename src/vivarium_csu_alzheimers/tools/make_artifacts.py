@@ -16,6 +16,7 @@ import click
 from loguru import logger
 
 from vivarium_csu_alzheimers.constants import data_keys, metadata
+from vivarium_csu_alzheimers.data import consistent_rates
 from vivarium_csu_alzheimers.tools.app_logging import add_logging_sink, decode_status
 from vivarium_csu_alzheimers.utilities import sanitize_location
 
@@ -246,6 +247,11 @@ def build_single_location_artifact(
         for key in key_group:
             logger.info(f"   - Loading and writing {key} data")
             builder.load_and_write_data(artifact, key, location, years, key in replace_keys)
+
+    consistent_rates.generate_consistent_rates(artifact)
+    consistent_rates.generate_consistent_susceptible_to_bbbm_transition_count(artifact)
+    consistent_rates.generate_consistent_dementia_conditional_prevalence(artifact)
+    consistent_rates.generate_consistent_csmr(artifact)
 
     logger.info(f"**Done building -- {location}**")
 
