@@ -37,7 +37,7 @@ configuration:
             month: 1
             day: 1
         end:
-            year: 2100
+            year: 2065
             month: 12
             day: 31
         step_size: 182  # days 365/2 = 182.5. 182 days guarantees 2 events per year for the 
