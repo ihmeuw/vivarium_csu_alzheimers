@@ -113,9 +113,11 @@ class AlzheimersPopulation(ScaledPopulation):
 
         # HACK: address nans introduced by mismatch between
         # (age_start,age_end) in population_structure and scaling_factor
-        scaled_population_structure['value'] = scaled_population_structure['value'].fillna(0.0)
+        scaled_population_structure["value"] = scaled_population_structure["value"].fillna(
+            0.0
+        )
         scaled_population_structure = scaled_population_structure.dropna()
-        
+
         return scaled_population_structure
 
 
@@ -151,7 +153,7 @@ class AlzheimersIncidence(Component):
         # NOTE: we only have prevalence for a single year so the year_start/year_end will be difference
         # in the index levels but their structure is the same
         # Model scale = (population_size / (pop_structure * prevalence).sum())
-        prevalence.index = prevalence.index.droplevel(["year_start", "year_end"]) 
+        prevalence.index = prevalence.index.droplevel(["year_start", "year_end"])
         merged_df = pd.merge(
             sub_pop, prevalence, left_index=True, right_index=True, suffixes=("_pop", "_prev")
         )
