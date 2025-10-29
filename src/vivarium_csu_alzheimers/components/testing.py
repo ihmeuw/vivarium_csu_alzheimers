@@ -80,14 +80,16 @@ class Testing(Component):
 
         # Update to reflect history
         event_time = pop_data.creation_time + get_timedelta_from_step_size(self.step_size)
-        bbbm_eligible_mask = self._get_bbbm_eligible_simulants(pop, event_time)
-        pop[COLUMNS.BBBM_TEST_DATE] = self._generate_bbbm_testing_history(
-            pop, bbbm_eligible_mask, event_time
-        )
-        # All previous BBBM tests are negative
-        pop.loc[bbbm_eligible_mask, COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NEGATIVE
-        pop.loc[bbbm_eligible_mask, COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = True
-        pop.loc[bbbm_eligible_mask, COLUMNS.TESTING_STATE] = TESTING_STATES.BBBM
+        if self.scenario.bbbm_testing:
+            bbbm_eligible_mask = self._get_bbbm_eligible_simulants(pop, event_time)
+            testing_rate = self._get_bbbm_testing_rate(event_time)
+            test_history_mask = bbbm_eligible_mask & (
+                pop[COLUMNS.TESTING_PROPENSITY] < testing_rate
+            )
+            pop[COLUMNS.BBBM_TEST_DATE] = self._generate_bbbm_testing_history(
+                pop, test_history_mask, event_time
+            )
+
         self._update_baseline_testing(pop)
 
         bbbm_tested_now_mask = pop[COLUMNS.BBBM_TEST_DATE] == event_time
@@ -206,14 +208,17 @@ class Testing(Component):
         """Generates previous BBBM test data for new simulants between 0 and 2.5 years prior
         to entering the simulation."""
 
-        test_dates = simulants[COLUMNS.BBBM_TEST_DATE]
+        test_dates = simulants[COLUMNS.BBBM_TEST_DATE].copy()
         if not self.scenario.bbbm_testing or time_of_event < BBBM_TESTING_START_DATE:
             return test_dates
 
         test_date_options = [
             time_of_event + get_timedelta_from_step_size(self.step_size, time_step)
             for time_step in range(0, -6, -1)
+            if time_of_event + get_timedelta_from_step_size(self.step_size, time_step)
+            >= BBBM_TESTING_START_DATE
         ]
+        # Calculate test results
         test_dates.loc[eligible_sims] = self.randomness.choice(
             index=simulants[eligible_sims].index,
             choices=test_date_options,

@@ -207,6 +207,8 @@ class BBBMTestingObserver(PublicHealthObserver):
     ###############
 
     def count_bbbm_tests(self, pop: pd.DataFrame) -> float:
+        """Counts the number of BBBM tests conducted only on this time step and not from a
+        simulants testing history to not count negative tests from history."""
         return sum(pop[COLUMNS.BBBM_TEST_DATE] == self.clock() + self.step_size())
 
     def count_newly_eligible_simulants(self, pop: pd.DataFrame) -> float:
