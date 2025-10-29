@@ -90,9 +90,9 @@ class Testing(Component):
                 pop, tested_mask, event_time
             )
             # All previous BBBM tests are negative
-            pop.loc[bbbm_eligible_mask, COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NEGATIVE
-            pop.loc[bbbm_eligible_mask, COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = True
-            pop.loc[bbbm_eligible_mask, COLUMNS.TESTING_STATE] = TESTING_STATES.BBBM
+            pop.loc[tested_mask, COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NEGATIVE
+            pop.loc[tested_mask, COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = True
+            pop.loc[tested_mask, COLUMNS.TESTING_STATE] = TESTING_STATES.BBBM
 
         self._update_baseline_testing(pop)
 
