@@ -2,14 +2,14 @@
 random_seed_count: 100
 
 # Use batch draws instead of doing a psim restart
-input_draw: [457, 169, 323]  # batch 0
-# input_draw: [392, 346, 480]  # batch 1
-# input_draw: [258, 446, 356, 273]  # batch 2
-# input_draw: [158, 24, 265]  # batch 3
-# input_draw: [317, 177, 199]  # batch 4
-# input_draw: [2, 13, 46]  # batch 5
-# input_draw: [89, 41, 113]  # batch 6
-# input_draw: [262, 460, 499]  # batch 7
+input_draws: [457, 169, 323]  # batch 0
+# input_draws: [392, 346, 480]  # batch 1
+# input_draws: [258, 446, 356, 273]  # batch 2
+# input_draws: [158, 24, 265]  # batch 3
+# input_draws: [317, 177, 199]  # batch 4
+# input_draws: [2, 13, 46]  # batch 5
+# input_draws: [89, 41, 113]  # batch 6
+# input_draws: [262, 460, 499]  # batch 7
 
 
 branches:
