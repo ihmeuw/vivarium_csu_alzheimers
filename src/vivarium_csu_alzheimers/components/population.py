@@ -102,7 +102,7 @@ class AlzheimersPopulation(ScaledPopulation):
                 f"Scaling factor must be a pandas DataFrame. Provided value: {scaling_factor}"
             )
         # Coerce scaling factor to have same index as population structure
-        scaling_factor = scaling_factor.drop(columns=["year_start", "year_end"])
+        scaling_factor = scaling_factor.drop(columns=["year_start", "year_end", "age_end"])
         scaling_factor = scaling_factor.set_index(
             [col for col in scaling_factor.columns if col != "value"]
         )
@@ -110,6 +110,13 @@ class AlzheimersPopulation(ScaledPopulation):
             [col for col in population_structure.columns if col != "value"]
         )
         scaled_population_structure = (population_structure * scaling_factor).reset_index()
+
+        # HACK: address nans introduced by mismatch between
+        # (age_start,age_end) in population_structure and scaling_factor
+        scaled_population_structure["value"] = scaled_population_structure["value"].fillna(
+            0.0
+        )
+        scaled_population_structure = scaled_population_structure.dropna()
 
         return scaled_population_structure
 
@@ -139,16 +146,20 @@ class AlzheimersIncidence(Component):
         self.pop_structure = self.load_population_structure(builder)
         prevalence = self.load_prevalence(builder)
         start_year = builder.configuration.time.start.year
+        # pop_structure starts in 2021, so adjust start year if necessary
         sub_pop = self.pop_structure.loc[
-            self.pop_structure.index.get_level_values("year_start") == start_year
+            self.pop_structure.index.get_level_values("year_start") == max(2021, start_year)
         ]
         # NOTE: we only have prevalence for a single year so the year_start/year_end will be difference
         # in the index levels but their structure is the same
         # Model scale = (population_size / (pop_structure * prevalence).sum())
-        merged_df = pd.merge(sub_pop, prevalence, left_index=True, right_index=True, suffixes=('_pop', '_prev'))
+        prevalence.index = prevalence.index.droplevel(["year_start", "year_end"])
+        merged_df = pd.merge(
+            sub_pop, prevalence, left_index=True, right_index=True, suffixes=("_pop", "_prev")
+        )
 
         self.model_scale = builder.configuration.population.population_size / (
-            (merged_df.value_pop*merged_df.value_prev).sum()
+            (merged_df.value_pop * merged_df.value_prev).sum()
         )
         self.simulant_creator = builder.population.get_simulant_creator()
 

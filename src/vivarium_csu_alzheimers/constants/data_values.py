@@ -174,6 +174,7 @@ BBBM_TESTING_RATES = [
     (pd.Timestamp("2040-01-01"), 0.4),
     (pd.Timestamp("2045-01-01"), 0.6),  # plateaus from here on out
 ]
+BBBM_TESTING_START_DATE = BBBM_TESTING_RATES[0][0]
 
 COMMON_TREATMENT_RAMP = [
     (pd.Timestamp("2030-01-01"), 0.4),  # step increase from 0 in 2030

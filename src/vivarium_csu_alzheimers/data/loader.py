@@ -277,6 +277,19 @@ def load_emr_dismod(
     return processed
 
 
+def load_emr(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+
+    raw = load_emr_dismod(location)
+    processed = reshape_to_vivarium_format(raw, location)
+    processed.index = processed.index.droplevel(
+        ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
+    )
+
+    return processed
+
+
 def get_entity(key: str | EntityKey):
     # Map of entity types to their gbd mappings.
     type_map = {

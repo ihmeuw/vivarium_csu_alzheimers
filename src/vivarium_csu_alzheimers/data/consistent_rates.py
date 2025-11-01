@@ -78,7 +78,6 @@ def generate_consistent_rates(art: Artifact):
                 transform_to_data("m_all", art.load(load_key["m_all"]), sex, ages, [2025]),
             ]
         )
-        
         # create and fit the model
         model_dict[sex] = BBBM_AD_Model(ages, [2025], sex)
         model_dict[sex].fit(ages, df_data)
@@ -97,13 +96,12 @@ def generate_consistent_rates(art: Artifact):
 
 
 class BBBM_AD_Model:
-    """Class to create and fit a consistent model of BBBM-AD using MCMC with Numpyro
-    """
+    """Class to create and fit a consistent model of BBBM-AD using MCMC with Numpyro"""
+
     def __init__(self, ages, years, sex):
         self.ages = ages
         self.years = years
         self.sex = sex
-
 
     def fit(self, ages, df_data):
 
@@ -245,6 +243,7 @@ class BBBM_AD_Model:
                 def odf_function(t, y, args):
                     S, BBBM, MCI, D_mild, D_moderate, D_severe, D_mixed, new_D_due_to_AD, new_D_due_to_mixed = y
                     h_S_to_BBBM, h_BBBM_to_MCI, h_MCI_to_mild, h_mild_to_moderate, h_moderate_to_severe, f, m, i_mixed = args
+                    # fmt: off
                     return (
                         0 - m * S                                                   - h_S_to_BBBM * S - i_mixed * S,
                         0 - m * BBBM                         - h_BBBM_to_MCI * BBBM + h_S_to_BBBM * S - i_mixed * BBBM,
@@ -256,6 +255,7 @@ class BBBM_AD_Model:
                         h_MCI_to_mild * MCI,
                         i_mixed * (S + BBBM + MCI),
                     )
+                    # fmt: on
 
                 def ode_consistency_factor(at):
                     h_BBBM_to_MCI = 1/BBBM_AVG_DURATION
