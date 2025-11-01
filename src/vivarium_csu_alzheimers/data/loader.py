@@ -65,25 +65,20 @@ def get_data(
         data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
         data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
-        
         data_keys.ALZHEIMERS.AD_DEMENTIA_PREVALENCE: load_ad_dementia_prevalence,
         data_keys.ALZHEIMERS.MIXED_DEMENTIA_PREVALENCE: load_mixed_dementia_prevalence,
         data_keys.ALZHEIMERS.AD_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_ad_dementia_incidence_total_population,
         data_keys.ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_mixed_dementia_incidence_total_population,
-
         data_keys.ALZHEIMERS.EMR_COMO: load_standard_data,
         data_keys.ALZHEIMERS.EMR_DISMOD: load_emr_dismod,
-        
         data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
         data_keys.ALZHEIMERS.MILD_DEMENTIA_DISABILITY_WEIGHT: load_standard_data,
         data_keys.ALZHEIMERS.MODERATE_DEMENTIA_DISABILITY_WEIGHT: load_standard_data,
         data_keys.ALZHEIMERS.SEVERE_DEMENTIA_DISABILITY_WEIGHT: load_standard_data,
-
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
         data_keys.ALZHEIMERS.MILD_DEMENTIA_PREVALENCE: load_standard_data,
         data_keys.ALZHEIMERS.MODERATE_DEMENTIA_PREVALENCE: load_standard_data,
         data_keys.ALZHEIMERS.SEVERE_DEMENTIA_PREVALENCE: load_standard_data,
-
         data_keys.TESTING_RATES.CSF: load_csf_pet_testing_rates,
         data_keys.TESTING_RATES.PET: load_csf_pet_testing_rates,
         data_keys.TREATMENT.RR: load_treatment_rrs,
@@ -244,8 +239,10 @@ def load_ad_dementia_prevalence(
         ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
     )
 
-    relevant_fraction = load_dementia_proportions(None, location, years, "Alzheimer's disease")
-    
+    relevant_fraction = load_dementia_proportions(
+        None, location, years, "Alzheimer's disease"
+    )
+
     return prevalence * relevant_fraction
 
 
@@ -260,7 +257,7 @@ def load_mixed_dementia_prevalence(
     )
 
     relevant_fraction = load_dementia_proportions(None, location, years, "Mixed dementia")
-    
+
     return prevalence * relevant_fraction
 
 
@@ -297,7 +294,7 @@ def get_entity(key: str | EntityKey):
         "covariate": covariates,
         "risk_factor": risk_factors,
         "alternative_risk_factor": alternative_risk_factors,
-        "sequela": sequelae
+        "sequela": sequelae,
     }
     key = EntityKey(key)
     return type_map[key.type][key.name]
@@ -567,16 +564,15 @@ def load_csf_pet_testing_rates(
 
 
 def load_dementia_proportions(
-        key: str, location: str, years: int | str | list[int] | None,
-        type_label: str
+    key: str, location: str, years: int | str | list[int] | None, type_label: str
 ) -> pd.DataFrame:
-    """ type_label must be on this list:
+    """type_label must be on this list:
 
-            "Alzheimer's disease" 'Alcohol Related' 'Lewy Body Predominant'
-            'Brain Injury' 'Frontotemporal dementia' 'Mixed dementia'
-            'Vascular dementia'
+    "Alzheimer's disease" 'Alcohol Related' 'Lewy Body Predominant'
+    'Brain Injury' 'Frontotemporal dementia' 'Mixed dementia'
+    'Vascular dementia'
     """
-    
+
     df = pd.read_csv(DEMENTIA_PROPORTIONS_PATH)
     bins = load_age_bins(None, None).index.to_frame().reset_index(drop=True)
     merged = pd.merge(df, bins, on="age_group_name", how="left")

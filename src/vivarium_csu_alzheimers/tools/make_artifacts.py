@@ -19,7 +19,6 @@ from vivarium_csu_alzheimers.constants import data_keys, metadata
 from vivarium_csu_alzheimers.data import consistent_rates
 from vivarium_csu_alzheimers.tools.app_logging import add_logging_sink, decode_status
 from vivarium_csu_alzheimers.utilities import sanitize_location
-from vivarium_csu_alzheimers.data import consistent_rates
 
 
 def running_from_cluster() -> bool:
@@ -252,7 +251,7 @@ def build_single_location_artifact(
     consistent_rates.generate_consistent_rates(artifact)
     consistent_rates.generate_consistent_data_for_population_components(artifact)
     consistent_rates.generate_consistent_data_for_disease_components(artifact)
-    
+
     logger.info(f"**Done building -- {location}**")
 
 

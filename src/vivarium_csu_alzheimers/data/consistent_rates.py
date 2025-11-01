@@ -10,13 +10,18 @@ import pandas as pd
 from diffrax import Dopri5, ODETerm, SaveAt, diffeqsolve
 from numpyro import distributions as dist
 from numpyro import infer
-
 from vivarium.framework.artifact import Artifact
 
-from vivarium_csu_alzheimers.constants.data_values import BBBM_AVG_DURATION, MCI_AVG_DURATION
 from vivarium_csu_alzheimers.constants import data_keys
+from vivarium_csu_alzheimers.constants.data_values import (
+    BBBM_AVG_DURATION,
+    MCI_AVG_DURATION,
+)
 
-n_mcmc_samples = 500 # 500 for a real run, perhaps something smaller for iterative development
+n_mcmc_samples = (
+    500  # 500 for a real run, perhaps something smaller for iterative development
+)
+
 
 def generate_consistent_rates(art: Artifact):
     """Generates consistent rates for sim of BBBM-AD
@@ -38,15 +43,15 @@ def generate_consistent_rates(art: Artifact):
         "f": data_keys.ALZHEIMERS.EMR_DISMOD,
         "m_all": data_keys.POPULATION.ACMR,
     }
-    
+
     save_key = {
         "p_ad": data_keys.ALZHEIMERS_CONSISTENT.AD_PREVALENCE,
         "p_mixed_dementia": data_keys.ALZHEIMERS_CONSISTENT.MIXED_DEMENTIA_PREVALENCE,
         "i_ad": data_keys.ALZHEIMERS_CONSISTENT.MILD_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION,
         "i_mixed": data_keys.ALZHEIMERS_CONSISTENT.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION,
-        "h_S_to_BBBM" : data_keys.ALZHEIMERS_CONSISTENT.BBBM_AD_INCIDENCE_RATE,
-        "h_mild_to_moderate" : data_keys.ALZHEIMERS_CONSISTENT.MILD_TO_MODERATE_DEMENTIA_TRANSITION_RATE,
-        "h_moderate_to_severe" : data_keys.ALZHEIMERS_CONSISTENT.MODERATE_TO_SEVERE_DEMENTIA_TRANSITION_RATE,
+        "h_S_to_BBBM": data_keys.ALZHEIMERS_CONSISTENT.BBBM_AD_INCIDENCE_RATE,
+        "h_mild_to_moderate": data_keys.ALZHEIMERS_CONSISTENT.MILD_TO_MODERATE_DEMENTIA_TRANSITION_RATE,
+        "h_moderate_to_severe": data_keys.ALZHEIMERS_CONSISTENT.MODERATE_TO_SEVERE_DEMENTIA_TRANSITION_RATE,
         # FIXME: include additional transition rates here
         "f": data_keys.ALZHEIMERS_CONSISTENT.EMR,
         "delta_BBBM": data_keys.ALZHEIMERS_CONSISTENT.BBBM_CONDITIONAL_PREVALENCE,
@@ -62,18 +67,56 @@ def generate_consistent_rates(art: Artifact):
     ages = np.arange(30, 101, 5)
     for sex in ["Male", "Female"]:
         # ETL the data
-        severity_sum = (art.load(load_key["p_mild"]) + art.load(load_key["p_moderate"]) + art.load(load_key["p_severe"]))
-        severity_sum += 1e-8 # offset denominator to avoid divide by zero
-        
+        severity_sum = (
+            art.load(load_key["p_mild"])
+            + art.load(load_key["p_moderate"])
+            + art.load(load_key["p_severe"])
+        )
+        severity_sum += 1e-8  # offset denominator to avoid divide by zero
+
         df_data = pd.concat(
             [
-                transform_to_data("p_ad_dementia", art.load(load_key["p_ad_dementia"]), sex, ages, [2023]),
-                transform_to_data("p_mixed_dementia", art.load(load_key["p_mixed_dementia"]), sex, ages, [2023]),
-                transform_to_data("frac_mild", art.load(load_key["p_mild"])/severity_sum, sex, ages, [2021]),
-                transform_to_data("frac_moderate", art.load(load_key["p_moderate"])/severity_sum, sex, ages, [2021]),
-                transform_to_data("frac_severe", art.load(load_key["p_severe"])/severity_sum, sex, ages, [2021]),
-                transform_to_data("i_ad_dementia", art.load(load_key["i_ad_dementia"]), sex, ages, [2023]),
-                transform_to_data("i_mixed_dementia", art.load(load_key["i_mixed_dementia"]), sex, ages, [2023]),
+                transform_to_data(
+                    "p_ad_dementia", art.load(load_key["p_ad_dementia"]), sex, ages, [2023]
+                ),
+                transform_to_data(
+                    "p_mixed_dementia",
+                    art.load(load_key["p_mixed_dementia"]),
+                    sex,
+                    ages,
+                    [2023],
+                ),
+                transform_to_data(
+                    "frac_mild",
+                    art.load(load_key["p_mild"]) / severity_sum,
+                    sex,
+                    ages,
+                    [2021],
+                ),
+                transform_to_data(
+                    "frac_moderate",
+                    art.load(load_key["p_moderate"]) / severity_sum,
+                    sex,
+                    ages,
+                    [2021],
+                ),
+                transform_to_data(
+                    "frac_severe",
+                    art.load(load_key["p_severe"]) / severity_sum,
+                    sex,
+                    ages,
+                    [2021],
+                ),
+                transform_to_data(
+                    "i_ad_dementia", art.load(load_key["i_ad_dementia"]), sex, ages, [2023]
+                ),
+                transform_to_data(
+                    "i_mixed_dementia",
+                    art.load(load_key["i_mixed_dementia"]),
+                    sex,
+                    ages,
+                    [2023],
+                ),
                 transform_to_data("f", art.load(load_key["f"]), sex, ages, [2023]),
                 transform_to_data("m_all", art.load(load_key["m_all"]), sex, ages, [2025]),
             ]
@@ -111,9 +154,22 @@ class BBBM_AD_Model:
 
         def numpyro_model():
             knot_val_dict = {}
-            for param in ["p_ad", "p_mixed_dementia", "delta_BBBM", "delta_MCI", "delta_mild", "delta_moderate", "delta_severe",
-                          "h_S_to_BBBM", "i_ad", "i_mixed", "h_mild_to_moderate", "h_moderate_to_severe",
-                          "f", "m"]:
+            for param in [
+                "p_ad",
+                "p_mixed_dementia",
+                "delta_BBBM",
+                "delta_MCI",
+                "delta_mild",
+                "delta_moderate",
+                "delta_severe",
+                "h_S_to_BBBM",
+                "i_ad",
+                "i_mixed",
+                "h_mild_to_moderate",
+                "h_moderate_to_severe",
+                "f",
+                "m",
+            ]:
                 knot_val_dict[param] = numpyro.sample(
                     f"{param}",
                     dist.TruncatedNormal(
@@ -161,17 +217,24 @@ class BBBM_AD_Model:
                 knot_val_dict["delta_severe"],
             )
 
-
             # deltas-sum-to-one constraint
             # Add a normal penalty for difference between sum and 1.0
-            knot_sum = knot_val_dict["delta_BBBM"] + knot_val_dict["delta_MCI"] + knot_val_dict["delta_mild"] + knot_val_dict["delta_moderate"] + knot_val_dict["delta_severe"]
+            knot_sum = (
+                knot_val_dict["delta_BBBM"]
+                + knot_val_dict["delta_MCI"]
+                + knot_val_dict["delta_mild"]
+                + knot_val_dict["delta_moderate"]
+                + knot_val_dict["delta_severe"]
+            )
             delta_sum = dist.Normal(1, 0.005).log_prob(knot_sum).sum()
             numpyro.factor(f"sum_to_one_factor", delta_sum)
 
-
             def p_ad_dementia(a, t):
                 return p_ad(a, t) * (1 - delta_BBBM(a, t) - delta_MCI(a, t))
-            data_model("p_ad_dementia", p_ad_dementia, df_data.query("measure == 'p_ad_dementia'"))
+
+            data_model(
+                "p_ad_dementia", p_ad_dementia, df_data.query("measure == 'p_ad_dementia'")
+            )
 
             p_mixed_dementia = at_param(
                 f"p_mixed_dementia",
@@ -179,16 +242,27 @@ class BBBM_AD_Model:
                 years,
                 knot_val_dict["p_mixed_dementia"],
             )
-            data_model("p_mixed_dementia", p_mixed_dementia, df_data.query("measure == 'p_mixed_dementia'"))
+            data_model(
+                "p_mixed_dementia",
+                p_mixed_dementia,
+                df_data.query("measure == 'p_mixed_dementia'"),
+            )
 
             def frac_mild(a, t):
                 return delta_mild(a, t) / (1 - delta_BBBM(a, t) - delta_MCI(a, t))
+
             data_model("frac_mild", frac_mild, df_data.query("measure == 'frac_mild'"))
+
             def frac_moderate(a, t):
                 return delta_moderate(a, t) / (1 - delta_BBBM(a, t) - delta_MCI(a, t))
-            data_model("frac_moderate", frac_moderate, df_data.query("measure == 'frac_moderate'"))
+
+            data_model(
+                "frac_moderate", frac_moderate, df_data.query("measure == 'frac_moderate'")
+            )
+
             def frac_severe(a, t):
                 return delta_severe(a, t) / (1 - delta_BBBM(a, t) - delta_MCI(a, t))
+
             data_model("frac_severe", frac_severe, df_data.query("measure == 'frac_severe'"))
 
             h_S_to_BBBM = at_param(
@@ -198,14 +272,10 @@ class BBBM_AD_Model:
                 knot_val_dict["h_S_to_BBBM"],
             )
 
-            i_ad = at_param(
-                f"i_ad", ages, years, knot_val_dict["i_ad"]
-            )
+            i_ad = at_param(f"i_ad", ages, years, knot_val_dict["i_ad"])
             data_model("i_ad", i_ad, df_data.query('measure == "i_ad_dementia"'))
 
-            i_mixed = at_param(
-                f"i_mixed", ages, years, knot_val_dict["i_mixed"]
-            )
+            i_mixed = at_param(f"i_mixed", ages, years, knot_val_dict["i_mixed"])
             data_model("i_mixed", i_mixed, df_data.query('measure == "i_mixed_dementia"'))
 
             h_mild_to_moderate = at_param(
@@ -223,26 +293,50 @@ class BBBM_AD_Model:
 
             # TODO: split excess mortality into different amounts for mild, moderate, and severe states
             f = at_param(
-                f"f", ages, years, knot_val_dict["f"],
+                f"f",
+                ages,
+                years,
+                knot_val_dict["f"],
             )
-            data_model('f', f, df_data.query('measure == "f"'))
+            data_model("f", f, df_data.query('measure == "f"'))
 
-            m = at_param(
-                f"m", ages, years, knot_val_dict["m"]
-            )
-            
+            m = at_param(f"m", ages, years, knot_val_dict["m"])
+
             def m_all(a, t):
                 # Population all-cause mortality: m * (1 - p_dementia) + (m + f) * p_dementia = m + f * p_dementia  # TODO: update eqn
-                return m(a, t) + f(a, t) * (p_ad_dementia(a, t) * (frac_moderate(a, t) + frac_severe(a, t)) + p_mixed_dementia(a, t))
+                return m(a, t) + f(a, t) * (
+                    p_ad_dementia(a, t) * (frac_moderate(a, t) + frac_severe(a, t))
+                    + p_mixed_dementia(a, t)
+                )
+
             data_model("m_all", m_all, df_data.query('measure == "m_all"'))
 
             include_consistency_constraints = True
             if include_consistency_constraints:
-                sigma=0.01
+                sigma = 0.01
 
                 def odf_function(t, y, args):
-                    S, BBBM, MCI, D_mild, D_moderate, D_severe, D_mixed, new_D_due_to_AD, new_D_due_to_mixed = y
-                    h_S_to_BBBM, h_BBBM_to_MCI, h_MCI_to_mild, h_mild_to_moderate, h_moderate_to_severe, f, m, i_mixed = args
+                    (
+                        S,
+                        BBBM,
+                        MCI,
+                        D_mild,
+                        D_moderate,
+                        D_severe,
+                        D_mixed,
+                        new_D_due_to_AD,
+                        new_D_due_to_mixed,
+                    ) = y
+                    (
+                        h_S_to_BBBM,
+                        h_BBBM_to_MCI,
+                        h_MCI_to_mild,
+                        h_mild_to_moderate,
+                        h_moderate_to_severe,
+                        f,
+                        m,
+                        i_mixed,
+                    ) = args
                     # fmt: off
                     return (
                         0 - m * S                                                   - h_S_to_BBBM * S - i_mixed * S,
@@ -258,9 +352,9 @@ class BBBM_AD_Model:
                     # fmt: on
 
                 def ode_consistency_factor(at):
-                    h_BBBM_to_MCI = 1/BBBM_AVG_DURATION
-                    h_MCI_to_mild = 1/MCI_AVG_DURATION
-                    
+                    h_BBBM_to_MCI = 1 / BBBM_AVG_DURATION
+                    h_MCI_to_mild = 1 / MCI_AVG_DURATION
+
                     a, t = at
                     dt = 5
                     term = ODETerm(odf_function)
@@ -275,11 +369,11 @@ class BBBM_AD_Model:
                         dt0=0.5,
                         y0=(
                             1 - p_ad(a, t) - p_mixed_dementia(a, t),
-                            p_ad(a, t) * delta_BBBM(a, t), 
+                            p_ad(a, t) * delta_BBBM(a, t),
                             p_ad(a, t) * delta_MCI(a, t),
-                            p_ad(a, t) * delta_mild(a,t),
-                            p_ad(a, t) * delta_moderate(a,t),
-                            p_ad(a, t) * delta_severe(a,t),
+                            p_ad(a, t) * delta_mild(a, t),
+                            p_ad(a, t) * delta_moderate(a, t),
+                            p_ad(a, t) * delta_severe(a, t),
                             p_mixed_dementia(a, t),
                             0,
                             0,
@@ -289,14 +383,24 @@ class BBBM_AD_Model:
                             h_S_to_BBBM(a, t),
                             h_BBBM_to_MCI,
                             h_MCI_to_mild,
-                            h_mild_to_moderate(a,t),
-                            h_moderate_to_severe(a,t),
+                            h_mild_to_moderate(a, t),
+                            h_moderate_to_severe(a, t),
                             f(a, t),
                             m(a, t),
                             i_mixed(a, t),
                         ],
                     )
-                    S, BBBM, MCI, D_mild, D_moderate, D_severe, D_mixed, new_D_due_to_AD, new_D_due_to_mixed = solution.ys
+                    (
+                        S,
+                        BBBM,
+                        MCI,
+                        D_mild,
+                        D_moderate,
+                        D_severe,
+                        D_mixed,
+                        new_D_due_to_AD,
+                        new_D_due_to_mixed,
+                    ) = solution.ys
                     # Numerical stability for log terms
                     eps = 1e-8
                     denom_alive = S + BBBM + MCI + D_mild + D_moderate + D_severe + D_mixed
@@ -309,25 +413,47 @@ class BBBM_AD_Model:
                     r_severe = jnp.clip(D_severe / (denom_ad + eps), eps)
                     r_mixed = jnp.clip(D_mixed / (denom_alive + eps), eps)
                     r_inc_ad = jnp.clip(new_D_due_to_AD / (dt * (denom_alive + eps)), eps)
-                    r_inc_mixed = jnp.clip(new_D_due_to_mixed / (dt * (denom_alive + eps)), eps)
+                    r_inc_mixed = jnp.clip(
+                        new_D_due_to_mixed / (dt * (denom_alive + eps)), eps
+                    )
 
                     sq_difference = 0.0
-                    sq_difference += (jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps)))**2
-                    sq_difference += (jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps)))**2
-                    sq_difference += (jnp.log(r_mild) - jnp.log(jnp.clip(delta_mild(a + dt, t + dt), eps)))**2
-                    sq_difference += (jnp.log(r_moderate) - jnp.log(jnp.clip(delta_moderate(a + dt, t + dt), eps)))**2
-                    sq_difference += (jnp.log(r_severe) - jnp.log(jnp.clip(delta_severe(a + dt, t + dt), eps)))**2
-                    sq_difference += (jnp.log(r_mixed) - jnp.log(jnp.clip(p_mixed_dementia(a + dt, t + dt), eps)))**2
-                    sq_difference += (jnp.log(r_inc_ad) - jnp.log(jnp.clip(i_ad(a + dt/2, t + dt/2), eps)))**2
-                    sq_difference += (jnp.log(r_inc_mixed) - jnp.log(jnp.clip(i_mixed(a + dt/2, t + dt/2), eps)))**2
+                    sq_difference += (
+                        jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps))
+                    ) ** 2
+                    sq_difference += (
+                        jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps))
+                    ) ** 2
+                    sq_difference += (
+                        jnp.log(r_mild) - jnp.log(jnp.clip(delta_mild(a + dt, t + dt), eps))
+                    ) ** 2
+                    sq_difference += (
+                        jnp.log(r_moderate)
+                        - jnp.log(jnp.clip(delta_moderate(a + dt, t + dt), eps))
+                    ) ** 2
+                    sq_difference += (
+                        jnp.log(r_severe)
+                        - jnp.log(jnp.clip(delta_severe(a + dt, t + dt), eps))
+                    ) ** 2
+                    sq_difference += (
+                        jnp.log(r_mixed)
+                        - jnp.log(jnp.clip(p_mixed_dementia(a + dt, t + dt), eps))
+                    ) ** 2
+                    sq_difference += (
+                        jnp.log(r_inc_ad)
+                        - jnp.log(jnp.clip(i_ad(a + dt / 2, t + dt / 2), eps))
+                    ) ** 2
+                    sq_difference += (
+                        jnp.log(r_inc_mixed)
+                        - jnp.log(jnp.clip(i_mixed(a + dt / 2, t + dt / 2), eps))
+                    ) ** 2
                     return jnp.sqrt(sq_difference)
 
                 # Vectorize the ode_consistency_factor function
                 ode_consistency_factors = jax.vmap(ode_consistency_factor)
 
                 # Create a mesh grid of ages and years
-                age_mesh, year_mesh = jnp.meshgrid(jnp.array(ages),
-                                                   jnp.array(years))
+                age_mesh, year_mesh = jnp.meshgrid(jnp.array(ages), jnp.array(years))
                 at_list = jnp.stack([age_mesh.ravel(), year_mesh.ravel()], axis=-1)
 
                 # Compute ODE errors for all age-time combinations at once
@@ -427,6 +553,7 @@ def at_param(name: str, ages, years, knot_val) -> Callable:
       'scan', which is allegedly efficient for GPU computation.
 
     """
+
     def f(a: jnp.ndarray, t: jnp.ndarray) -> jnp.ndarray:
         method = "scan"  # 'scan_unrolled' can be more performant on GPU at the
         # expense of additional compile time
@@ -447,11 +574,14 @@ def at_param(name: str, ages, years, knot_val) -> Callable:
             side="right",
         )
         return knot_val[a_index, t_index]
+
     return f
 
 
-def data_model(name: str, f: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray], df_data: pd.DataFrame):
-    assert len(df_data) > 0, f'{name} should have some data'
+def data_model(
+    name: str, f: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray], df_data: pd.DataFrame
+):
+    assert len(df_data) > 0, f"{name} should have some data"
 
     ages = jnp.array(0.5 * (df_data.age_start + df_data.age_end))
     years = jnp.array(0.5 * (df_data.year_start + df_data.year_end))
@@ -466,7 +596,9 @@ def data_model(name: str, f: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray], 
     return rate_obs
 
 
-def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[int], years: Iterable[int]) -> pd.DataFrame:
+def transform_to_data(
+    param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[int], years: Iterable[int]
+) -> pd.DataFrame:
     """Convert artifact data to a format suitable for DisMod-AT-NumPyro."""
     t = df_in.loc[sex]
     results = []  # fill with rows of data, then convert to a dataframe
@@ -477,10 +609,10 @@ def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[
             # computation downstream; they do not affect which rows are selected from
             # the artifact (selection is done via the query below).
             row = {
-                "age_start": a+2.5,
-                "age_end": a+2.5,
-                "year_start": y+.5,
-                "year_end": y+.5,
+                "age_start": a + 2.5,
+                "age_end": a + 2.5,
+                "year_start": y + 0.5,
+                "year_end": y + 0.5,
                 "sex": sex,
                 "measure": param,
             }
@@ -490,8 +622,7 @@ def transform_to_data(param: str, df_in: pd.DataFrame, sex: str, ages: Iterable[
             assert len(tt) == 1
             row["mean"] = np.mean(tt.iloc[0])
             row["standard_error"] = (
-                np.std(tt.iloc[0])
-                + 1e-8  # small epsilon to avoid zero standard errors
+                np.std(tt.iloc[0]) + 1e-8  # small epsilon to avoid zero standard errors
             )
 
             results.append(row)
@@ -505,6 +636,7 @@ def write_or_replace(art: Artifact, key: str, data: pd.DataFrame):
         art.replace(key, data)
     else:
         art.write(key, data)
+
 
 def generate_consistent_data_for_population_components(art):
     """use the cause.alzheimers_consistent.population_incidence_any and
@@ -520,42 +652,53 @@ def generate_consistent_data_for_population_components(art):
     write_or_replace(art, data_keys.POPULATION.SCALING_FACTOR, prevalence)
 
     pop = art.load(data_keys.POPULATION.STRUCTURE)
-    
+
     transition_rate = art.load(data_keys.ALZHEIMERS_CONSISTENT.BBBM_AD_INCIDENCE_RATE)
 
-    df = pd.merge(pop.reset_index().drop(['location'], axis=1),
-            transition_rate.reset_index().drop(['year_start', 'year_end'], axis=1),
-            on=['sex', 'age_start', 'age_end'],
-            suffixes=('', '_rate'),
-            ).set_index(['sex', 'age_start', 'age_end', 'year_start', 'year_end'])
+    df = pd.merge(
+        pop.reset_index().drop(["location"], axis=1),
+        transition_rate.reset_index().drop(["year_start", "year_end"], axis=1),
+        on=["sex", "age_start", "age_end"],
+        suffixes=("", "_rate"),
+    ).set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
 
-    df = pd.merge(df.reset_index(),
-            prevalence.reset_index().drop(['year_start', 'year_end'], axis=1),
-            on=['sex', 'age_start', 'age_end'],
-            suffixes=('', '_prev'),
-            ).set_index(['sex', 'age_start', 'age_end', 'year_start', 'year_end'])
+    df = pd.merge(
+        df.reset_index(),
+        prevalence.reset_index().drop(["year_start", "year_end"], axis=1),
+        on=["sex", "age_start", "age_end"],
+        suffixes=("", "_prev"),
+    ).set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
 
     for i in range(min(n_mcmc_samples, 1_000)):
-        df[f'draw_{i}'] *= df[f'draw_{i}_rate'] * (1 - df[f'draw_{i}_prev'])
-        del df[f'draw_{i}_rate']
-        del df[f'draw_{i}_prev']
+        df[f"draw_{i}"] *= df[f"draw_{i}_rate"] * (1 - df[f"draw_{i}_prev"])
+        del df[f"draw_{i}_rate"]
+        del df[f"draw_{i}_prev"]
 
-    write_or_replace(art, data_keys.ALZHEIMERS_CONSISTENT.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT, df)
+    write_or_replace(
+        art, data_keys.ALZHEIMERS_CONSISTENT.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT, df
+    )
 
 
 def generate_consistent_data_for_disease_components(art):
     prevalence = art.load(data_keys.ALZHEIMERS_CONSISTENT.AD_PREVALENCE)
     emr = art.load(data_keys.ALZHEIMERS_CONSISTENT.EMR)
-    delta_mild = art.load(data_keys.ALZHEIMERS_CONSISTENT.MILD_DEMENTIA_CONDITIONAL_PREVALENCE)
-    delta_moderate = art.load(data_keys.ALZHEIMERS_CONSISTENT.MODERATE_DEMENTIA_CONDITIONAL_PREVALENCE)
-    delta_severe = art.load(data_keys.ALZHEIMERS_CONSISTENT.SEVERE_DEMENTIA_CONDITIONAL_PREVALENCE)
+    delta_mild = art.load(
+        data_keys.ALZHEIMERS_CONSISTENT.MILD_DEMENTIA_CONDITIONAL_PREVALENCE
+    )
+    delta_moderate = art.load(
+        data_keys.ALZHEIMERS_CONSISTENT.MODERATE_DEMENTIA_CONDITIONAL_PREVALENCE
+    )
+    delta_severe = art.load(
+        data_keys.ALZHEIMERS_CONSISTENT.SEVERE_DEMENTIA_CONDITIONAL_PREVALENCE
+    )
 
     csmr = emr * prevalence * (delta_moderate + delta_severe)
     write_or_replace(art, data_keys.ALZHEIMERS_CONSISTENT.CSMR, csmr)
 
+
 if __name__ == "__main__":
-    fname = 'sweden.hdf'
-    print('updating', fname)
+    fname = "sweden.hdf"
+    print("updating", fname)
     art = Artifact(fname)
     generate_consistent_rates(art)
     generate_consistent_data_for_population_components(art)
