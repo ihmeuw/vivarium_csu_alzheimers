@@ -43,7 +43,7 @@ configuration:
         step_size: 182  # days 365/2 = 182.5. 182 days guarantees 2 events per year for the 
                         # 76-year simulation period (including leap years)
     population:
-        population_size: 10_000
+        population_size: 200_000
         initialization_age_min: 25
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
