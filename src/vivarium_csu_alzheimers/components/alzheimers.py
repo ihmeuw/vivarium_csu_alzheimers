@@ -177,9 +177,7 @@ class Alzheimers(Component):
         mixed_dementia_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.MIXED_DEMENTIA_STATE,
             allow_self_transition=True,
-            prevalence=lambda builder: builder.data.load(
-                ALZHEIMERS.MIXED_DEMENTIA_PREVALENCE
-            ),
+            prevalence=0,  # NOTE: this is acceptible, because we model mixed dementia *only* among simulants who developed it while in BBBM-AD or MCI-AD state
             disability_weight=lambda builder: builder.data.load(
                 ALZHEIMERS.MODERATE_DEMENTIA_DISABILITY_WEIGHT
             ),  # FIXME: load a more appropriate weight
