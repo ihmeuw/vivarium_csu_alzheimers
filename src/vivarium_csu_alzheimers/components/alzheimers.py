@@ -181,7 +181,9 @@ class Alzheimers(Component):
             disability_weight=lambda builder: builder.data.load(
                 ALZHEIMERS.MODERATE_DEMENTIA_DISABILITY_WEIGHT
             ),  # FIXME: load a more appropriate weight
-            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR_MODERATE),   # FIXME: load a more appropriate rate
+            excess_mortality_rate=lambda builder: builder.data.load(
+                ALZHEIMERS.EMR_MODERATE
+            ),  # FIXME: load a more appropriate rate
         )
 
         # AD progression transitions
@@ -228,4 +230,3 @@ class Alzheimers(Component):
                 mixed_dementia_state,
             ],
         )
-

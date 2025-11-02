@@ -312,21 +312,29 @@ class BBBM_AD_Model:
                 years,
                 knot_val_dict["f_severe"],
             )
-            def f(a,t):
-                return f_mild(a,t)*frac_mild(a,t) + f_moderate(a,t)*frac_moderate(a,t) + f_severe(a,t)*frac_severe(a,t)
+
+            def f(a, t):
+                return (
+                    f_mild(a, t) * frac_mild(a, t)
+                    + f_moderate(a, t) * frac_moderate(a, t)
+                    + f_severe(a, t) * frac_severe(a, t)
+                )
+
             data_model("f", f, df_data.query('measure == "f"'))
 
             m = at_param(f"m", ages, years, knot_val_dict["m"])
 
             def m_all(a, t):
                 # Population all-cause mortality: m * (1 - p_dementia) + (m + f) * p_dementia = m + f * p_dementia  # TODO: update eqn
-                return (m(a, t)
-                        + p_ad_dementia(a, t) * (
-                            frac_mild(a, t) * f_mild(a, t)
-                            + frac_moderate(a, t) * f_moderate(a, t)
-                            + frac_severe(a, t) * f_severe(a, t)
-                        )
-                        + p_mixed_dementia(a, t) * f(a, t)
+                return (
+                    m(a, t)
+                    + p_ad_dementia(a, t)
+                    * (
+                        frac_mild(a, t) * f_mild(a, t)
+                        + frac_moderate(a, t) * f_moderate(a, t)
+                        + frac_severe(a, t) * f_severe(a, t)
+                    )
+                    + p_mixed_dementia(a, t) * f(a, t)
                 )
 
             data_model("m_all", m_all, df_data.query('measure == "m_all"'))
@@ -723,7 +731,9 @@ def generate_consistent_data_for_disease_components(art):
         data_keys.ALZHEIMERS_CONSISTENT.SEVERE_DEMENTIA_CONDITIONAL_PREVALENCE
     )
 
-    csmr = prevalence * (emr_mild*delta_mild + emr_moderate*delta_moderate + emr_severe*delta_severe)
+    csmr = prevalence * (
+        emr_mild * delta_mild + emr_moderate * delta_moderate + emr_severe * delta_severe
+    )
     write_or_replace(art, data_keys.ALZHEIMERS_CONSISTENT.CSMR, csmr)
 
 

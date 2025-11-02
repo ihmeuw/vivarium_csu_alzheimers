@@ -145,6 +145,7 @@ class __AlzheimersConsistent(NamedTuple):
 
 ALZHEIMERS_CONSISTENT = __AlzheimersConsistent()
 
+
 class __TestingRates(NamedTuple):
     CSF: str = "testing_rates.csf"
     PET: str = "testing_rates.pet"
