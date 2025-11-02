@@ -20,7 +20,6 @@ from vivarium_csu_alzheimers.constants.data_values import (
     DW_BBBM,
     EMR_BBBM,
     EMR_MCI,
-    EMR_MILD,
     MCI_AVG_DURATION,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
@@ -151,7 +150,7 @@ class Alzheimers(Component):
             disability_weight=lambda builder: builder.data.load(
                 ALZHEIMERS.MILD_DEMENTIA_DISABILITY_WEIGHT
             ),
-            excess_mortality_rate=EMR_MILD,
+            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR_MILD),
         )
         moderate_dementia_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.MODERATE_DEMENTIA_STATE,
@@ -162,7 +161,7 @@ class Alzheimers(Component):
             disability_weight=lambda builder: builder.data.load(
                 ALZHEIMERS.MODERATE_DEMENTIA_DISABILITY_WEIGHT
             ),
-            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR),
+            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR_MODERATE),
         )
         severe_dementia_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.SEVERE_DEMENTIA_STATE,
@@ -173,16 +172,16 @@ class Alzheimers(Component):
             disability_weight=lambda builder: builder.data.load(
                 ALZHEIMERS.SEVERE_DEMENTIA_DISABILITY_WEIGHT
             ),
-            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR),
+            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR_SEVERE),
         )
         mixed_dementia_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.MIXED_DEMENTIA_STATE,
             allow_self_transition=True,
             prevalence=0,
             disability_weight=lambda builder: builder.data.load(
-                ALZHEIMERS.MILD_DEMENTIA_DISABILITY_WEIGHT
+                ALZHEIMERS.MODERATE_DEMENTIA_DISABILITY_WEIGHT
             ),  # FIXME: load a more appropriate weight
-            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR),
+            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR_MODERATE),   # FIXME: load a more appropriate rate
         )
 
         # AD progression transitions
@@ -230,14 +229,3 @@ class Alzheimers(Component):
             ],
         )
 
-    def _get_alzheimers_disease_state_prevalence(self, builder: Builder) -> pd.DataFrame:
-        """Get the Alzheimer's disease state prevalence table."""
-        bbbm_prevalence = builder.data.load(ALZHEIMERS.BBBM_CONDITIONAL_PREVALENCE)
-        mci_prevalence = builder.data.load(ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE)
-        alz_prevalence = bbbm_prevalence.copy()
-        alz_prevalence["value"] = 1.0
-        alz_prevalence["value"] = alz_prevalence["value"] - (
-            bbbm_prevalence["value"] + mci_prevalence["value"]
-        )
-
-        return alz_prevalence

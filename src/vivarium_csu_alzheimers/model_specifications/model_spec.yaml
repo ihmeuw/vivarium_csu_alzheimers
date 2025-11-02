@@ -24,7 +24,7 @@ components:
 configuration:
     input_data:
         input_draw_number: 0
-        artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/united_states_of_america.hdf'
+        artifact_path: '/ihme/homes/abie/projects/2025/vivarium_csu_alzheimers/china.hdf'
     interpolation:
         order: 0
         extrapolate: True
@@ -37,13 +37,13 @@ configuration:
             month: 1
             day: 1
         end:
-            year: 2100
+            year: 2060
             month: 12
             day: 31
         step_size: 182  # days 365/2 = 182.5. 182 days guarantees 2 events per year for the 
                         # 76-year simulation period (including leap years)
     population:
-        population_size: 20_000
+        population_size: 10_000
         initialization_age_min: 25
         # This is to work around an issue where simulants will age past age_max/untracking_age
         initialization_age_max: 100
@@ -64,4 +64,4 @@ configuration:
                 - bbbm_test_results
         
     intervention:
-        scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
+        scenario: bbbm_testing_and_treatment  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
