@@ -69,12 +69,12 @@ class BBBMDiseaseState(DiseaseState):
         self.add_transition(transition)
         return transition
 
-class AlzheimersModel(DiseaseModel):
 
+class AlzheimersModel(DiseaseModel):
     @property
     def name(self) -> str:
         return "disease_model.alzheimers_disease_and_other_dementias"
-    
+
     def on_initialize_simulants(self, pop_data: SimulantData) -> None:
         """Initialize the simulants in the population.
 
@@ -98,7 +98,6 @@ class AlzheimersModel(DiseaseModel):
             ]
 
         super(DiseaseModel, self).on_initialize_simulants(pop_data)
-
 
 
 class Alzheimers(Component):
