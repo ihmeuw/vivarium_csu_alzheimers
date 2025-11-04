@@ -69,6 +69,37 @@ class BBBMDiseaseState(DiseaseState):
         self.add_transition(transition)
         return transition
 
+class AlzheimersModel(DiseaseModel):
+
+    @property
+    def name(self) -> str:
+        return "disease_model.alzheimers_disease_and_other_dementias"
+    
+    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
+        """Initialize the simulants in the population.
+
+        HACK: Use birth prevalence for simulants entering on time_step
+        This enables us to initialize 100% of new simulants into BBBM state
+        at their creation time if they are entering after the simulation starts.
+
+        Parameters
+        ----------
+        pop_data
+            The population data object.
+        """
+        if pop_data.user_data.get("sim_state") == "time_step":
+            initialization_table_name = "birth_prevalence"
+        else:
+            initialization_table_name = "prevalence"
+
+        for state in self.states:
+            state.lookup_tables["initialization_weights"] = state.lookup_tables[
+                initialization_table_name
+            ]
+
+        super(DiseaseModel, self).on_initialize_simulants(pop_data)
+
+
 
 class Alzheimers(Component):
     """A class to hold the Alzheimer's disease model. This class includes the
@@ -119,10 +150,11 @@ class Alzheimers(Component):
 
         self.population_view.update(new_simulants)
 
-    def _create_disease_model(self) -> DiseaseModel:
+    def _create_disease_model(self) -> AlzheimersModel:
         bbbm_state = BBBMDiseaseState(
             ALZHEIMERS_DISEASE_MODEL.BBBM_STATE,
             allow_self_transition=True,
+            birth_prevalence=1.0,
             prevalence=lambda builder: builder.data.load(
                 ALZHEIMERS.BBBM_CONDITIONAL_PREVALENCE
             ),
@@ -132,6 +164,7 @@ class Alzheimers(Component):
         mci_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.MCI_STATE,
             allow_self_transition=True,
+            birth_prevalence=0.0,
             prevalence=lambda builder: builder.data.load(
                 ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE
             ),
@@ -142,6 +175,7 @@ class Alzheimers(Component):
         )
         alzheimers_state = DiseaseState(
             ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE,
+            birth_prevalence=0.0,
             prevalence=lambda builder: builder.data.load(
                 ALZHEIMERS.DEMENTIA_CONDITIONAL_PREVALENCE
             ),
@@ -158,7 +192,7 @@ class Alzheimers(Component):
             ),
         )
 
-        return DiseaseModel(
+        return AlzheimersModel(
             ALZHEIMERS_DISEASE_MODEL.NAME,
             initial_state=bbbm_state,
             states=[bbbm_state, mci_state, alzheimers_state],
