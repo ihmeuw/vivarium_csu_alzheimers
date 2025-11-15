@@ -185,6 +185,15 @@ class BBBM_AD_Model:
 
             # smooth some of the knot values
             add_age_smoothness_factors(knot_val_dict, "h_S_to_BBBM")
+            add_age_smoothness_factors(knot_val_dict, "h_mild_to_moderate")
+            add_age_smoothness_factors(knot_val_dict, "h_moderate_to_severe")
+            add_age_smoothness_factors(knot_val_dict, "f_mild")
+            add_age_smoothness_factors(knot_val_dict, "f_moderate")
+            add_age_smoothness_factors(knot_val_dict, "f_severe")
+            
+            add_age_monotone_increasing_factor(knot_val_dict, "f_mild")
+            add_age_monotone_increasing_factor(knot_val_dict, "f_moderate")
+            add_age_monotone_increasing_factor(knot_val_dict, "f_severe")
 
             p_ad = at_param(
                 f"p_ad",
@@ -344,7 +353,7 @@ class BBBM_AD_Model:
 
             include_consistency_constraints = True
             if include_consistency_constraints:
-                sigma = 0.01  # TODO: consider effect of making this larger --- does it lead to more model uncertainty?
+                sigma = 0.04  # TODO: consider effect of making this larger --- does it lead to more model uncertainty?
 
                 def odf_function(t, y, args):
                     (
@@ -588,6 +597,54 @@ def add_age_smoothness_factors(
         dist.Normal(0.0, sigma_second).log_prob(d2).sum(),
     )
 
+
+def add_age_monotone_increasing_factor(
+            knot_val_dict: dict[str, jnp.ndarray],
+            name: str,
+            sigma: float = 0.1,
+            use_log: bool = True,
+            EPS = 1e-8
+        ):
+    """
+    Encourage the age-pattern of `knot_val_dict[name]` to be non-decreasing
+    in age (axis=0), for each year independently.
+
+    Monotonicity is enforced on the log scale by default:
+        log(vals(age+1)) - log(vals(age)) >= 0
+
+    Any negative differences are penalized quadratically.
+
+    Parameters
+    ----------
+    name : str
+        Key in knot_val_dict.
+    knot_val_dict : dict[str, jnp.ndarray]
+        Dict of parameter fields, each shape (n_age, n_year).
+    sigma : float
+        Strength/scale of the penalty. Smaller = stronger belief that
+        the curve is monotone increasing.
+    use_log : bool
+        If True, impose monotonicity on log(vals); otherwise on vals.
+    """
+    vals = knot_val_dict[name]  # shape (n_age, n_year)
+
+    if use_log:
+        vals = jnp.log(vals + EPS)
+
+    # First differences along age: age_{a+1} - age_a
+    diffs = jnp.diff(vals, axis=0)  # shape (n_age-1, n_year)
+    
+    # Amount of violation: how far below zero each difference is.
+    # If diffs >= 0 → violations = 0 (no penalty)
+    # If diffs < 0  → violations = -diffs > 0
+    violations = jnp.maximum(-diffs, 0.0)
+    
+    # Simple quadratic penalty: ~ Normal(0, sigma) on violations,
+    # but without bothering with constants.
+    penalty = -0.5 * jnp.square(violations / sigma).sum()
+    
+    numpyro.factor(f"{name}_age_monotone_increasing", penalty)
+                                                                    
 
 def at_param(name: str, ages, years, knot_val) -> Callable:
     """Create an age- and time-specific rate function for a DisMod model.
