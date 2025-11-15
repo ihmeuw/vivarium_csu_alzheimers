@@ -183,6 +183,9 @@ class BBBM_AD_Model:
                     ),
                 )
 
+            # smooth some of the knot values
+            add_age_smoothness_factors(knot_val_dict, "h_S_to_BBBM")
+
             p_ad = at_param(
                 f"p_ad",
                 ages,
@@ -558,6 +561,32 @@ class BBBM_AD_Model:
         return pd.DataFrame(rate_table).set_index(
             ["sex", "age_start", "age_end", "year_start", "year_end"]
         )
+
+
+def add_age_smoothness_factors(
+    knot_val_dict, name, sigma_first=0.2, sigma_second=0.1, EPS=1e-8
+):
+    """Add first- and second-difference smoothness priors along age."""
+    vals = knot_val_dict[name]  # shape (n_age, n_year)
+
+    # Work on the log scale to respect positivity and relative changes.
+    log_vals = jnp.log(vals + EPS)
+
+    # First differences along age (axis 0).
+    d1 = jnp.diff(log_vals, axis=0)  # shape (n_age-1, n_year)
+
+    # Second differences along age: diff of first differences.
+    d2 = jnp.diff(d1, axis=0)  # shape (n_age-2, n_year)
+
+    # Penalize both sets of differences toward 0.
+    numpyro.factor(
+        f"{name}_age_first_diff",
+        dist.Normal(0.0, sigma_first).log_prob(d1).sum(),
+    )
+    numpyro.factor(
+        f"{name}_age_second_diff",
+        dist.Normal(0.0, sigma_second).log_prob(d2).sum(),
+    )
 
 
 def at_param(name: str, ages, years, knot_val) -> Callable:
