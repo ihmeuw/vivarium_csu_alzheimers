@@ -324,7 +324,7 @@ class BBBM_AD_Model:
 
             include_consistency_constraints = True
             if include_consistency_constraints:
-                sigma = 0.002  # TODO: consider effect of making this larger --- does it lead to more model uncertainty?
+                sigma = 0.02  # TODO: consider effect of making this larger --- does it lead to more model uncertainty?
 
                 def odf_function(t, y, args):
                     (
