@@ -164,11 +164,15 @@ class BBBM_AD_Model:
                 )
 
             # smooth some of the knot values
+            #add_age_smoothness_factors(knot_val_dict, "delta_BBBM")
+            #add_age_smoothness_factors(knot_val_dict, "delta_MCI")
+            #add_age_smoothness_factors(knot_val_dict, "delta_moderate")
+            #add_age_smoothness_factors(knot_val_dict, "delta_mild")
+            #add_age_smoothness_factors(knot_val_dict, "delta_severe")
+
             add_age_smoothness_factors(
                 knot_val_dict, "h_S_to_BBBM", sigma_first=10, sigma_second=0.25
             )
-            # add_age_smoothness_factors(knot_val_dict, "delta_BBBM")
-
             add_age_smoothness_factors(knot_val_dict, "h_mild_to_moderate")
             add_age_smoothness_factors(knot_val_dict, "h_moderate_to_severe")
             add_age_smoothness_factors(knot_val_dict, "f_mild")
@@ -471,7 +475,7 @@ class BBBM_AD_Model:
 
                 # Create a mesh grid of ages and years
                 age_mesh, year_mesh = jnp.meshgrid(
-                    jnp.array([a for a in ages if a >= 40]), jnp.array(years)
+                    jnp.array([a for a in ages if a >= 45]), jnp.array(years)
                 )
                 at_list = jnp.stack([age_mesh.ravel(), year_mesh.ravel()], axis=-1)
 
