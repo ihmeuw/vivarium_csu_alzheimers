@@ -416,8 +416,12 @@ class BBBM_AD_Model:
                     r_mild = jnp.clip(D_mild / (denom_ad + eps), eps)
                     r_moderate = jnp.clip(D_moderate / (denom_ad + eps), eps)
                     r_severe = jnp.clip(D_severe / (denom_ad + eps), eps)
-                    r_prev_ad_dementia = jnp.clip((D_mild + D_moderate + D_severe) / (denom_alive + eps), eps)
-                    r_inc_ad_dementia = jnp.clip(new_D_due_to_AD / (dt * (denom_alive + eps)), eps)
+                    r_prev_ad_dementia = jnp.clip(
+                        (D_mild + D_moderate + D_severe) / (denom_alive + eps), eps
+                    )
+                    r_inc_ad_dementia = jnp.clip(
+                        new_D_due_to_AD / (dt * (denom_alive + eps)), eps
+                    )
 
                     sq_difference = 0.0
                     sq_difference += (
@@ -428,9 +432,11 @@ class BBBM_AD_Model:
                         )
                         ** 2
                     )
-                    sq_difference += 10 * (
-                        jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps))
-                    ) ** 2
+                    sq_difference += (
+                        10
+                        * (jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps)))
+                        ** 2
+                    )
                     sq_difference += (
                         jnp.log(r_mild) - jnp.log(jnp.clip(delta_mild(a + dt, t + dt), eps))
                     ) ** 2
@@ -464,7 +470,9 @@ class BBBM_AD_Model:
                 ode_consistency_factors = jax.vmap(ode_consistency_factor)
 
                 # Create a mesh grid of ages and years
-                age_mesh, year_mesh = jnp.meshgrid(jnp.array([a for a in ages if a >= 45]), jnp.array(years))
+                age_mesh, year_mesh = jnp.meshgrid(
+                    jnp.array([a for a in ages if a >= 40]), jnp.array(years)
+                )
                 at_list = jnp.stack([age_mesh.ravel(), year_mesh.ravel()], axis=-1)
 
                 # Compute ODE errors for all age-time combinations at once
