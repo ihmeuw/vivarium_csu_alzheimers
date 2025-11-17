@@ -229,7 +229,6 @@ class Alzheimers(Component):
             ),
         )
 
-
         return AlzheimersModel(
             ALZHEIMERS_DISEASE_MODEL.NAME,
             initial_state=bbbm_state,

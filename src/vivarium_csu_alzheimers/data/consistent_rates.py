@@ -164,16 +164,23 @@ class BBBM_AD_Model:
                 )
 
             # smooth some of the knot values
-            add_age_smoothness_factors(knot_val_dict, "h_S_to_BBBM")
+            add_age_smoothness_factors(
+                knot_val_dict, "h_S_to_BBBM", sigma_first=10, sigma_second=0.25
+            )
+            # add_age_smoothness_factors(knot_val_dict, "delta_BBBM")
+
             add_age_smoothness_factors(knot_val_dict, "h_mild_to_moderate")
             add_age_smoothness_factors(knot_val_dict, "h_moderate_to_severe")
             add_age_smoothness_factors(knot_val_dict, "f_mild")
             add_age_smoothness_factors(knot_val_dict, "f_moderate")
             add_age_smoothness_factors(knot_val_dict, "f_severe")
-            
+
             add_age_monotone_increasing_factor(knot_val_dict, "f_mild")
             add_age_monotone_increasing_factor(knot_val_dict, "f_moderate")
             add_age_monotone_increasing_factor(knot_val_dict, "f_severe")
+
+            add_rate_ordering_factor(knot_val_dict, "f_moderate", smaller_name="f_mild")
+            add_rate_ordering_factor(knot_val_dict, "f_severe", smaller_name="f_moderate")
 
             p_ad = at_param(
                 f"p_ad",
@@ -303,21 +310,17 @@ class BBBM_AD_Model:
 
             def m_all(a, t):
                 # Population all-cause mortality: m * (1 - p_dementia) + (m + f) * p_dementia = m + f * p_dementia  # TODO: update eqn
-                return (
-                    m(a, t)
-                    + p_ad_dementia(a, t)
-                    * (
-                        frac_mild(a, t) * f_mild(a, t)
-                        + frac_moderate(a, t) * f_moderate(a, t)
-                        + frac_severe(a, t) * f_severe(a, t)
-                    )
+                return m(a, t) + p_ad_dementia(a, t) * (
+                    frac_mild(a, t) * f_mild(a, t)
+                    + frac_moderate(a, t) * f_moderate(a, t)
+                    + frac_severe(a, t) * f_severe(a, t)
                 )
 
             data_model("m_all", m_all, df_data.query('measure == "m_all"'))
 
             include_consistency_constraints = True
             if include_consistency_constraints:
-                sigma = 0.01  # TODO: consider effect of making this larger --- does it lead to more model uncertainty?
+                sigma = 0.002  # TODO: consider effect of making this larger --- does it lead to more model uncertainty?
 
                 def odf_function(t, y, args):
                     (
@@ -344,10 +347,10 @@ class BBBM_AD_Model:
 
                     # fmt: off
                     return (
-                        0 - m * S                                                   - h_S_to_BBBM * S,
-                        0 - m * BBBM                         - h_BBBM_to_MCI * BBBM + h_S_to_BBBM * S,
-                        0 - m * MCI    - h_MCI_to_mild * MCI + h_BBBM_to_MCI * BBBM,
-                        0 - (m+f_mild) * D_AD_mild + h_MCI_to_mild * MCI      - h_mild_to_moderate * D_AD_mild       ,
+                        0 - m * S                                                               - h_S_to_BBBM * S,
+                        0 - m * BBBM                                     - h_BBBM_to_MCI * BBBM + h_S_to_BBBM * S,
+                        0 - m * MCI                - h_MCI_to_mild * MCI + h_BBBM_to_MCI * BBBM,
+                        0 - (m+f_mild) * D_AD_mild + h_MCI_to_mild * MCI      - h_mild_to_moderate * D_AD_mild,
                         0 - (m+f_moderate) * D_AD_moderate                    + h_mild_to_moderate * D_AD_mild  \
                                                                                     - h_moderate_to_severe * D_AD_moderate,
                         0 - (m+f_severe) * D_AD_severe                              + h_moderate_to_severe * D_AD_moderate,
@@ -413,13 +416,19 @@ class BBBM_AD_Model:
                     r_mild = jnp.clip(D_mild / (denom_ad + eps), eps)
                     r_moderate = jnp.clip(D_moderate / (denom_ad + eps), eps)
                     r_severe = jnp.clip(D_severe / (denom_ad + eps), eps)
-                    r_inc_ad = jnp.clip(new_D_due_to_AD / (dt * (denom_alive + eps)), eps)
+                    r_prev_ad_dementia = jnp.clip((D_mild + D_moderate + D_severe) / (denom_alive + eps), eps)
+                    r_inc_ad_dementia = jnp.clip(new_D_due_to_AD / (dt * (denom_alive + eps)), eps)
 
                     sq_difference = 0.0
                     sq_difference += (
-                        jnp.log(r_bbbm) - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps))
-                    ) ** 2
-                    sq_difference += (
+                        10
+                        * (
+                            jnp.log(r_bbbm)
+                            - jnp.log(jnp.clip(delta_BBBM(a + dt, t + dt), eps))
+                        )
+                        ** 2
+                    )
+                    sq_difference += 10 * (
                         jnp.log(r_mci) - jnp.log(jnp.clip(delta_MCI(a + dt, t + dt), eps))
                     ) ** 2
                     sq_difference += (
@@ -434,16 +443,28 @@ class BBBM_AD_Model:
                         - jnp.log(jnp.clip(delta_severe(a + dt, t + dt), eps))
                     ) ** 2
                     sq_difference += (
-                        jnp.log(r_inc_ad)
-                        - jnp.log(jnp.clip(i_ad(a + dt / 2, t + dt / 2), eps))
-                    ) ** 2
+                        10
+                        * (
+                            jnp.log(r_prev_ad_dementia)
+                            - jnp.log(jnp.clip(p_ad_dementia(a + dt, t + dt), eps))
+                        )
+                        ** 2
+                    )
+                    sq_difference += (
+                        10
+                        * (
+                            jnp.log(r_inc_ad_dementia)
+                            - jnp.log(jnp.clip(i_ad(a + dt / 2, t + dt / 2), eps))
+                        )
+                        ** 2
+                    )
                     return jnp.sqrt(sq_difference)
 
                 # Vectorize the ode_consistency_factor function
                 ode_consistency_factors = jax.vmap(ode_consistency_factor)
 
                 # Create a mesh grid of ages and years
-                age_mesh, year_mesh = jnp.meshgrid(jnp.array(ages), jnp.array(years))
+                age_mesh, year_mesh = jnp.meshgrid(jnp.array([a for a in ages if a >= 45]), jnp.array(years))
                 at_list = jnp.stack([age_mesh.ravel(), year_mesh.ravel()], axis=-1)
 
                 # Compute ODE errors for all age-time combinations at once
@@ -541,12 +562,12 @@ def add_age_smoothness_factors(
 
 
 def add_age_monotone_increasing_factor(
-            knot_val_dict: dict[str, jnp.ndarray],
-            name: str,
-            sigma: float = 0.1,
-            use_log: bool = True,
-            EPS = 1e-8
-        ):
+    knot_val_dict: dict[str, jnp.ndarray],
+    name: str,
+    sigma: float = 0.1,
+    use_log: bool = True,
+    EPS=1e-8,
+):
     """
     Encourage the age-pattern of `knot_val_dict[name]` to be non-decreasing
     in age (axis=0), for each year independently.
@@ -575,18 +596,70 @@ def add_age_monotone_increasing_factor(
 
     # First differences along age: age_{a+1} - age_a
     diffs = jnp.diff(vals, axis=0)  # shape (n_age-1, n_year)
-    
+
     # Amount of violation: how far below zero each difference is.
     # If diffs >= 0 → violations = 0 (no penalty)
     # If diffs < 0  → violations = -diffs > 0
     violations = jnp.maximum(-diffs, 0.0)
-    
+
     # Simple quadratic penalty: ~ Normal(0, sigma) on violations,
     # but without bothering with constants.
     penalty = -0.5 * jnp.square(violations / sigma).sum()
-    
+
     numpyro.factor(f"{name}_age_monotone_increasing", penalty)
-                                                                    
+
+
+def add_rate_ordering_factor(
+    knot_val_dict: dict[str, jnp.ndarray],
+    larger_name: str,
+    smaller_name: str,
+    sigma: float = 0.1,
+    use_log: bool = True,
+    margin: float = 0.0,
+    EPS=1e-8,
+):
+    """
+    Encourage knot_val_dict[larger_name] >= knot_val_dict[smaller_name]
+    (optionally on the log scale), pointwise over age & year.
+
+    Any violations are penalized quadratically.
+
+    Parameters
+    ----------
+    larger_name : str
+        Key for the field that should be >= the other (e.g. "f_severe").
+    smaller_name : str
+        Key for the field that should be <= the other (e.g. "f_mild").
+    knot_val_dict : dict[str, jnp.ndarray]
+        Dict of parameter fields, each shape (n_age, n_year).
+    sigma : float
+        Scale of the penalty. Smaller = stronger belief in the inequality.
+    use_log : bool
+        If True, apply inequality in log-space (i.e., multiplicative order).
+    margin : float
+        Optional strictness margin in the same scale you’re working in:
+        - If use_log=True, margin is in log units (e.g. log(1.1) for 10%).
+        - If use_log=False, margin is in raw units.
+        The prior then prefers larger >= smaller + margin.
+    """
+    a = knot_val_dict[larger_name]
+    b = knot_val_dict[smaller_name]
+
+    if use_log:
+        a = jnp.log(a + EPS)
+        b = jnp.log(b + EPS)
+
+    # We want: a >= b + margin
+    diffs = a - (b + margin)  # shape (n_age, n_year)
+
+    # Violations where a < b + margin
+    violations = jnp.maximum(-diffs, 0.0)
+
+    # Quadratic penalty on violations
+    penalty = -0.5 * jnp.square(violations / sigma).sum()
+
+    numpyro.factor(f"{larger_name}_ge_{smaller_name}", penalty)
+
 
 def at_param(name: str, ages, years, knot_val) -> Callable:
     """Create an age- and time-specific rate function for a DisMod model.
@@ -764,7 +837,7 @@ def generate_consistent_data_for_disease_components(art):
     )
     write_or_replace(art, data_keys.ALZHEIMERS_CONSISTENT.CSMR, csmr)
 
-    
+
 if __name__ == "__main__":
     fname = "sweden.hdf"
     print("updating", fname)
