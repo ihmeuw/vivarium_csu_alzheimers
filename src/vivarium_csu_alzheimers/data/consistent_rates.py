@@ -164,11 +164,11 @@ class BBBM_AD_Model:
                 )
 
             # smooth some of the knot values
-            #add_age_smoothness_factors(knot_val_dict, "delta_BBBM")
-            #add_age_smoothness_factors(knot_val_dict, "delta_MCI")
-            #add_age_smoothness_factors(knot_val_dict, "delta_moderate")
-            #add_age_smoothness_factors(knot_val_dict, "delta_mild")
-            #add_age_smoothness_factors(knot_val_dict, "delta_severe")
+            # add_age_smoothness_factors(knot_val_dict, "delta_BBBM")
+            # add_age_smoothness_factors(knot_val_dict, "delta_MCI")
+            # add_age_smoothness_factors(knot_val_dict, "delta_moderate")
+            # add_age_smoothness_factors(knot_val_dict, "delta_mild")
+            # add_age_smoothness_factors(knot_val_dict, "delta_severe")
 
             add_age_smoothness_factors(
                 knot_val_dict, "h_S_to_BBBM", sigma_first=10, sigma_second=0.25
