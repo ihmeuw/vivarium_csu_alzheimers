@@ -81,21 +81,21 @@ def generate_consistent_rates(art: Artifact):
                     art.load(load_key["p_mild"]) / severity_sum,
                     sex,
                     ages,
-                    [2021],
+                    [2023],
                 ),
                 transform_to_data(
                     "frac_moderate",
                     art.load(load_key["p_moderate"]) / severity_sum,
                     sex,
                     ages,
-                    [2021],
+                    [2023],
                 ),
                 transform_to_data(
                     "frac_severe",
                     art.load(load_key["p_severe"]) / severity_sum,
                     sex,
                     ages,
-                    [2021],
+                    [2023],
                 ),
                 transform_to_data(
                     "i_ad_dementia", art.load(load_key["i_ad_dementia"]), sex, ages, [2023]
@@ -324,7 +324,8 @@ class BBBM_AD_Model:
 
             include_consistency_constraints = True
             if include_consistency_constraints:
-                sigma = 0.02  # TODO: consider effect of making this larger --- does it lead to more model uncertainty?
+                sigma = 0.02  # this parameter controls the error allowed in the ODE (technically making it a stochastic ODE)
+
 
                 def odf_function(t, y, args):
                     (
@@ -475,7 +476,7 @@ class BBBM_AD_Model:
 
                 # Create a mesh grid of ages and years
                 age_mesh, year_mesh = jnp.meshgrid(
-                    jnp.array([a for a in ages if a >= 45]), jnp.array(years)
+                    jnp.array([a for a in ages if a >= 40]), jnp.array(years)
                 )
                 at_list = jnp.stack([age_mesh.ravel(), year_mesh.ravel()], axis=-1)
 

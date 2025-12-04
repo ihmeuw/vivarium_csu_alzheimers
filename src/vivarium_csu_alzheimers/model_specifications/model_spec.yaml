@@ -23,7 +23,7 @@ components:
 
 configuration:
     input_data:
-        input_draw_number: 0
+        input_draw_number: 249
         artifact_path: '/ihme/homes/abie/projects/2025/vivarium_csu_alzheimers/china.hdf'
     interpolation:
         order: 0

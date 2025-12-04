@@ -46,10 +46,10 @@ def check_for_existing(
 
     if existing:
         if not append:
-            click.confirm(
-                f"Existing artifacts found for {existing}. Do you want to delete and rebuild?",
-                abort=True,
-            )
+            #click.confirm(
+            #    f"Existing artifacts found for {existing}. Do you want to delete and rebuild?",
+            #    abort=True,
+            #)
             for loc in existing:
                 path = output_dir / f"{loc}.hdf"
                 logger.info(f"Deleting artifact at {str(path)}.")
