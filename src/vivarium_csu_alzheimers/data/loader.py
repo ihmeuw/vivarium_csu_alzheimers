@@ -519,19 +519,36 @@ def load_csf_pet_testing_rates(
 def load_dementia_proportions(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
+    fraction_mixed_that_includes_ad = 0.96  # TODO: update this based on literature, make source clear in code
+    
     df = pd.read_csv(DEMENTIA_PROPORTIONS_PATH)
     bins = load_age_bins(None, None).index.to_frame().reset_index(drop=True)
     merged = pd.merge(df, bins, on="age_group_name", how="left")
-    merged = merged[
+    
+    df_ad = merged[
         (merged.type_label == "Alzheimer's disease")  # AD only, no mixed
         & (merged.age_group_name != "All Age")
     ]
-    merged["year_start"] = 2023
-    merged["year_end"] = 2024
+    df_ad["year_start"] = 2023
+    df_ad["year_end"] = 2024
+
+    df_mixed = merged[
+        (merged.type_label == "Mixed dementia")  # mixed
+        & (merged.age_group_name != "All Age")
+    ]
+    df_mixed["year_start"] = 2023
+    df_mixed["year_end"] = 2024
+
     merged = (
-        merged.set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
+        df_ad.set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
         .drop(["age_group_name", "type_label", "age_group_id"], axis=1)
         .rename({"proportion": "value"}, axis=1)
+        +
+        fraction_mixed_that_includes_ad *
+        df_mixed.set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
+        .drop(["age_group_name", "type_label", "age_group_id"], axis=1)
+        .rename({"proportion": "value"}, axis=1)
+
     )
 
     # add <40 age groups
