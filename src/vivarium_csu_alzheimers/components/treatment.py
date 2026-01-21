@@ -9,6 +9,7 @@ import pandas as pd
 from pandas import Timedelta
 from vivarium import Component
 from vivarium.framework.engine import Builder
+from vivarium.framework.event import Event
 from vivarium.framework.population import SimulantData
 from vivarium.framework.resource import Resource
 from vivarium_public_health import (
@@ -24,10 +25,10 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_TEST_RESULTS,
     COLUMNS,
     DWELL_TIME_AWAITING_EFFECT_TIMESTEPS,
-    DWELL_TIME_TREATMENT_EFFECT_LONG_TIMESTEPS,
     DWELL_TIME_FULL_EFFECT_SHORT_TIMESTEPS,
-    DWELL_TIME_WANING_EFFECT_TIMESTEPS,
+    DWELL_TIME_TREATMENT_EFFECT_LONG_TIMESTEPS,
     DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS,
+    DWELL_TIME_WANING_EFFECT_TIMESTEPS,
     LOCATION_TREATMENT_PROBS,
     TREATMENT_COMPLETION_PROBABILITY,
 )
@@ -202,6 +203,11 @@ class Treatment(Component):
                 COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT,
             ],
         ] = [TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE, event_time, 1]
+        # Update treatment duration for simulants waiting for treatment
+        update.loc[
+            update.index.isin(start_treatment_idx), COLUMNS.TREATMENT_DURATION
+        ] = self.get_treatment_duration(start_treatment_idx)
+
         update.loc[
             update.index.isin(decline_treatment_idx),
             [
@@ -210,17 +216,20 @@ class Treatment(Component):
                 COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_COUNT,
             ],
         ] = [TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE, event_time, 1]
-        # TODO: update treatment duration column if simulat is in waiting_for_treatment or treated states
 
         self.population_view.update(update)
 
-    def on_time_step(self, event: pd.Timestamp) -> None:
-        # TODO: get treatment effect durations
-        # Get treatment length - get draw between 1 and 9 months
-        # 9 months needs to be weighted to 90% - full
-        # 1-8 months weighted to 10%/8 - short
-        # Find people waiting for treatment
-        pass
+    def on_time_step(self, event: Event) -> None:
+        pop = self.population_view.get(event)
+        # TODO: confirm this happens after disease state is updated to waiting for treatment
+        waiting_for_treatment_idx = pop.index[
+            pop[COLUMNS.TREATMENT_STATE]
+            == TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE
+        ]
+        pop.loc[
+            waiting_for_treatment_idx, COLUMNS.TREATMENT_DURATION
+        ] = self.get_treatment_duration(waiting_for_treatment_idx)
+        self.population_view.update(pop)
 
     def _create_treatment_mode(self) -> TreatmentModel:
 
@@ -347,6 +356,23 @@ class Treatment(Component):
         start_treatment_probs = self.start_treatment_probs(index)
         probs = 1 - start_treatment_probs
         return probs
+
+    def get_treatment_duration(self, waiting_for_treatment: pd.Index) -> pd.Series:
+        """Returns the treatment duration for each simulant in months."""
+        months_of_treatment = pd.Series(index=waiting_for_treatment)
+        # First determine which simulants get full vs short treatment
+        treatment_draws = self.randomness.get_draw(
+            waiting_for_treatment, additional_key="treatment_duration_draws"
+        )
+        short_treatment_idx = treatment_draws.index[treatment_draws > 0.9]
+        # Get treatment duration for short treatment simulants
+        months_of_treatment.loc[short_treatment_idx] = self.randomness.choice(
+            short_treatment_idx,
+            choices=list(range(1, 9)),
+            additional_key="short_treatment_duration",
+        )
+        months_of_treatment.loc[waiting_for_treatment.difference(short_treatment_idx)] = 9
+        return months_of_treatment
 
     def get_treatment_effect_duration(
         self, index: pd.Index, target: pd.Series[Timedelta]
