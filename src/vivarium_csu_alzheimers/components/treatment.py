@@ -379,11 +379,13 @@ class Treatment(Component):
     ) -> pd.Series:
         """Returns the treatment effect duration for each simulant. Scale effect duration by dwell time."""
         treatment_length = (
-            self.population_view.view(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
+            self.population_view.subview(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
         )
         # Treatment length is in months, target is dwell time in Timedelta (check in debugger)
         effect_duration = (treatment_length / 9.0) * target
-        # TODO: round to near timeestep
+        # Round to nearest timestep
+        step_size_td = pd.Timedelta(days=self.step_size)
+        effect_duration = (effect_duration / step_size_td).round() * step_size_td
         return effect_duration
 
     def get_wanning_effect_duration(
@@ -391,11 +393,13 @@ class Treatment(Component):
     ) -> pd.Series:
         """Returns the waning effect duration for each simulant. Scale effect duration by dwell time."""
         treatment_length = (
-            self.population_view.view(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
+            self.population_view.subview(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
         )
         # Treatment length is in months, target is dwell time in Timedelta (check in debugger)
         effect_duration = (treatment_length / 9.0) * target
-        # TODO: round to near timeestep
+        # Round to nearest timestep
+        step_size_td = pd.Timedelta(days=self.step_size)
+        effect_duration = (effect_duration / step_size_td).round() * step_size_td
         return effect_duration
 
 
