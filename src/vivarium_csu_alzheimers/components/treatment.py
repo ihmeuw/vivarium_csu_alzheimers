@@ -25,9 +25,7 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_TEST_RESULTS,
     COLUMNS,
     DWELL_TIME_AWAITING_EFFECT_TIMESTEPS,
-    DWELL_TIME_FULL_EFFECT_SHORT_TIMESTEPS,
-    DWELL_TIME_TREATMENT_EFFECT_LONG_TIMESTEPS,
-    DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS,
+    DWELL_TIME_TREATMENT_EFFECT_TIMESTEPS,
     DWELL_TIME_WANING_EFFECT_TIMESTEPS,
     LOCATION_TREATMENT_PROBS,
     TREATMENT_COMPLETION_PROBABILITY,
@@ -129,12 +127,11 @@ class Treatment(Component):
             component=self,
             required_resources=[COLUMNS.TREATMENT_STATE],
         )
-        # TODO: check pipelien names
         builder.value.register_value_modifier(
-            "full_effect_long.dwell_time",
+            "treatment_effect.dwell_time",
             modifier=self.get_treatment_effect_duration,
             component=self,
-            required_resources=[COLUMNS.TREATMENT_DURATION, "full_effect_long.dwell_time"],
+            required_resources=[COLUMNS.TREATMENT_DURATION, "treatment_effect.dwell_time"],
         )
         builder.value.register_value_modifier(
             "waning_effect.dwell_time",
@@ -196,7 +193,7 @@ class Treatment(Component):
             index=pop_data.index,
         )
         update.loc[
-            update.index.isin(start_treatment_idx),
+            start_treatment_idx,
             [
                 COLUMNS.TREATMENT_STATE,
                 COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME,
@@ -205,7 +202,7 @@ class Treatment(Component):
         ] = [TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE, event_time, 1]
         # Update treatment duration for simulants waiting for treatment
         update.loc[
-            update.index.isin(start_treatment_idx), COLUMNS.TREATMENT_DURATION
+            start_treatment_idx, COLUMNS.TREATMENT_DURATION
         ] = self.get_treatment_duration(start_treatment_idx)
 
         update.loc[
@@ -255,7 +252,7 @@ class Treatment(Component):
             allow_self_transition=True,
             prevalence=0.0,
             dwell_time=get_timedelta_from_step_size(
-                self.step_size, DWELL_TIME_TREATMENT_EFFECT_LONG_TIMESTEPS
+                self.step_size, DWELL_TIME_TREATMENT_EFFECT_TIMESTEPS
             ),
             disability_weight=0.0,
             excess_mortality_rate=0.0,
@@ -438,13 +435,9 @@ class TreatmentRiskEffect(RiskEffect):
         defaults[self.name]["data_sources"]["population_attributable_fraction"] = 0.0
         return defaults
 
-    # TODO: update columns required
     @property
     def columns_required(self) -> list[str]:
-        return [
-            f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT}_event_time",
-            f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE}_event_time",
-        ]
+        return [f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT}_event_time"]
 
     def __init__(self, target: str):
         super().__init__(risk="treatment.treatment", target=target)
