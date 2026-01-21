@@ -6,6 +6,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from pandas import Timedelta
 from vivarium import Component
 from vivarium.framework.engine import Builder
 from vivarium.framework.population import SimulantData
@@ -23,9 +24,9 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_TEST_RESULTS,
     COLUMNS,
     DWELL_TIME_AWAITING_EFFECT_TIMESTEPS,
-    DWELL_TIME_FULL_EFFECT_LONG_TIMESTEPS,
+    DWELL_TIME_TREATMENT_EFFECT_LONG_TIMESTEPS,
     DWELL_TIME_FULL_EFFECT_SHORT_TIMESTEPS,
-    DWELL_TIME_WANING_EFFECT_LONG_TIMESTEPS,
+    DWELL_TIME_WANING_EFFECT_TIMESTEPS,
     DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS,
     LOCATION_TREATMENT_PROBS,
     TREATMENT_COMPLETION_PROBABILITY,
@@ -95,6 +96,7 @@ class Treatment(Component):
             COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT,
             COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_TIME,
             COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_COUNT,
+            COLUMNS.TREATMENT_DURATION,
         ]
 
     @property
@@ -125,6 +127,19 @@ class Treatment(Component):
             source=self.get_treatment_states,
             component=self,
             required_resources=[COLUMNS.TREATMENT_STATE],
+        )
+        # TODO: check pipelien names
+        builder.value.register_value_modifier(
+            "full_effect_long.dwell_time",
+            modifier=self.get_treatment_effect_duration,
+            component=self,
+            required_resources=[COLUMNS.TREATMENT_DURATION, "full_effect_long.dwell_time"],
+        )
+        builder.value.register_value_modifier(
+            "waning_effect.dwell_time",
+            modifier=self.get_wanning_effect_duration,
+            component=self,
+            required_resources=[COLUMNS.TREATMENT_DURATION, "waning_effect.dwell_time"],
         )
 
     def get_treatment_states(self, index: pd.Index) -> pd.Series:
@@ -175,6 +190,7 @@ class Treatment(Component):
                 COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT: 0,
                 COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_TIME: pd.NaT,
                 COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_COUNT: 0,
+                COLUMNS.TREATMENT_DURATION: np.nan,
             },
             index=pop_data.index,
         )
@@ -194,8 +210,17 @@ class Treatment(Component):
                 COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_COUNT,
             ],
         ] = [TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE, event_time, 1]
+        # TODO: update treatment duration column if simulat is in waiting_for_treatment or treated states
 
         self.population_view.update(update)
+
+    def on_time_step(self, event: pd.Timestamp) -> None:
+        # TODO: get treatment effect durations
+        # Get treatment length - get draw between 1 and 9 months
+        # 9 months needs to be weighted to 90% - full
+        # 1-8 months weighted to 10%/8 - short
+        # Find people waiting for treatment
+        pass
 
     def _create_treatment_mode(self) -> TreatmentModel:
 
@@ -216,55 +241,28 @@ class Treatment(Component):
             disability_weight=0.0,
             excess_mortality_rate=0.0,
         )
-        full_effect_long = DiseaseState(
-            TREATMENT_DISEASE_MODEL.FULL_EFFECT_LONG_STATE,
+        treatment_effect = DiseaseState(
+            TREATMENT_DISEASE_MODEL.TREATMENT_EFFECT,
             allow_self_transition=True,
             prevalence=0.0,
             dwell_time=get_timedelta_from_step_size(
-                self.step_size, DWELL_TIME_FULL_EFFECT_LONG_TIMESTEPS
+                self.step_size, DWELL_TIME_TREATMENT_EFFECT_LONG_TIMESTEPS
             ),
             disability_weight=0.0,
             excess_mortality_rate=0.0,
         )
-        full_effect_short = DiseaseState(
-            TREATMENT_DISEASE_MODEL.FULL_EFFECT_SHORT_STATE,
+        waning_effect = DiseaseState(
+            TREATMENT_DISEASE_MODEL.WANING_EFFECT,
             allow_self_transition=True,
             prevalence=0.0,
             dwell_time=get_timedelta_from_step_size(
-                self.step_size, DWELL_TIME_FULL_EFFECT_SHORT_TIMESTEPS
+                self.step_size, DWELL_TIME_WANING_EFFECT_TIMESTEPS
             ),
             disability_weight=0.0,
             excess_mortality_rate=0.0,
         )
-        waning_effect_long = DiseaseState(
-            TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE,
-            allow_self_transition=True,
-            prevalence=0.0,
-            dwell_time=get_timedelta_from_step_size(
-                self.step_size, DWELL_TIME_WANING_EFFECT_LONG_TIMESTEPS
-            ),
-            disability_weight=0.0,
-            excess_mortality_rate=0.0,
-        )
-        waning_effect_short = DiseaseState(
-            TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE,
-            allow_self_transition=True,
-            prevalence=0.0,
-            dwell_time=get_timedelta_from_step_size(
-                self.step_size, DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS
-            ),
-            disability_weight=0.0,
-            excess_mortality_rate=0.0,
-        )
-        no_effect_after_short = DiseaseState(
-            TREATMENT_DISEASE_MODEL.NO_EFFECT_AFTER_SHORT_STATE,
-            allow_self_transition=True,
-            prevalence=0.0,
-            disability_weight=0.0,
-            excess_mortality_rate=0.0,
-        )
-        no_effect_after_long = DiseaseState(
-            TREATMENT_DISEASE_MODEL.NO_EFFECT_AFTER_LONG_STATE,
+        no_effect_after_treatment = DiseaseState(
+            TREATMENT_DISEASE_MODEL.NO_EFFECT_AFTER_TREATMENT,
             allow_self_transition=True,
             prevalence=0.0,
             disability_weight=0.0,
@@ -290,15 +288,10 @@ class Treatment(Component):
             probability_function=self.decline_treatment_probs,
         )
         waiting_for_treatment.add_proportion_transition(
-            full_effect_long, proportion=TREATMENT_COMPLETION_PROBABILITY
+            treatment_effect, proportion=TREATMENT_COMPLETION_PROBABILITY
         )
-        full_effect_long.add_transition(output_state=waning_effect_long)
-        waning_effect_long.add_transition(output_state=no_effect_after_long)
-        waiting_for_treatment.add_proportion_transition(
-            full_effect_short, proportion=(1 - TREATMENT_COMPLETION_PROBABILITY)
-        )
-        full_effect_short.add_transition(output_state=waning_effect_short)
-        waning_effect_short.add_transition(output_state=no_effect_after_short)
+        treatment_effect.add_transition(output_state=waning_effect)
+        waning_effect.add_transition(output_state=no_effect_after_treatment)
 
         return TreatmentModel(
             TREATMENT_DISEASE_MODEL.NAME,
@@ -307,12 +300,9 @@ class Treatment(Component):
                 susceptible,
                 positive_test,
                 waiting_for_treatment,
-                full_effect_long,
-                full_effect_short,
-                waning_effect_long,
-                waning_effect_short,
-                no_effect_after_long,
-                no_effect_after_short,
+                treatment_effect,
+                waning_effect,
+                no_effect_after_treatment,
                 no_effect_never_treated,
             ],
             cause_specific_mortality_rate=0.0,
@@ -358,6 +348,30 @@ class Treatment(Component):
         probs = 1 - start_treatment_probs
         return probs
 
+    def get_treatment_effect_duration(
+        self, index: pd.Index, target: pd.Series[Timedelta]
+    ) -> pd.Series:
+        """Returns the treatment effect duration for each simulant. Scale effect duration by dwell time."""
+        treatment_length = (
+            self.population_view.view(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
+        )
+        # Treatment length is in months, target is dwell time in Timedelta (check in debugger)
+        effect_duration = (treatment_length / 9.0) * target
+        # TODO: round to near timeestep
+        return effect_duration
+
+    def get_wanning_effect_duration(
+        self, index: pd.Index, target: pd.Series[Timedelta]
+    ) -> pd.Series:
+        """Returns the waning effect duration for each simulant. Scale effect duration by dwell time."""
+        treatment_length = (
+            self.population_view.view(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
+        )
+        # Treatment length is in months, target is dwell time in Timedelta (check in debugger)
+        effect_duration = (treatment_length / 9.0) * target
+        # TODO: round to near timeestep
+        return effect_duration
+
 
 class PositiveTestDecisionState(DiseaseState):
     """Override initialization of the columns so that Treatment can handle it."""
@@ -394,10 +408,11 @@ class TreatmentRiskEffect(RiskEffect):
         defaults[self.name]["data_sources"]["population_attributable_fraction"] = 0.0
         return defaults
 
+    # TODO: update columns required
     @property
     def columns_required(self) -> list[str]:
         return [
-            f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE}_event_time",
+            f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT}_event_time",
             f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE}_event_time",
         ]
 
@@ -443,12 +458,13 @@ class TreatmentRiskEffect(RiskEffect):
             exposure = self.exposure(index)
             relative_risk = pd.Series(index=index, dtype=float)
 
+            # TODO: update to combine states, check artifact
             full_effect_states = [
-                TREATMENT_DISEASE_MODEL.FULL_EFFECT_LONG_STATE,
+                TREATMENT_DISEASE_MODEL.TREATMENT_EFFECT,
                 TREATMENT_DISEASE_MODEL.FULL_EFFECT_SHORT_STATE,
             ]
             waning_states = [
-                TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE,
+                TREATMENT_DISEASE_MODEL.WANING_EFFECT,
                 TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE,
             ]
             affected_states = full_effect_states + waning_states
@@ -470,7 +486,7 @@ class TreatmentRiskEffect(RiskEffect):
                 relative_risk,
                 rr_min,
                 exposure,
-                TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE,
+                TREATMENT_DISEASE_MODEL.WANING_EFFECT,
             )
 
             if relative_risk.isna().any():
@@ -499,7 +515,7 @@ class TreatmentRiskEffect(RiskEffect):
             )
             dwell_time = {
                 TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE: DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS,
-                TREATMENT_DISEASE_MODEL.WANING_EFFECT_LONG_STATE: DWELL_TIME_WANING_EFFECT_LONG_TIMESTEPS,
+                TREATMENT_DISEASE_MODEL.WANING_EFFECT: DWELL_TIME_WANING_EFFECT_TIMESTEPS,
             }[waning_state]
             waning_end_date = waning_start_date + get_timedelta_from_step_size(
                 self.step_size().days, dwell_time
