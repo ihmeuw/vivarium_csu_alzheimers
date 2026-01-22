@@ -34,7 +34,7 @@ configuration:
         key_columns: [entrance_time, age]
     time: 
         start:
-            year: 2028
+            year: 2030
             month: 1
             day: 1
         end:
@@ -65,4 +65,4 @@ configuration:
                 - bbbm_test_results
         
     intervention:
-        scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
+        scenario: bbbm_testing_and_treatment  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'

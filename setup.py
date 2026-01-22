@@ -43,8 +43,7 @@ if __name__ == "__main__":
         long_description = f.read()
 
     install_requirements = [
-        "vivarium_dependencies[numpy,scipy,click,tables,loguru]",
-        "pandas<3.0.0",
+        "vivarium_dependencies[pandas,numpy,scipy,click,tables,loguru]",
         "vivarium_build_utils>2.0.3,<3.0.0",
         "gbd_mapping>=4.1.3",
         "vivarium>=3.4.5,<4.0.0",

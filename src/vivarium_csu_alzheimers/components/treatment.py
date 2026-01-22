@@ -135,7 +135,7 @@ class Treatment(Component):
         )
         builder.value.register_value_modifier(
             "waning_effect.dwell_time",
-            modifier=self.get_wanning_effect_duration,
+            modifier=self.get_waning_effect_duration,
             component=self,
             required_resources=[COLUMNS.TREATMENT_DURATION, "waning_effect.dwell_time"],
         )
@@ -217,7 +217,7 @@ class Treatment(Component):
         self.population_view.update(update)
 
     def on_time_step(self, event: Event) -> None:
-        pop = self.population_view.get(event)
+        pop = self.population_view.get(event.index)
         # TODO: confirm this happens after disease state is updated to waiting for treatment
         waiting_for_treatment_idx = pop.index[
             pop[COLUMNS.TREATMENT_STATE]
@@ -372,31 +372,55 @@ class Treatment(Component):
         return months_of_treatment
 
     def get_treatment_effect_duration(
-        self, index: pd.Index, target: pd.Series[Timedelta]
-    ) -> pd.Series:
-        """Returns the treatment effect duration for each simulant. Scale effect duration by dwell time."""
+        self, index: pd.Index, target: pd.Series[float]
+    ) -> pd.Series[float]:
+        """Returns the treatment effect duration for each simulant. Scale effect duration by dwell time.
+
+        Parameters
+        ----------
+        index
+            Index of simulants to calculate duration for
+        target
+            Dwell time in days
+
+        Returns
+        -------
+        pd.Series[float]
+            Modified dwell time in days (as float)
+        """
         treatment_length = (
             self.population_view.subview(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
         )
-        # Treatment length is in months, target is dwell time in Timedelta (check in debugger)
+        # Treatment length is in months, target is dwell time in days (float)
         effect_duration = (treatment_length / 9.0) * target
         # Round to nearest timestep
-        step_size_td = pd.Timedelta(days=self.step_size)
-        effect_duration = (effect_duration / step_size_td).round() * step_size_td
+        effect_duration = (effect_duration / self.step_size).round() * self.step_size
         return effect_duration
 
-    def get_wanning_effect_duration(
-        self, index: pd.Index, target: pd.Series[Timedelta]
-    ) -> pd.Series:
-        """Returns the waning effect duration for each simulant. Scale effect duration by dwell time."""
+    def get_waning_effect_duration(
+        self, index: pd.Index, target: pd.Series[float]
+    ) -> pd.Series[float]:
+        """Returns the waning effect duration for each simulant. Scale effect duration by dwell time.
+
+        Parameters
+        ----------
+        index
+            Index of simulants to calculate duration for
+        target
+            Dwell time in days
+
+        Returns
+        -------
+        pd.Series[float]
+            Modified dwell time in days (as float)
+        """
         treatment_length = (
             self.population_view.subview(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
         )
-        # Treatment length is in months, target is dwell time in Timedelta (check in debugger)
+        # Treatment length is in months, target is dwell time in days (float)
         effect_duration = (treatment_length / 9.0) * target
         # Round to nearest timestep
-        step_size_td = pd.Timedelta(days=self.step_size)
-        effect_duration = (effect_duration / step_size_td).round() * step_size_td
+        effect_duration = (effect_duration / self.step_size).round() * self.step_size
         return effect_duration
 
 
@@ -482,15 +506,10 @@ class TreatmentRiskEffect(RiskEffect):
             relative_risk = pd.Series(index=index, dtype=float)
 
             # TODO: update to combine states, check artifact
-            full_effect_states = [
+            affected_states = [
                 TREATMENT_DISEASE_MODEL.TREATMENT_EFFECT,
-                TREATMENT_DISEASE_MODEL.FULL_EFFECT_SHORT_STATE,
-            ]
-            waning_states = [
                 TREATMENT_DISEASE_MODEL.WANING_EFFECT,
-                TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE,
             ]
-            affected_states = full_effect_states + waning_states
 
             # Unaffected relative risks are 1
             relative_risk[~exposure.isin(affected_states)] = 1.0
@@ -499,12 +518,6 @@ class TreatmentRiskEffect(RiskEffect):
             relative_risk[exposure.isin(full_effect_states)] = rr_min
 
             # Modify relative risks to be interpolated values for waning states
-            self._interpolate_rr(
-                relative_risk,
-                rr_min,
-                exposure,
-                TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE,
-            )
             self._interpolate_rr(
                 relative_risk,
                 rr_min,
@@ -536,6 +549,7 @@ class TreatmentRiskEffect(RiskEffect):
                     .squeeze()
                 )
             )
+            # TODO: interpolate remaining time
             dwell_time = {
                 TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE: DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS,
                 TREATMENT_DISEASE_MODEL.WANING_EFFECT: DWELL_TIME_WANING_EFFECT_TIMESTEPS,
