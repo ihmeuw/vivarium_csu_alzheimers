@@ -11,7 +11,7 @@ components:
           - BBBMTestingObserver()
           - Treatment()
           - TreatmentObserver()
-          # - TreatmentRiskEffect('cause.alzheimers_blood_based_biomarker_state_to_alzheimers_mild_cognitive_impairment_state.transition_rate')
+          - TreatmentRiskEffect('cause.alzheimers_blood_based_biomarker_state_to_alzheimers_mild_cognitive_impairment_state.transition_rate')
             
     vivarium_public_health:
         population:

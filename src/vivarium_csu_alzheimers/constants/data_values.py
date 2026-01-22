@@ -176,23 +176,24 @@ BBBM_TESTING_RATES = [
 ]
 BBBM_TESTING_START_DATE = BBBM_TESTING_RATES[0][0]
 
-COMMON_TREATMENT_RAMP = [
-    (pd.Timestamp("2030-01-01"), 0.4),  # step increase from 0 in 2030
-    (pd.Timestamp("2035-01-01"), 0.7),  # plateaus from here on out
+TREATMENT_PROBS_RAMP = [
+    (pd.Timestamp("2027-01-01"), 0.0),
+    (pd.Timestamp("2035-01-01") + pd.Timedelta(days=182), 0.3),
+    (pd.Timestamp("2100-01-01"), 0.8),
 ]
 
-LOCATION_TREATMENT_PROBS = {
-    "united_states_of_america": 0.3,
-    "germany": COMMON_TREATMENT_RAMP,
-    "spain": COMMON_TREATMENT_RAMP,
-    "sweden": COMMON_TREATMENT_RAMP,
-    "united_kingdom": COMMON_TREATMENT_RAMP,
-    "japan": 0.8,
-    "israel": COMMON_TREATMENT_RAMP,
-    "taiwan_(province_of_china)": COMMON_TREATMENT_RAMP,
-    "brazil": COMMON_TREATMENT_RAMP,
-    "china": COMMON_TREATMENT_RAMP,
-}
+# LOCATION_TREATMENT_PROBS = {
+#     "united_states_of_america": 0.3,
+#     "germany": TREATMENT_PROBS_RAMP,
+#     "spain": TREATMENT_PROBS_RAMP,
+#     "sweden": TREATMENT_PROBS_RAMP,
+#     "united_kingdom": TREATMENT_PROBS_RAMP,
+#     "japan": 0.8,
+#     "israel": TREATMENT_PROBS_RAMP,
+#     "taiwan_(province_of_china)": TREATMENT_PROBS_RAMP,
+#     "brazil": TREATMENT_PROBS_RAMP,
+#     "china": TREATMENT_PROBS_RAMP,
+# }
 DWELL_TIME_AWAITING_EFFECT_TIMESTEPS = 1  # 6 months
 DWELL_TIME_TREATMENT_EFFECT_TIMESTEPS = 12  # 6 years
 DWELL_TIME_WANING_EFFECT_TIMESTEPS = 22  # 11 years

@@ -6,7 +6,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from pandas import Timedelta
 from vivarium import Component
 from vivarium.framework.engine import Builder
 from vivarium.framework.event import Event
@@ -27,8 +26,8 @@ from vivarium_csu_alzheimers.constants.data_values import (
     DWELL_TIME_AWAITING_EFFECT_TIMESTEPS,
     DWELL_TIME_TREATMENT_EFFECT_TIMESTEPS,
     DWELL_TIME_WANING_EFFECT_TIMESTEPS,
-    LOCATION_TREATMENT_PROBS,
     TREATMENT_COMPLETION_PROBABILITY,
+    TREATMENT_PROBS_RAMP,
 )
 from vivarium_csu_alzheimers.constants.models import TREATMENT_DISEASE_MODEL
 from vivarium_csu_alzheimers.utilities import get_timedelta_from_step_size
@@ -330,19 +329,16 @@ class Treatment(Component):
         if not self.scenario.treatment:
             return probs
 
-        TREATMENT_PROBS = LOCATION_TREATMENT_PROBS[self.location]
-        if isinstance(TREATMENT_PROBS, float):
-            treatment_prob = TREATMENT_PROBS
-        elif event_date < TREATMENT_PROBS[0][0]:
+        if event_date < TREATMENT_PROBS_RAMP[0][0]:
             # Before the first defined time point, return 0
             treatment_prob = 0.0
-        elif event_date > TREATMENT_PROBS[-1][0]:
+        elif event_date > TREATMENT_PROBS_RAMP[-1][0]:
             # Everything after the defined time point is a constant rate
-            treatment_prob = TREATMENT_PROBS[-1][1]
+            treatment_prob = TREATMENT_PROBS_RAMP[-1][1]
         else:
             # interpolate
-            timestamps = [ts.value for ts, _ in TREATMENT_PROBS]
-            rates = [rate for _, rate in TREATMENT_PROBS]
+            timestamps = [ts.value for ts, _ in TREATMENT_PROBS_RAMP]
+            rates = [rate for _, rate in TREATMENT_PROBS_RAMP]
             treatment_prob = np.interp(event_date.value, timestamps, rates)
 
         probs[pop[COLUMNS.TREATMENT_PROPENSITY] < treatment_prob] = 1.0
@@ -361,7 +357,7 @@ class Treatment(Component):
         treatment_draws = self.randomness.get_draw(
             waiting_for_treatment, additional_key="treatment_duration_draws"
         )
-        short_treatment_idx = treatment_draws.index[treatment_draws > 0.9]
+        short_treatment_idx = treatment_draws.index[treatment_draws < 0.1]
         # Get treatment duration for short treatment simulants
         months_of_treatment.loc[short_treatment_idx] = self.randomness.choice(
             short_treatment_idx,
@@ -470,6 +466,7 @@ class TreatmentRiskEffect(RiskEffect):
         super().setup(builder)
         self.clock = builder.time.clock()
         self.step_size = builder.time.step_size()
+        self.waning_dwell_time_pipeline = builder.value.get_value("waning_effect.dwell_time")
 
     def get_distribution_type(self, builder: Builder) -> str:
         """Returns the type of distribution for the exposure.
@@ -515,14 +512,13 @@ class TreatmentRiskEffect(RiskEffect):
             relative_risk[~exposure.isin(affected_states)] = 1.0
 
             # Modify relative risks to be the minimum rr value for fully affected states
-            relative_risk[exposure.isin(full_effect_states)] = rr_min
+            relative_risk[exposure == TREATMENT_DISEASE_MODEL.TREATMENT_EFFECT] = rr_min
 
             # Modify relative risks to be interpolated values for waning states
             self._interpolate_rr(
                 relative_risk,
                 rr_min,
                 exposure,
-                TREATMENT_DISEASE_MODEL.WANING_EFFECT,
             )
 
             if relative_risk.isna().any():
@@ -537,26 +533,27 @@ class TreatmentRiskEffect(RiskEffect):
         relative_risk: pd.Series[float],
         rr_min: float,
         exposure: pd.Series[str],
-        waning_state: str,
     ) -> None:
-        waning_mask = exposure == waning_state
+        waning_mask = exposure == TREATMENT_DISEASE_MODEL.WANING_EFFECT
         if waning_mask.any():
             event_date = self.clock() + self.step_size()
             waning_start_date = pd.to_datetime(
                 (
-                    self.population_view.subview(f"{waning_state}_event_time")
+                    self.population_view.subview(
+                        f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT}_event_time"
+                    )
                     .get(waning_mask[waning_mask].index)
                     .squeeze()
                 )
             )
-            # TODO: interpolate remaining time
-            dwell_time = {
-                TREATMENT_DISEASE_MODEL.WANING_EFFECT_SHORT_STATE: DWELL_TIME_WANING_EFFECT_SHORT_TIMESTEPS,
-                TREATMENT_DISEASE_MODEL.WANING_EFFECT: DWELL_TIME_WANING_EFFECT_TIMESTEPS,
-            }[waning_state]
+
+            # Dwell times are number of days in waning effect
+            dwell_times = self.waning_dwell_time_pipeline(waning_mask[waning_mask].index)
+            dwell_times = dwell_times / (self.step_size() / pd.Timedelta(days=1))
             waning_end_date = waning_start_date + get_timedelta_from_step_size(
-                self.step_size().days, dwell_time
+                self.step_size().days, dwell_times
             )
+
             # Linearly interpolate between the source rr and 1 based on where the
             # event date is between the waning start date and the waning end date
             relative_risk[waning_mask] = rr_min + (1.0 - rr_min) * (
