@@ -217,7 +217,6 @@ class Treatment(Component):
 
     def on_time_step(self, event: Event) -> None:
         pop = self.population_view.get(event.index)
-        # TODO: confirm this happens after disease state is updated to waiting for treatment
         waiting_for_treatment_idx = pop.index[
             pop[COLUMNS.TREATMENT_STATE]
             == TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE

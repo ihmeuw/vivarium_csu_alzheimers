@@ -24,7 +24,6 @@ components:
 configuration:
     input_data:
         input_draw_number: 0
-        artifact_path: /home/albrja/scratch/artifacts/united_states_of_america.hdf
         # artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/united_states_of_america.hdf'
     interpolation:
         order: 0
@@ -34,11 +33,11 @@ configuration:
         key_columns: [entrance_time, age]
     time: 
         start:
-            year: 2030
+            year: 2022
             month: 1
             day: 1
         end:
-            year: 2050
+            year: 2100
             month: 12
             day: 31
         step_size: 182  # days 365/2 = 182.5. 182 days guarantees 2 events per year for the 
@@ -65,4 +64,4 @@ configuration:
                 - bbbm_test_results
         
     intervention:
-        scenario: bbbm_testing_and_treatment  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
+        scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
