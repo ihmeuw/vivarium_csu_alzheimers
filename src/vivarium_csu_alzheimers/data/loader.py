@@ -15,7 +15,7 @@ for an example.
 
 import numpy as np
 import pandas as pd
-from gbd_mapping import causes, covariates, risk_factors
+from gbd_mapping import causes, covariates, risk_factors, sequelae
 from vivarium.framework.artifact import EntityKey
 from vivarium_inputs import globals as vi_globals
 from vivarium_inputs import interface
@@ -29,11 +29,7 @@ from vivarium_csu_alzheimers.constants.paths import (
     DEMENTIA_PROPORTIONS_PATH,
     FORECAST_NC_DATA_FILEPATHS_DICT,
 )
-from vivarium_csu_alzheimers.data.extra_gbd import (
-    load_emr_dismod,
-    load_incidence_dismod,
-    load_prevalence_dismod,
-)
+from vivarium_csu_alzheimers.data import extra_gbd
 from vivarium_csu_alzheimers.data.forecasts import table_from_nc
 from vivarium_csu_alzheimers.utilities import (
     get_norm,
@@ -63,24 +59,26 @@ def get_data(
     mapping = {
         data_keys.POPULATION.LOCATION: load_population_location,
         data_keys.POPULATION.STRUCTURE: load_forecasted_population_structure,
+        data_keys.POPULATION.SCALING_FACTOR: load_ad_dementia_prevalence,  # this will be replaced by consistent model
         data_keys.POPULATION.AGE_BINS: load_age_bins,
         data_keys.POPULATION.DEMOGRAPHY: load_demographic_dimensions,
         data_keys.POPULATION.TMRLE: load_theoretical_minimum_risk_life_expectancy,
         data_keys.POPULATION.ACMR: load_forecasted_mortality,
         data_keys.POPULATION.LIVE_BIRTH_RATE: load_standard_data,
-        data_keys.POPULATION.SCALING_FACTOR: load_alzheimers_all_states_prevalence,
-        data_keys.ALZHEIMERS.PREVALENCE: load_prevalence,
-        data_keys.ALZHEIMERS.BBBM_CONDITIONAL_PREVALENCE: load_bbbm_conditional_prevalence,
-        data_keys.ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE: load_mci_conditional_prevalence,
-        data_keys.ALZHEIMERS.MCI_TO_DEMENTIA_TRANSITION_RATE: load_mci_to_dementia_transition_rate,
-        data_keys.ALZHEIMERS.SUSCEPTIBLE_TO_BBBM_TRANSITION_COUNT: load_susceptible_to_bbbm_transition_count,
-        # MCI incidence rate caluclated during sim using mci_hazard.py and time in state
-        data_keys.ALZHEIMERS.CSMR: load_standard_data,
-        data_keys.ALZHEIMERS.EMR: load_emr,
-        data_keys.ALZHEIMERS.DISABILITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.AD_DEMENTIA_PREVALENCE: load_ad_dementia_prevalence,
+        data_keys.ALZHEIMERS.MIXED_DEMENTIA_PREVALENCE: load_mixed_dementia_prevalence,
+        data_keys.ALZHEIMERS.AD_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_ad_dementia_incidence_total_population,
+        data_keys.ALZHEIMERS.MIXED_DEMENTIA_INCIDENCE_RATE_TOTAL_POPULATION: load_mixed_dementia_incidence_total_population,
+        data_keys.ALZHEIMERS.EMR_COMO: load_standard_data,
+        data_keys.ALZHEIMERS.EMR_DISMOD: load_emr_dismod,
         data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT: load_mci_disability_weight,
+        data_keys.ALZHEIMERS.MILD_DEMENTIA_DISABILITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.MODERATE_DEMENTIA_DISABILITY_WEIGHT: load_standard_data,
+        data_keys.ALZHEIMERS.SEVERE_DEMENTIA_DISABILITY_WEIGHT: load_standard_data,
         data_keys.ALZHEIMERS.RESTRICTIONS: load_metadata,
-        data_keys.ALZHEIMERS.INCIDENCE_RATE_TOTAL_POPULATION: load_alzheimers_incidence_total_population,
+        data_keys.ALZHEIMERS.MILD_DEMENTIA_PREVALENCE: load_standard_data,
+        data_keys.ALZHEIMERS.MODERATE_DEMENTIA_PREVALENCE: load_standard_data,
+        data_keys.ALZHEIMERS.SEVERE_DEMENTIA_PREVALENCE: load_standard_data,
         data_keys.TESTING_RATES.CSF: load_csf_pet_testing_rates,
         data_keys.TESTING_RATES.PET: load_csf_pet_testing_rates,
         data_keys.TREATMENT.RR: load_treatment_rrs,
@@ -199,33 +197,81 @@ def load_categorical_paf(
     return paf
 
 
-def load_alzheimers_incidence_total_population(
+def load_ad_dementia_incidence_total_population(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
     """Load raw Alzheimers incidence rates from GBD. The incidence rate we pull through vivarium framework
     is the incidence rate / the susceptible population. We want incidence rate / total population.
     """
 
-    raw_incidence = load_incidence_dismod(location)  # total population
+    raw_incidence = extra_gbd.load_incidence_dismod(location)  # total population
     incidence = reshape_to_vivarium_format(raw_incidence, location)
     incidence.index = incidence.index.droplevel(
         ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
     )
 
-    return incidence * load_dementia_proportions(None, location, years)
+    return incidence * load_dementia_proportions(None, location, years, "Alzheimer's disease")
 
 
-def load_prevalence(
+def load_mixed_dementia_incidence_total_population(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+    """Load mixed dementia incidence rates from GBD. The incidence rate we pull through vivarium framework
+    is the incidence rate / the susceptible population. We want incidence rate / total population.
+    """
+
+    raw_incidence = extra_gbd.load_incidence_dismod(location)  # total population
+    incidence = reshape_to_vivarium_format(raw_incidence, location)
+    incidence.index = incidence.index.droplevel(
+        ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
+    )
+
+    return incidence * load_dementia_proportions(None, location, years, "Mixed dementia")
+
+
+def load_ad_dementia_prevalence(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
 
-    raw_prevalence = load_prevalence_dismod(location)  # total population
+    raw_prevalence = extra_gbd.load_prevalence_dismod(location)  # total population
     prevalence = reshape_to_vivarium_format(raw_prevalence, location)
     prevalence.index = prevalence.index.droplevel(
         ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
     )
 
-    return prevalence * load_dementia_proportions(None, location, years)
+    relevant_fraction = load_dementia_proportions(
+        None, location, years, "Alzheimer's disease"
+    )
+
+    return prevalence * relevant_fraction
+
+
+def load_mixed_dementia_prevalence(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+
+    raw_prevalence = extra_gbd.load_prevalence_dismod(location)  # total population
+    prevalence = reshape_to_vivarium_format(raw_prevalence, location)
+    prevalence.index = prevalence.index.droplevel(
+        ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
+    )
+
+    relevant_fraction = load_dementia_proportions(None, location, years, "Mixed dementia")
+
+    return prevalence * relevant_fraction
+
+
+def load_emr_dismod(
+    key: str, location: str, years: int | str | list[int] | None = None
+) -> pd.DataFrame:
+
+    raw = extra_gbd.load_emr_dismod(location)
+    processed = reshape_to_vivarium_format(raw, location)
+    processed.index = processed.index.droplevel(
+        ["measure_id", "metric_id", "model_version_id", "modelable_entity_id"]
+    )
+
+    return processed
 
 
 def load_emr(
@@ -248,6 +294,7 @@ def get_entity(key: str | EntityKey):
         "covariate": covariates,
         "risk_factor": risk_factors,
         "alternative_risk_factor": alternative_risk_factors,
+        "sequela": sequelae,
     }
     key = EntityKey(key)
     return type_map[key.type][key.name]
@@ -517,13 +564,20 @@ def load_csf_pet_testing_rates(
 
 
 def load_dementia_proportions(
-    key: str, location: str, years: int | str | list[int] | None = None
+    key: str, location: str, years: int | str | list[int] | None, type_label: str
 ) -> pd.DataFrame:
+    """type_label must be on this list:
+
+    "Alzheimer's disease" 'Alcohol Related' 'Lewy Body Predominant'
+    'Brain Injury' 'Frontotemporal dementia' 'Mixed dementia'
+    'Vascular dementia'
+    """
+
     df = pd.read_csv(DEMENTIA_PROPORTIONS_PATH)
     bins = load_age_bins(None, None).index.to_frame().reset_index(drop=True)
     merged = pd.merge(df, bins, on="age_group_name", how="left")
     merged = merged[
-        (merged.type_label == "Alzheimer's disease")  # AD only, no mixed
+        (merged.type_label == type_label)  # requested type only
         & (merged.age_group_name != "All Age")
     ]
     merged["year_start"] = 2023

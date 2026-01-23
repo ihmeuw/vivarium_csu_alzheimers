@@ -118,7 +118,9 @@ class Testing(Component):
         eligible_state = pop[COLUMNS.DISEASE_STATE].isin(
             [
                 ALZHEIMERS_DISEASE_MODEL.MCI_STATE,
-                ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE,
+                ALZHEIMERS_DISEASE_MODEL.MILD_DEMENTIA_STATE,
+                ALZHEIMERS_DISEASE_MODEL.MODERATE_DEMENTIA_STATE,
+                ALZHEIMERS_DISEASE_MODEL.SEVERE_DEMENTIA_STATE,
             ]
         )
         eligible_test_propensity = pop[COLUMNS.TESTING_PROPENSITY] < (

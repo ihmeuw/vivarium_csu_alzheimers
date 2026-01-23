@@ -22,4 +22,3 @@ matplotlib
 jax
 numpyro
 diffrax
-interpax

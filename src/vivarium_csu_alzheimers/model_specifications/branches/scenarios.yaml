@@ -1,5 +1,17 @@
-input_draw_count: 25
+# input_draw_count: 3
 random_seed_count: 100
+
+# Use batch draws instead of doing a psim restart
+input_draws: [207, 169, 123]  # batch 0
+# input_draws: [192, 146, 230]  # batch 1
+# input_draws: [58, 246]  # batch 2
+# input_draws: [158, 24, 65]  # batch 3
+# input_draws: [17, 177, 199]  # batch 4
+# input_draws: [2, 13, 46]  # batch 5
+# input_draws: [89, 41, 113]  # batch 6
+# input_draws: [62, 210, 249]  # batch 7
+# input_draws: [156, 73]  # batch 8
+
 
 branches:
   - intervention:
@@ -7,15 +19,3 @@ branches:
         - baseline
         - bbbm_testing
         - bbbm_testing_and_treatment
-    input_data:
-      artifact_path:
-        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/united_states_of_america.hdf'
-        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/china.hdf'
-        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/brazil.hdf'
-        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/germany.hdf'
-        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/israel.hdf'
-        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/japan.hdf'
-        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/spain.hdf'
-        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/sweden.hdf'
-        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/taiwan_(province_of_china).hdf'
-        - '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/united_kingdom.hdf'
