@@ -187,20 +187,18 @@ def get_random_variable(draw: int, seed: str, distribution: stats.rv_continuous)
 def get_timedelta_from_step_size(
     step_size: int, time_steps: int | float | pd.Series[float] = 1
 ) -> pd.Timedelta | pd.Series:
-    """Convert step size and time steps to timedelta.
+    """Convert step size and time steps to days.
 
     Parameters
     ----------
-    step_size : int
+    step_size
         The step size in days.
-    time_steps : int | float | pd.Series, default 1
-        Number of time steps. Can be a scalar (int/float) or a pandas Series.
+    time_steps
+        Number of time steps
 
     Returns
     -------
-    pd.Timedelta | pd.Series
-        A single Timedelta if time_steps is a scalar, or a Series of Timedeltas
-        if time_steps is a Series.
+        The number of days that span across the given time steps
     """
     if isinstance(time_steps, pd.Series):
         return pd.to_timedelta(time_steps * step_size, unit="D")

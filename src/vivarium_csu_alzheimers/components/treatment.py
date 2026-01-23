@@ -27,6 +27,7 @@ from vivarium_csu_alzheimers.constants.data_values import (
     DWELL_TIME_TREATMENT_EFFECT_TIMESTEPS,
     DWELL_TIME_WANING_EFFECT_TIMESTEPS,
     TREATMENT_COMPLETION_PROBABILITY,
+    TREATMENT_FULL_DURATION,
     TREATMENT_PROBS_RAMP,
 )
 from vivarium_csu_alzheimers.constants.models import TREATMENT_DISEASE_MODEL
@@ -128,13 +129,13 @@ class Treatment(Component):
         )
         builder.value.register_value_modifier(
             "treatment_effect.dwell_time",
-            modifier=self.get_treatment_effect_duration,
+            modifier=self.modify_dwell_time,
             component=self,
             required_resources=[COLUMNS.TREATMENT_DURATION, "treatment_effect.dwell_time"],
         )
         builder.value.register_value_modifier(
             "waning_effect.dwell_time",
-            modifier=self.get_waning_effect_duration,
+            modifier=self.modify_dwell_time,
             component=self,
             required_resources=[COLUMNS.TREATMENT_DURATION, "waning_effect.dwell_time"],
         )
@@ -197,15 +198,17 @@ class Treatment(Component):
                 COLUMNS.TREATMENT_STATE,
                 COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME,
                 COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT,
+                COLUMNS.TREATMENT_DURATION,
             ],
-        ] = [TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE, event_time, 1]
-        # Update treatment duration for simulants waiting for treatment
-        update.loc[
-            start_treatment_idx, COLUMNS.TREATMENT_DURATION
-        ] = self.get_treatment_duration(start_treatment_idx)
+        ] = [
+            TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE,
+            event_time,
+            1,
+            self.get_treatment_duration(start_treatment_idx),
+        ]
 
         update.loc[
-            update.index.isin(decline_treatment_idx),
+            decline_treatment_idx,
             [
                 COLUMNS.TREATMENT_STATE,
                 COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_TIME,
@@ -366,10 +369,10 @@ class Treatment(Component):
         months_of_treatment.loc[waiting_for_treatment.difference(short_treatment_idx)] = 9
         return months_of_treatment
 
-    def get_treatment_effect_duration(
+    def modify_dwell_time(
         self, index: pd.Index, target: pd.Series[float]
     ) -> pd.Series[float]:
-        """Returns the treatment effect duration for each simulant. Scale effect duration by dwell time.
+        """Returns the modified dwell time for treatment and waning effect states.
 
         Parameters
         ----------
@@ -380,40 +383,13 @@ class Treatment(Component):
 
         Returns
         -------
-        pd.Series[float]
-            Modified dwell time in days (as float)
+            Modified dwell time in days
         """
         treatment_length = (
             self.population_view.subview(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
         )
         # Treatment length is in months, target is dwell time in days (float)
-        effect_duration = (treatment_length / 9.0) * target
-        # Round to nearest timestep
-        effect_duration = (effect_duration / self.step_size).round() * self.step_size
-        return effect_duration
-
-    def get_waning_effect_duration(
-        self, index: pd.Index, target: pd.Series[float]
-    ) -> pd.Series[float]:
-        """Returns the waning effect duration for each simulant. Scale effect duration by dwell time.
-
-        Parameters
-        ----------
-        index
-            Index of simulants to calculate duration for
-        target
-            Dwell time in days
-
-        Returns
-        -------
-        pd.Series[float]
-            Modified dwell time in days (as float)
-        """
-        treatment_length = (
-            self.population_view.subview(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
-        )
-        # Treatment length is in months, target is dwell time in days (float)
-        effect_duration = (treatment_length / 9.0) * target
+        effect_duration = (treatment_length / TREATMENT_FULL_DURATION) * target
         # Round to nearest timestep
         effect_duration = (effect_duration / self.step_size).round() * self.step_size
         return effect_duration
@@ -501,7 +477,6 @@ class TreatmentRiskEffect(RiskEffect):
             exposure = self.exposure(index)
             relative_risk = pd.Series(index=index, dtype=float)
 
-            # TODO: update to combine states, check artifact
             affected_states = [
                 TREATMENT_DISEASE_MODEL.TREATMENT_EFFECT,
                 TREATMENT_DISEASE_MODEL.WANING_EFFECT,
