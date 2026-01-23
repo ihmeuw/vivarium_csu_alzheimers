@@ -198,14 +198,11 @@ class Treatment(Component):
                 COLUMNS.TREATMENT_STATE,
                 COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME,
                 COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT,
-                COLUMNS.TREATMENT_DURATION,
             ],
-        ] = [
-            TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE,
-            event_time,
-            1,
-            self.get_treatment_duration(start_treatment_idx),
-        ]
+        ] = [TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE, event_time, 1]
+        update.loc[
+            start_treatment_idx, COLUMNS.TREATMENT_DURATION
+        ] = self.get_treatment_duration(start_treatment_idx)
 
         update.loc[
             decline_treatment_idx,
