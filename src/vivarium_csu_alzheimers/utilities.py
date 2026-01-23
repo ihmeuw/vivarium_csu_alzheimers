@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import click
@@ -182,5 +184,23 @@ def get_random_variable(draw: int, seed: str, distribution: stats.rv_continuous)
     return distribution.rvs()
 
 
-def get_timedelta_from_step_size(step_size: int, time_steps: int = 1) -> pd.Timedelta:
-    return pd.Timedelta(days=time_steps * step_size)
+def get_timedelta_from_step_size(
+    step_size: int, time_steps: int | float | pd.Series[float] = 1
+) -> pd.Timedelta | pd.Series:
+    """Convert step size and time steps to days.
+
+    Parameters
+    ----------
+    step_size
+        The step size in days.
+    time_steps
+        Number of time steps
+
+    Returns
+    -------
+        The number of days that span across the given time steps
+    """
+    if isinstance(time_steps, pd.Series):
+        return pd.to_timedelta(time_steps * step_size, unit="D")
+    else:
+        return pd.Timedelta(days=time_steps * step_size)
