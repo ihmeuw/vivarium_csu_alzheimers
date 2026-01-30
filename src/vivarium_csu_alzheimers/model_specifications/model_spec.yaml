@@ -24,8 +24,7 @@ components:
 configuration:
     input_data:
         input_draw_number: 0
-        artifact_path: /home/albrja/scratch/artifacts/united_states_of_america.hdf
-        # artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model8.3/united_states_of_america.hdf'
+        # artifact_path: '/mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model10.0/united_states_of_america.hdf'
     interpolation:
         order: 0
         extrapolate: True
@@ -65,4 +64,4 @@ configuration:
                 - bbbm_test_results
         
     intervention:
-        scenario: bbbm_testing_and_treatment  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
+        scenario: baseline  # can be 'baseline', 'bbbm_testing', or 'bbbm_testing_and_treatment'
