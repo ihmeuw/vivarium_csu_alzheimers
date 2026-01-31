@@ -228,7 +228,7 @@ class Testing(Component):
 
         time_steps_until_next_test = self.randomness.choice(
             index=simulants[eligible_sims].index,
-            choices=TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
+            choices=TIME_STEPS_UNTIL_NEXT_BBBM_TEST[:-1],
             additional_key="bbbm_time_until_next_test_history",
         )
         interval_choices = time_steps_until_next_test.apply(
