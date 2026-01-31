@@ -17,9 +17,9 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_TEST_RESULTS,
     BBBM_TESTING_RATES,
     BBBM_TESTING_START_DATE,
-    BBBM_TIMESTEPS_UNTIL_RETEST,
     COLUMNS,
     TESTING_STATES,
+    TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
 from vivarium_csu_alzheimers.utilities import get_timedelta_from_step_size

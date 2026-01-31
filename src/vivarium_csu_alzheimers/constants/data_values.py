@@ -155,7 +155,6 @@ CSF_PET_LOCATION_TESTING_RATES = {
 
 BBBM_AGE_MIN = 60
 BBBM_AGE_MAX = 80
-BBBM_TIMESTEPS_UNTIL_RETEST = 6  # three years b/c time step is ~6 months
 BBBM_POSITIVE_DIAGNOSIS_PROBABILITY = 0.9
 
 
@@ -175,6 +174,7 @@ BBBM_TESTING_RATES = [
     (pd.Timestamp("2055-01-01"), 0.6),  # plateaus from here on out
 ]
 BBBM_TESTING_START_DATE = BBBM_TESTING_RATES[0][0]
+TIME_STEPS_UNTIL_NEXT_BBBM_TEST = [6.0, 7.0, 8.0, 9.0, 10.0]
 
 # TODO: update time start of ramp with test model updates
 TREATMENT_PROBS_RAMP = [
