@@ -170,7 +170,18 @@ class Testing(Component):
         # Update BBBM-specific columns for those who had BBBM tests
         pop.loc[tested_mask, COLUMNS.TESTING_STATE] = TESTING_STATES.BBBM
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_RESULT] = test_results
-        pop.loc[tested_mask, COLUMNS.BBBM_TEST_DATE] = event_time
+        # Choose next test date for negative tests
+        negative_test = (test_results == BBBM_TEST_RESULTS.NEGATIVE) & tested_mask
+        time_steps_until_next_test = self.randomness.choice(
+            index=pop[negative_test].index,
+            choices=TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
+            additional_key="bbbm_time_until_next_test",
+        )
+        pop.loc[
+            negative_test, COLUMNS.BBBM_TEST_DATE
+        ] = event_time + get_timedelta_from_step_size(
+            self.step_size, time_steps_until_next_test
+        )
 
     def _get_bbbm_eligible_simulants(
         self, pop: pd.DataFrame, event_time: Time
@@ -178,9 +189,7 @@ class Testing(Component):
         eligible_state = pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
         eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
         eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
-            pop[COLUMNS.BBBM_TEST_DATE]
-            <= event_time
-            - get_timedelta_from_step_size(self.step_size, BBBM_TIMESTEPS_UNTIL_RETEST)
+            pop[COLUMNS.BBBM_TEST_DATE] <= event_time
         )
         eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
         return eligible_state & eligible_age & eligible_history & eligible_results
