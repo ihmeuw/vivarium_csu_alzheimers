@@ -86,7 +86,7 @@ class Testing(Component):
             test_history_mask = bbbm_eligible_mask & (
                 pop[COLUMNS.TESTING_PROPENSITY] < testing_rate
             )
-            pop[COLUMNS.BBBM_TEST_DATE] = self._generate_bbbm_testing_history(
+            pop[COLUMNS.BBBM_TEST_DATE] = self._generate_bbbm_testing_data(
                 pop, test_history_mask, event_time
             )
 
@@ -202,27 +202,37 @@ class Testing(Component):
 
         return np.interp(event_time.value, timestamps, rates)
 
-    def _generate_bbbm_testing_history(
+    def _generate_bbbm_testing_data(
         self, simulants: pd.DataFrame, eligible_sims: pd.Series, time_of_event: Time
     ) -> pd.Series[Time]:
-        """Generates previous BBBM test data for new simulants between 0 and 2.5 years prior
-        to entering the simulation."""
+        """Generates BBBM test data for new simulants next BBBM test 0 to 4.5 into the future.
+        This will sample the 3-5 year range for time until the next test. It will then sample
+        how far along that simulant is in that range to determine the test date. For example,
+        if a simulant is intering the simulation on 2030-01-01, and CRN samples that their test
+        will be 4 years after their previous test, then then will take a sample between 0 and 4
+        years. If that sample is 1 year, their COLUMNS.BBBM_TEST_DATE will be 2033-01-01.
+        """
 
         test_dates = simulants[COLUMNS.BBBM_TEST_DATE].copy()
         if not self.scenario.bbbm_testing or time_of_event < BBBM_TESTING_START_DATE:
             return test_dates
 
-        test_date_options = [
-            time_of_event + get_timedelta_from_step_size(self.step_size, time_step)
-            for time_step in range(0, -6, -1)
-            if time_of_event + get_timedelta_from_step_size(self.step_size, time_step)
-            >= BBBM_TESTING_START_DATE
-        ]
-        # Calculate test results
-        test_dates.loc[eligible_sims] = self.randomness.choice(
+        time_steps_until_next_test = self.randomness.choice(
             index=simulants[eligible_sims].index,
-            choices=test_date_options,
-            additional_key="bbbm_test_date_history",
+            choices=TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
+            additional_key="bbbm_time_until_next_test_history",
+        )
+        interval_choices = time_steps_until_next_test.apply(
+            lambda x: list(np.arange(0.0, x + 1.0, 1.0))
+        )
+        time_into_test_interval = self.randomness.choice(
+            index=simulants[eligible_sims].index,
+            choices=interval_choices,
+            additional_key="bbbm_time_into_test_interval_history",
+        )
+        steps_until_next_test = time_steps_until_next_test - time_into_test_interval
+        test_dates.loc[eligible_sims] = time_of_event + get_timedelta_from_step_size(
+            self.step_size, steps_until_next_test
         )
 
         return test_dates
