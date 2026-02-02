@@ -11,7 +11,6 @@ from vivarium.framework.randomness import get_hash
 from vivarium_public_health.risks.data_transformations import pivot_categorical
 
 from vivarium_csu_alzheimers.constants import metadata
-from vivarium_csu_alzheimers.constants.data_values import BBBM_TIMESTEPS_UNTIL_RETEST
 
 
 def len_longest_location() -> int:

@@ -177,6 +177,7 @@ class Testing(Component):
             choices=TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
             additional_key="bbbm_time_until_next_test",
         )
+        breakpoint()
         pop.loc[
             negative_test, COLUMNS.BBBM_TEST_DATE
         ] = event_time + get_timedelta_from_step_size(
@@ -231,17 +232,18 @@ class Testing(Component):
             choices=TIME_STEPS_UNTIL_NEXT_BBBM_TEST[:-1],
             additional_key="bbbm_time_until_next_test_history",
         )
-        interval_choices = time_steps_until_next_test.apply(
-            lambda x: list(np.arange(0.0, x + 1.0, 1.0))
+        # Sample uniformly from [0, time_steps_until_next_test] for each simulant
+        time_steps_into_test_interval = np.round(
+            self.randomness.get_draw(
+                index=simulants[eligible_sims].index,
+                additional_key="bbbm_time_into_test_interval_history",
+            )
+            * time_steps_until_next_test
         )
-        time_into_test_interval = self.randomness.choice(
-            index=simulants[eligible_sims].index,
-            choices=interval_choices,
-            additional_key="bbbm_time_into_test_interval_history",
-        )
-        steps_until_next_test = time_steps_until_next_test - time_into_test_interval
+        steps_until_next_test = time_steps_until_next_test - time_steps_into_test_interval
         test_dates.loc[eligible_sims] = time_of_event + get_timedelta_from_step_size(
             self.step_size, steps_until_next_test
         )
+        breakpoint()
 
         return test_dates

@@ -10,7 +10,6 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AGE_MAX,
     BBBM_AGE_MIN,
     BBBM_TEST_RESULTS,
-    BBBM_TIMESTEPS_UNTIL_RETEST,
     COLUMNS,
     TESTING_STATES,
 )
@@ -257,11 +256,8 @@ class BBBMTestingObserver(PublicHealthObserver):
         aged_in = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (
             pop[COLUMNS.AGE] < BBBM_AGE_MIN + step_size_in_years
         )
-        retest = pop[
-            COLUMNS.BBBM_TEST_DATE
-        ] == self.clock() + self.step_size() - get_timedelta_from_step_size(
-            self.step_size().days, BBBM_TIMESTEPS_UNTIL_RETEST
-        )
+        # Retest population will be current time - clock + step size = event time
+        retest = pop[COLUMNS.BBBM_TEST_DATE] == self.clock() + self.step_size()
 
         return sum(eligible_baseline & (new_entrants | aged_in | retest))
 
@@ -271,9 +267,7 @@ class BBBMTestingObserver(PublicHealthObserver):
         eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
         event_time = self.clock() + self.step_size()
         eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
-            pop[COLUMNS.BBBM_TEST_DATE]
-            <= event_time
-            - get_timedelta_from_step_size(self.step_size().days, BBBM_TIMESTEPS_UNTIL_RETEST)
+            pop[COLUMNS.BBBM_TEST_DATE] <= event_time
         )
         eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
 
