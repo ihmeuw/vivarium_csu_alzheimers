@@ -180,8 +180,6 @@ class Testing(Component):
             choices=TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
             additional_key="bbbm_time_until_next_test",
         )
-        if event_time.year >= 2027:
-            breakpoint()
         pop.loc[
             negative_test, COLUMNS.NEXT_BBBM_TEST_DATE
         ] = event_time + get_timedelta_from_step_size(
@@ -248,6 +246,5 @@ class Testing(Component):
         test_dates.loc[eligible_sims] = time_of_event + get_timedelta_from_step_size(
             self.step_size, steps_until_next_test
         )
-        breakpoint()
 
         return test_dates

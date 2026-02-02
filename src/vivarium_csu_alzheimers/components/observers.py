@@ -260,11 +260,9 @@ class BBBMTestingObserver(PublicHealthObserver):
         # Retest population will be simulants with previous test date >= 3 years ago
         retest = pop[
             COLUMNS.BBBM_TEST_DATE
-        ] <= self.clock() + self.step_size() - get_timedelta_from_step_size(
+        ] == self.clock() + self.step_size() - get_timedelta_from_step_size(
             self.step_size().days, TIME_STEPS_UNTIL_NEXT_BBBM_TEST[0]
         )
-        if (self.clock() + self.step_size()) >= 2027:
-            breakpoint()
 
         return sum(eligible_baseline & (new_entrants | aged_in | retest))
 
