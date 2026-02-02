@@ -88,6 +88,7 @@ class __Columns(NamedTuple):
         f"{TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE}_event_count"
     )
     TREATMENT_DURATION: str = "treatment_duration"
+    NEXT_BBBM_TEST_DATE: str = "next_bbbm_test_date"
 
 
 COLUMNS = __Columns()
