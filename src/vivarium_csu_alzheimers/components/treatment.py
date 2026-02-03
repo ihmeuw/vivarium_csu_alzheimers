@@ -200,9 +200,10 @@ class Treatment(Component):
                 COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT,
             ],
         ] = [TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE, event_time, 1]
-        update.loc[
-            start_treatment_idx, COLUMNS.TREATMENT_DURATION
-        ] = self.get_treatment_duration(start_treatment_idx)
+        if not start_treatment_idx.empty:
+            update.loc[
+                start_treatment_idx, COLUMNS.TREATMENT_DURATION
+            ] = self.get_treatment_duration(start_treatment_idx)
 
         update.loc[
             decline_treatment_idx,
@@ -215,16 +216,23 @@ class Treatment(Component):
 
         self.population_view.update(update)
 
-    def on_time_step(self, event: Event) -> None:
+    def on_time_step_cleanup(self, event: Event) -> None:
+        """Set treatment duration for simulants in waiting_for_treatment state.
+
+        This runs after the state machine transitions (priority 8) to ensure
+        all simulants who entered waiting_for_treatment during this time step
+        have their treatment duration set.
+        """
         pop = self.population_view.get(event.index)
         waiting_for_treatment_idx = pop.index[
             pop[COLUMNS.TREATMENT_STATE]
             == TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE
         ]
-        pop.loc[
-            waiting_for_treatment_idx, COLUMNS.TREATMENT_DURATION
-        ] = self.get_treatment_duration(waiting_for_treatment_idx)
-        self.population_view.update(pop)
+        if not waiting_for_treatment_idx.empty:
+            pop.loc[
+                waiting_for_treatment_idx, COLUMNS.TREATMENT_DURATION
+            ] = self.get_treatment_duration(waiting_for_treatment_idx)
+            self.population_view.update(pop)
 
     def _create_treatment_mode(self) -> TreatmentModel:
 

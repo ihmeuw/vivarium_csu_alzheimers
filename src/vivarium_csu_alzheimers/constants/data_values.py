@@ -176,8 +176,9 @@ BBBM_TESTING_RATES = [
 ]
 BBBM_TESTING_START_DATE = BBBM_TESTING_RATES[0][0]
 
+# TODO: update time start of ramp with test model updates
 TREATMENT_PROBS_RAMP = [
-    (pd.Timestamp("2027-01-01"), 0.0),
+    (pd.Timestamp("2030-01-01"), 0.0),
     (pd.Timestamp("2035-01-01") + pd.Timedelta(days=182), 0.3),
     (pd.Timestamp("2100-01-01"), 0.8),
 ]
