@@ -179,7 +179,7 @@ TIME_STEPS_UNTIL_NEXT_BBBM_TEST = [6.0, 7.0, 8.0, 9.0, 10.0]
 
 # TODO: update time start of ramp with test model updates
 TREATMENT_PROBS_RAMP = [
-    (pd.Timestamp("2027-01-01"), 0.0),
+    (pd.Timestamp("2030-01-01"), 0.0),
     (pd.Timestamp("2035-01-01") + pd.Timedelta(days=182), 0.3),
     (pd.Timestamp("2100-01-01"), 0.8),
 ]
