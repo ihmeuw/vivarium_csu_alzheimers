@@ -257,11 +257,12 @@ class BBBMTestingObserver(PublicHealthObserver):
         aged_in = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (
             pop[COLUMNS.AGE] < BBBM_AGE_MIN + step_size_in_years
         )
-        # Retest population will be simulants with previous test date >= 3 years ago
+        # Retest population will be simulants with previous test date >= 3 years ago,
+        # so we find newly eligible simulants whose last test is exactly 6 time steps ago
         retest = pop[
             COLUMNS.BBBM_TEST_DATE
         ] == self.clock() + self.step_size() - get_timedelta_from_step_size(
-            self.step_size().days, TIME_STEPS_UNTIL_NEXT_BBBM_TEST[0]
+            self.step_size().days, min(TIME_STEPS_UNTIL_NEXT_BBBM_TEST)
         )
 
         return sum(eligible_baseline & (new_entrants | aged_in | retest))
@@ -275,7 +276,7 @@ class BBBMTestingObserver(PublicHealthObserver):
             pop[COLUMNS.BBBM_TEST_DATE]
             <= event_time
             - get_timedelta_from_step_size(
-                self.step_size().days, TIME_STEPS_UNTIL_NEXT_BBBM_TEST[0]
+                self.step_size().days, min(TIME_STEPS_UNTIL_NEXT_BBBM_TEST)
             )
         )
         eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
