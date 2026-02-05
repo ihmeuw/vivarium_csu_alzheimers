@@ -88,6 +88,7 @@ class __Columns(NamedTuple):
         f"{TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE}_event_count"
     )
     TREATMENT_DURATION: str = "treatment_duration"
+    NEXT_BBBM_TEST_DATE: str = "next_bbbm_test_date"
 
 
 COLUMNS = __Columns()
@@ -153,10 +154,9 @@ CSF_PET_LOCATION_TESTING_RATES = {
 }
 
 
-BBBM_AGE_MIN = 60
+BBBM_AGE_MIN = 65
 BBBM_AGE_MAX = 80
-BBBM_TIMESTEPS_UNTIL_RETEST = 6  # three years b/c time step is ~6 months
-BBBM_POSITIVE_DIAGNOSIS_PROBABILITY = 0.9
+BBBM_POSITIVE_DIAGNOSIS_PROBABILITY = 0.5
 
 
 class __BBBMTestResults(NamedTuple):
@@ -167,34 +167,22 @@ class __BBBMTestResults(NamedTuple):
 
 BBBM_TEST_RESULTS = __BBBMTestResults()
 
-# bbbm testing rates are piecewise-linear starting at 2030 and maxing out in 2045
+# bbbm testing rates are piecewise-linear starting at 2027 and maxing out in 2045
 BBBM_TESTING_RATES = [
-    (pd.Timestamp("2030-01-01"), 0.1),  # step increase from 0 in 2030
-    (pd.Timestamp("2035-01-01"), 0.2),
-    (pd.Timestamp("2040-01-01"), 0.4),
-    (pd.Timestamp("2045-01-01"), 0.6),  # plateaus from here on out
+    (pd.Timestamp("2027-01-01"), 0.0),  # step increase from 0 in 2027
+    (pd.Timestamp("2035-01-01") + pd.Timedelta(days=182), 0.1),
+    (pd.Timestamp("2045-01-01"), 0.5),
+    (pd.Timestamp("2055-01-01"), 0.6),  # plateaus from here on out
 ]
 BBBM_TESTING_START_DATE = BBBM_TESTING_RATES[0][0]
+TIME_STEPS_UNTIL_NEXT_BBBM_TEST = [6.0, 7.0, 8.0, 9.0, 10.0]
 
-# TODO: update time start of ramp with test model updates
 TREATMENT_PROBS_RAMP = [
-    (pd.Timestamp("2030-01-01"), 0.0),
+    (pd.Timestamp("2027-01-01"), 0.0),
     (pd.Timestamp("2035-01-01") + pd.Timedelta(days=182), 0.3),
     (pd.Timestamp("2100-01-01"), 0.8),
 ]
 
-# LOCATION_TREATMENT_PROBS = {
-#     "united_states_of_america": 0.3,
-#     "germany": TREATMENT_PROBS_RAMP,
-#     "spain": TREATMENT_PROBS_RAMP,
-#     "sweden": TREATMENT_PROBS_RAMP,
-#     "united_kingdom": TREATMENT_PROBS_RAMP,
-#     "japan": 0.8,
-#     "israel": TREATMENT_PROBS_RAMP,
-#     "taiwan_(province_of_china)": TREATMENT_PROBS_RAMP,
-#     "brazil": TREATMENT_PROBS_RAMP,
-#     "china": TREATMENT_PROBS_RAMP,
-# }
 DWELL_TIME_AWAITING_EFFECT_TIMESTEPS = 1  # 6 months
 DWELL_TIME_TREATMENT_EFFECT_TIMESTEPS = 12  # 6 years
 DWELL_TIME_WANING_EFFECT_TIMESTEPS = 22  # 11 years

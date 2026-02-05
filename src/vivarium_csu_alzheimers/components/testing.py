@@ -17,9 +17,9 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_TEST_RESULTS,
     BBBM_TESTING_RATES,
     BBBM_TESTING_START_DATE,
-    BBBM_TIMESTEPS_UNTIL_RETEST,
     COLUMNS,
     TESTING_STATES,
+    TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
 from vivarium_csu_alzheimers.utilities import get_timedelta_from_step_size
@@ -39,6 +39,7 @@ class Testing(Component):
             COLUMNS.TESTING_PROPENSITY,
             COLUMNS.TESTING_STATE,
             COLUMNS.BBBM_TEST_DATE,
+            COLUMNS.NEXT_BBBM_TEST_DATE,
             COLUMNS.BBBM_TEST_RESULT,
             COLUMNS.BBBM_TEST_EVER_ELIGIBLE,
         ]
@@ -77,6 +78,7 @@ class Testing(Component):
         pop[COLUMNS.BBBM_TEST_RESULT] = BBBM_TEST_RESULTS.NOT_TESTED
         pop[COLUMNS.BBBM_TEST_EVER_ELIGIBLE] = False
         pop[COLUMNS.BBBM_TEST_DATE] = pd.NaT
+        pop[COLUMNS.NEXT_BBBM_TEST_DATE] = pd.NaT
 
         # Update to reflect history
         event_time = pop_data.creation_time + get_timedelta_from_step_size(self.step_size)
@@ -86,13 +88,13 @@ class Testing(Component):
             test_history_mask = bbbm_eligible_mask & (
                 pop[COLUMNS.TESTING_PROPENSITY] < testing_rate
             )
-            pop[COLUMNS.BBBM_TEST_DATE] = self._generate_bbbm_testing_history(
+            pop[COLUMNS.NEXT_BBBM_TEST_DATE] = self._generate_bbbm_testing_data(
                 pop, test_history_mask, event_time
             )
 
         self._update_baseline_testing(pop)
 
-        bbbm_tested_now_mask = pop[COLUMNS.BBBM_TEST_DATE] == event_time
+        bbbm_tested_now_mask = pop[COLUMNS.NEXT_BBBM_TEST_DATE] == event_time
         self._update_bbbm_testing(
             pop,
             bbbm_tested_now_mask,
@@ -168,19 +170,29 @@ class Testing(Component):
         )
 
         # Update BBBM-specific columns for those who had BBBM tests
+        pop.loc[tested_mask, COLUMNS.BBBM_TEST_DATE] = event_time
         pop.loc[tested_mask, COLUMNS.TESTING_STATE] = TESTING_STATES.BBBM
         pop.loc[tested_mask, COLUMNS.BBBM_TEST_RESULT] = test_results
-        pop.loc[tested_mask, COLUMNS.BBBM_TEST_DATE] = event_time
+        # Choose next test date for negative tests
+        negative_test = (test_results == BBBM_TEST_RESULTS.NEGATIVE) & tested_mask
+        time_steps_until_next_test = self.randomness.choice(
+            index=pop[negative_test].index,
+            choices=TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
+            additional_key="bbbm_time_until_next_test",
+        )
+        pop.loc[
+            negative_test, COLUMNS.NEXT_BBBM_TEST_DATE
+        ] = event_time + get_timedelta_from_step_size(
+            self.step_size, time_steps_until_next_test
+        )
 
     def _get_bbbm_eligible_simulants(
         self, pop: pd.DataFrame, event_time: Time
     ) -> pd.Series[bool]:
         eligible_state = pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
         eligible_age = (pop[COLUMNS.AGE] >= BBBM_AGE_MIN) & (pop[COLUMNS.AGE] < BBBM_AGE_MAX)
-        eligible_history = (pop[COLUMNS.BBBM_TEST_DATE].isna()) | (
-            pop[COLUMNS.BBBM_TEST_DATE]
-            <= event_time
-            - get_timedelta_from_step_size(self.step_size, BBBM_TIMESTEPS_UNTIL_RETEST)
+        eligible_history = (pop[COLUMNS.NEXT_BBBM_TEST_DATE].isna()) | (
+            pop[COLUMNS.NEXT_BBBM_TEST_DATE] <= event_time
         )
         eligible_results = pop[COLUMNS.BBBM_TEST_RESULT] != BBBM_TEST_RESULTS.POSITIVE
         return eligible_state & eligible_age & eligible_history & eligible_results
@@ -202,27 +214,37 @@ class Testing(Component):
 
         return np.interp(event_time.value, timestamps, rates)
 
-    def _generate_bbbm_testing_history(
+    def _generate_bbbm_testing_data(
         self, simulants: pd.DataFrame, eligible_sims: pd.Series, time_of_event: Time
     ) -> pd.Series[Time]:
-        """Generates previous BBBM test data for new simulants between 0 and 2.5 years prior
-        to entering the simulation."""
+        """Generates BBBM test data for new simulants next BBBM test 0 to 4.5 into the future.
+        This will sa                                            mple the 3-5 year range for time until the next test. It will then sample
+        how far along that simulant is in that range to determine the test date. For example,
+        if a simulant is intering the simulation on 2030-01-01, and CRN samples that their test
+        will be 4 years after their previous test, then then will take a sample between 0 and 4
+        years. If that sample is 1 year, their COLUMNS.BBBM_TEST_DATE will be 2033-01-01.
+        """
 
-        test_dates = simulants[COLUMNS.BBBM_TEST_DATE].copy()
+        test_dates = simulants[COLUMNS.NEXT_BBBM_TEST_DATE].copy()
         if not self.scenario.bbbm_testing or time_of_event < BBBM_TESTING_START_DATE:
             return test_dates
 
-        test_date_options = [
-            time_of_event + get_timedelta_from_step_size(self.step_size, time_step)
-            for time_step in range(0, -6, -1)
-            if time_of_event + get_timedelta_from_step_size(self.step_size, time_step)
-            >= BBBM_TESTING_START_DATE
-        ]
-        # Calculate test results
-        test_dates.loc[eligible_sims] = self.randomness.choice(
+        time_steps_until_next_test = self.randomness.choice(
             index=simulants[eligible_sims].index,
-            choices=test_date_options,
-            additional_key="bbbm_test_date_history",
+            choices=TIME_STEPS_UNTIL_NEXT_BBBM_TEST[:-1],
+            additional_key="bbbm_time_until_next_test_history",
+        )
+        # Sample uniformly from [0, time_steps_until_next_test] for each simulant
+        time_steps_into_test_interval = np.round(
+            self.randomness.get_draw(
+                index=simulants[eligible_sims].index,
+                additional_key="bbbm_time_into_test_interval_history",
+            )
+            * time_steps_until_next_test
+        )
+        steps_until_next_test = time_steps_until_next_test - time_steps_into_test_interval
+        test_dates.loc[eligible_sims] = time_of_event + get_timedelta_from_step_size(
+            self.step_size, steps_until_next_test
         )
 
         return test_dates
