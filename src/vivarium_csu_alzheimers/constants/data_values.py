@@ -170,7 +170,7 @@ BBBM_TEST_RESULTS = __BBBMTestResults()
 # bbbm testing rates are piecewise-linear starting at 2027 and maxing out in 2045
 BBBM_TESTING_RATES = [
     (pd.Timestamp("2027-01-01"), 0.0),  # step increase from 0 in 2027
-    (pd.Timestamp("2035-01-01") + pd.Timedelta(days=182), 0.1),
+    (pd.Timestamp("2030-01-01") + pd.Timedelta(days=182), 0.1),
     (pd.Timestamp("2045-01-01"), 0.5),
     (pd.Timestamp("2055-01-01"), 0.6),  # plateaus from here on out
 ]
