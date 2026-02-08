@@ -27,7 +27,7 @@
 | Code knots | Year | Rate |
 |---|---|---|
 | 1 | 2027-01-01 | 0% |
-| 2 | 2035-07-01 | 10% |
+| 2 | 2030-07-01 | 10% |
 | 3 | 2045-01-01 | 50% |
 | 4 | 2055-01-01 | 60% (plateau) |
 
@@ -245,8 +245,10 @@ Notebook: `tests/integration_tests.ipynb`
 - Propensity check (threshold ~10%):
   - Low-propensity (<0.10): 294 eligible, **156 tested (53.1%)**
   - High-propensity (>=0.10): 3,684 eligible, **21 tested (0.6%)**
-- The 53% tested-rate among low-propensity is expected: retesting intervals (3-5yr)
-  mean not everyone is due for a test at any given snapshot
+- The 53% tested-rate among low-propensity is expected: new simulants entering via
+  AlzheimersIncidence are assigned a future first-test date (0-4.5 years out) to avoid
+  testing surges. Investigation confirms 100% of untested low-propensity simulants are
+  recent entrants (post-2030) with future `next_bbbm_test_date`
 - The 0.6% in high-propensity is from the rate increasing past 10% by end-2030
 
 **At ~end of 2035** (sim time 2035-12-15):
@@ -278,9 +280,150 @@ At 2045, scenario comparison:
 Treatment scenario retains more in BBBM and has fewer MCI/Dementia — **confirms
 treatment effect on BBBM→MCI progression**.
 
-### Test 4: Baseline Sanity
+### Test 4: Baseline Verification
 
 At 2035 (baseline scenario):
 - BBBM tests: **0** (correct)
 - Non-susceptible treatment: **0** (correct)
 - CSF/PET testing: 1,580 PET + 730 CSF (working correctly)
+
+## 9. Scenario Comparison Visualization
+
+Notebook: `tests/scenario_comparison.ipynb`
+
+Runs all 3 scenarios (baseline, bbbm_testing, bbbm_testing_and_treatment) from 2022
+to 2060 and collects per-step snapshots. Produces:
+
+1. **Disease state trajectories** — BBBM, MCI, Dementia counts over time per scenario
+2. **Differences from baseline** — isolates the intervention effect
+3. **Testing coverage** — BBBM-positive tests and eligible population over time
+4. **Treatment activity** — simulants in treatment pipeline and active treatment effect
+5. **Stacked area charts** — disease state proportions per scenario
+6. **Animated bar chart** — HTML5 video of disease state counts across scenarios
+7. **Summary table** — counts at key years (2030, 2035, 2040, 2045, 2050, 2055)
+
+Key observations from the visualization:
+- Testing and treatment effects become visible after ~2030 (when testing starts ramping)
+- Treatment effect compounds over time: by 2060, the gap in MCI/Dementia counts widens
+- The treatment scenario retains more simulants in BBBM state (slower progression)
+- Baseline has zero BBBM testing and zero treatment activity throughout
+
+## 10. Deep Dive: Why Testing/Treatment Numbers Seem Modest at 2055
+
+At 2055, the summary table shows (for `bbbm_testing_and_treatment`, 10k pop):
+
+| Metric | Value |
+|---|---|
+| Alive | ~20,100 |
+| BBBM state | ~9,500 (47%) |
+| BBBM+ (tested positive) | ~2,900 (14% of alive) |
+| In treatment pipeline | ~1,200 (41% of BBBM+) |
+
+This may look low given a 60% testing rate and ~46% treatment probability, but
+the numbers are correct. Here is why.
+
+### Rate functions verified
+
+| Year | Testing rate | Treatment prob |
+|---|---|---|
+| 2027 | 1.4% | 1.7% |
+| 2030 | 10.0% | 12.3% |
+| 2035 | 23.8% | 30.0% |
+| 2040 | 37.6% | 33.9% |
+| 2045 | 50.5% | 37.8% |
+| 2050 | 55.5% | 41.6% |
+| 2055 | 60.0% | 45.5% |
+
+Both functions match the spec knots and interpolate correctly.
+
+### Why only ~2,900 BBBM+ out of ~9,500 BBBM?
+
+Three compounding filters limit who gets tested:
+
+1. **Narrow age window**: Only BBBM simulants aged 65-80 are eligible. At 2055,
+   only 43% of BBBM simulants (4,142 of 9,536) fall in this range. Half (50%)
+   are over 80 and have aged out.
+
+2. **Propensity ceiling**: The testing rate plateaus at 60%, so 40% of eligible
+   simulants will *never* be tested regardless of time.
+
+3. **Staggered first-test dates**: New entrants via `AlzheimersIncidence` get a
+   random future `next_bbbm_test_date` (0-4.5 years out). At any snapshot, recent
+   entrants haven't been tested yet. At 2055, ~900 of ~1,500 below-threshold
+   eligible simulants are recent entrants awaiting their first test.
+
+4. **50% positive diagnosis rate**: Each test only has a 50% chance of returning
+   positive, so negative-tested simulants re-enter the queue for 3-5 years.
+
+### Propensity distribution is correct (not a bug)
+
+Initial concern: 52% of remaining eligible had propensity >= 0.60, suggesting
+a non-uniform distribution. Investigation showed this is **selection bias**, not
+a bug:
+
+- Among **all** BBBM 65-80 (n=4,142): propensity >= 0.60 = **40.3%** (correct)
+- Among the **not-yet-positive** subset (n=3,210): propensity >= 0.60 = **52.0%**
+- The 932 simulants who tested positive are **100% low-propensity** (< 0.60)
+
+Removing positive-tested simulants from the denominator depletes the low-propensity
+group and inflates the high-propensity fraction. The underlying distribution is
+perfectly uniform across the full population.
+
+### Why only ~1,200 in treatment out of ~2,900 BBBM+?
+
+The treatment decision is **one-time and permanent**. When a simulant tests positive
+for BBBM, they immediately either enter treatment (propensity < treatment_prob) or
+permanently decline (`no_effect_never_treated` has no exit transitions).
+
+At 2055 (10k pop, `bbbm_testing_and_treatment`):
+- 2,946 BBBM+ alive
+- 1,215 (41.2%) entered the treatment pipeline
+- 1,731 (58.8%) permanently declined
+- 0 stuck in `susceptible_to_treatment` (all processed correctly)
+
+The 58.8% decline rate reflects the **historical average** of treatment probability
+across all years when positive tests occurred, not the current-year rate. Breakdown
+of when declined simulants tested positive:
+
+| Year | Declined | Treatment prob at time |
+|---|---|---|
+| 2029-2034 | ~27 | 9-26% |
+| 2035-2039 | ~100 | 30-33% |
+| 2040-2044 | ~291 | 34-37% |
+| 2045-2049 | ~470 | 38-41% |
+| 2050-2055 | ~843 | 42-46% |
+
+Simulants who tested positive in early years faced very low treatment probabilities,
+permanently locking them out even as the probability later rose. A simulant with
+`treatment_propensity = 0.35` who tested positive in 2040 (treatment prob ~34%)
+was permanently declined, even though by 2055 the threshold reached 46%.
+
+Treatment propensity of declined simulants confirms this:
+- 0% have propensity < 0.20 (very-low-propensity always got treated)
+- 2.3% have propensity < 0.30 (almost all early-low-propensity got treated)
+- 32.6% have propensity < 0.60 (many would qualify NOW but were locked out earlier)
+
+### Why baseline and testing-only have identical disease counts
+
+The disease state numbers (BBBM, MCI, Dementia) are identical between baseline and
+testing-only scenarios at every time point. This is correct:
+
+- Testing is pure observation — it does not affect disease progression
+- Vivarium uses Common Random Numbers (CRN) keyed by simulant attributes, so
+  disease model random draws are identical across scenarios
+- Only the `bbbm_testing_and_treatment` scenario differs because the treatment
+  RiskEffect modifies the BBBM→MCI transition rate
+
+### Consistency checks passed
+
+- Propensity distribution is uniform across the full alive population
+- 0 positive simulants stuck in `susceptible_to_treatment`
+- 0 BBBM+ simulants without a test date
+- All rate functions return correct values at all time points
+
+### Design question for the research team
+
+The permanent-decline behavior is the dominant factor limiting treatment coverage.
+Whether this is the desired model design depends on the research question — should
+simulants who declined treatment early be re-evaluated as treatment availability
+increases? Currently `no_effect_never_treated` is an absorbing state.
