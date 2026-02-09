@@ -231,6 +231,7 @@ class Testing(Component):
 
         time_steps_until_next_test = self.randomness.choice(
             index=simulants[eligible_sims].index,
+            # There should be a total of 10 options including now (0 years) to 4.5 years, in 6 month increments
             choices=TIME_STEPS_UNTIL_NEXT_BBBM_TEST[:-1],
             additional_key="bbbm_time_until_next_test_history",
         )
