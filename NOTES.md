@@ -596,15 +596,19 @@ enhancements to the vivarium framework would improve the researcher experience:
 
 ### 13.1 Configurable Logging Verbosity
 
-**Problem**: Vivarium emits extensive INFO-level logging during `InteractiveContext`
-construction and each `sim.step()` call (component registration, pipeline building,
-population table updates, etc.). In notebook contexts, this floods the output and
-obscures analysis results. Currently requires `logging.getLogger().setLevel(logging.WARNING)`
-as a workaround, which silences ALL loggers globally.
+**Problem**: Vivarium uses **loguru** (not Python's standard `logging` module) for
+all its log output. This means `logging.getLogger().setLevel(logging.WARNING)` has
+no effect on vivarium's INFO spam during `InteractiveContext` construction and
+`sim.step()` calls. The correct workaround is:
+```python
+from loguru import logger
+logger.disable("vivarium")
+```
+But this is non-obvious and catches researchers off guard.
 
 **Suggestion**: Add a `log_level` parameter to `InteractiveContext` (and/or a
-`vivarium.quiet_mode` configuration key) that sets vivarium's own loggers to the
-specified level without affecting other libraries. Something like:
+`vivarium.quiet_mode` configuration key) that configures loguru's level for vivarium
+loggers without requiring users to know about the loguru dependency:
 ```python
 sim = InteractiveContext(spec_path, configuration={'vivarium': {'log_level': 'WARNING'}})
 ```
