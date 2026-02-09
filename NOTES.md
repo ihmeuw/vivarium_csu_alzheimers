@@ -548,3 +548,141 @@ The treatment effect is implemented correctly. The seemingly high zero-benefit r
 timing, and dropout — not a bug. The treatment does provide meaningful benefit when
 it works: 4.68 additional preclinical years for the 28.2% who benefit, averaging
 1.32 years across all treated simulants.
+
+## 12. Hazard Ratio Degradation Analysis
+
+### Notebook
+- `tests/hr_degradation_analysis.ipynb` — standalone, well-commented notebook for sharing
+
+### Method
+
+Using Kaplan-Meier survival curves and Cox Proportional Hazards regression, measured
+the hazard ratio (HR) for MCI progression (treated vs control) under five increasingly
+inclusive analysis strategies. The dialed-in relative risk is RR=0.528.
+
+### Five Analysis Strategies
+
+| # | Strategy | Time zero | Censoring | Control group | Expected HR |
+|---|---|---|---|---|---|
+| 1 | As-treated (effect only) | treatment_effect start | treatment_effect end | Refused (same scenario) | ~0.53 (matches RR) |
+| 2 | As-treated (effect + waning) | treatment_effect start | waning_effect end | Refused | ~0.55-0.56 |
+| 3 | Per-protocol (full course) | treatment_effect start | None | Refused | ~0.56-0.57 |
+| 4 | From treatment offer | Pipeline entry | None | Refused | ~0.58-0.60 |
+| 5 | Intention to treat (CRN) | BBBM entry | None | CRN-matched untreated | ~0.61-0.62 |
+
+### Why HR degrades from RR
+
+The observed HR attenuates toward 1.0 as more "diluted" (unprotected) person-time is
+included in the analysis. Each strategy adds a source of dilution:
+
+- **Strategy 1→2**: Waning period has RR interpolating from 0.528 back to 1.0
+- **Strategy 2→3**: Post-treatment period has RR=1.0 (no protection)
+- **Strategy 3→4**: Waiting-for-treatment period has RR=1.0 (1 step delay)
+- **Strategy 4→5**: ITT includes simulants who never entered treatment, plus uses
+  BBBM entry (earlier) as time zero, adding unprotected person-time at the start
+
+### Significance
+
+The close match between Strategy 1 HR (~0.531) and the dialed-in RR (0.528) confirms
+the simulation correctly implements the treatment effect. The progressive degradation
+demonstrates how real-world clinical trial designs (which can't perfectly isolate
+treatment-effect windows) will observe attenuated effect sizes — a useful validation
+that the model produces epidemiologically realistic patterns.
+
+## 13. Vivarium Enhancement Ideas
+
+Based on experience building analysis notebooks for this project, the following
+enhancements to the vivarium framework would improve the researcher experience:
+
+### 13.1 Configurable Logging Verbosity
+
+**Problem**: Vivarium emits extensive INFO-level logging during `InteractiveContext`
+construction and each `sim.step()` call (component registration, pipeline building,
+population table updates, etc.). In notebook contexts, this floods the output and
+obscures analysis results. Currently requires `logging.getLogger().setLevel(logging.WARNING)`
+as a workaround, which silences ALL loggers globally.
+
+**Suggestion**: Add a `log_level` parameter to `InteractiveContext` (and/or a
+`vivarium.quiet_mode` configuration key) that sets vivarium's own loggers to the
+specified level without affecting other libraries. Something like:
+```python
+sim = InteractiveContext(spec_path, configuration={'vivarium': {'log_level': 'WARNING'}})
+```
+
+### 13.2 Built-in State Transition Event Tracking
+
+**Problem**: Tracking when simulants enter/exit specific states requires manual
+per-step diffing of the population table — comparing column values before and after
+each `sim.step()`. This is error-prone (component priority ordering means columns
+may reflect post-transition states) and requires significant boilerplate code.
+
+**Suggestion**: Add an optional event log that records state transitions as they
+happen, accessible via something like `sim.get_event_log()`. Each entry would include:
+- Simulant index
+- Column name (e.g., `treatment`, `alzheimers_disease_and_other_dementias`)
+- Old value, new value
+- Simulation time
+
+This would eliminate the need for manual "snapshot before step, diff after step"
+patterns that are currently necessary for survival analysis.
+
+### 13.3 Per-Simulant Event History / Audit Trail
+
+**Problem**: To do survival analysis (KM curves, Cox regression), researchers need
+per-simulant timelines: when did each simulant enter BBBM? When did they get tested?
+When did treatment start/end? Currently this must be reconstructed by tracking state
+changes at every step and building DataFrames manually.
+
+**Suggestion**: An opt-in per-simulant event history that records key lifecycle events:
+```python
+sim = InteractiveContext(spec_path, configuration={'vivarium': {'track_history': True}})
+# ... run simulation ...
+history = sim.get_simulant_history(simulant_id=42)
+# Returns: [(time, 'disease_state', 'susceptible', 'bbbm'), (time, 'treatment', 'susceptible', 'waiting'), ...]
+```
+
+### 13.4 Snapshot / Checkpoint Support for InteractiveContext
+
+**Problem**: Running a simulation to year 2070 takes ~25 minutes. If you want to
+analyze different metrics at different time points, you must either: (a) collect
+everything in one run, or (b) re-run from scratch. Adding a new analysis often means
+re-running the entire simulation.
+
+**Suggestion**: Allow saving and restoring simulation state:
+```python
+sim.step_n(50)  # Run to ~2047
+sim.save_checkpoint('checkpoint_2047.pkl')
+# ... later, in a new session ...
+sim = InteractiveContext.from_checkpoint('checkpoint_2047.pkl')
+sim.step_n(10)  # Continue from 2047
+```
+
+### 13.5 Built-in CRN-Matched Scenario Comparison
+
+**Problem**: Comparing outcomes across scenarios (e.g., treatment vs no-treatment)
+with Common Random Numbers requires running two separate simulations and manually
+joining results by simulant index. This is a very common analysis pattern but has
+no framework support.
+
+**Suggestion**: A utility that runs multiple scenarios in parallel and returns a
+matched comparison DataFrame:
+```python
+from vivarium.tools import compare_scenarios
+results = compare_scenarios(
+    spec_path,
+    scenarios={'control': {...}, 'treatment': {...}},
+    track_columns=['disease_state', 'treatment'],
+    duration_steps=50,
+)
+# Returns per-simulant, per-step data for both scenarios, pre-joined
+```
+
+### 13.6 Progress Bar for sim.step() and sim.step_n()
+
+**Problem**: Long simulation runs (~50+ steps) provide no progress feedback beyond
+log messages. In notebooks, this makes it hard to estimate completion time.
+
+**Suggestion**: Optional `tqdm` integration:
+```python
+sim.step_n(50, progress=True)  # Shows a progress bar
+```
