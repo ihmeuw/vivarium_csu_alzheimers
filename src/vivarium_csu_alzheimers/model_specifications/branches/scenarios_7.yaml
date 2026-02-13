@@ -1,5 +1,19 @@
-input_draw_count: 25
+input_draw_count: 2
 random_seed_count: 100
+
+# input_draws: [172, 235] # run 1
+# input_draws: [204, 219] # run 2
+# input_draws: [245, 69] # run 3
+# input_draws: [1, 211] # run 4
+# input_draws: [35, 187] # run 5
+# input_draws: [6, 249] # run 6
+input_draws: [7, 236] # run 7
+# input_draws: [183, 103] # run 8
+# input_draws: [41, 123] # run 9
+# input_draws: [63, 199] # run 10
+# input_draws: [248, 122] # run 11
+# input_draws: [161, 50, 24] # run 12
+
 
 branches:
   - intervention:
