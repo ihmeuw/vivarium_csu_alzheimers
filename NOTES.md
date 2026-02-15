@@ -690,3 +690,108 @@ log messages. In notebooks, this makes it hard to estimate completion time.
 ```python
 sim.step_n(50, progress=True)  # Shows a progress bar
 ```
+
+### 13.7 Configuration-Level Parameter Override for Sensitivity Analysis
+
+**Problem**: Sweeping model parameters (e.g., Weibull scale for BBBM duration) requires
+patching Python module-level variables at runtime. Because `from X import Y` creates
+local bindings, you must identify and patch every module that imported the constant —
+in this project, sweeping `BBBM_AVG_DURATION` requires patching `data_values`,
+`alzheimers`, and `consistent_rates` modules separately. This is fragile and requires
+deep knowledge of the import graph.
+
+**Suggestion**: Allow model parameters to be overridden via configuration:
+```python
+sim = InteractiveContext(spec_path, configuration={
+    'alzheimers_disease': {'bbbm_weibull_scale': 10.0},
+})
+```
+Components would read parameters from the configuration system (which already exists)
+rather than from module-level constants, making sensitivity analysis a matter of
+changing configuration dicts rather than monkey-patching imports.
+
+### 13.8 Artifact-Level Summary Statistics for Disability Weights
+
+**Problem**: Disability weights in the artifact are stored as age×sex×year×draw
+DataFrames (e.g., 38 age groups × 500 draws for dementia DW). Summarizing to a scalar
+for DALY calculations requires researcher choices: which draw (draw_0 vs mean across
+draws), which ages (all vs 65+), which sex. Different notebooks in this project used
+different summarization choices (draw_0 values 0.031/0.31 vs mean-across-draws
+0.021/0.258), creating inconsistency.
+
+**Suggestion**: Artifacts could provide pre-computed summary statistics:
+```python
+art.load_summary('cause.alzheimers.disability_weight',
+                 age_range=(65, 100), statistic='mean')
+```
+Or at minimum, document the recommended summarization approach for each data type.
+
+### 13.9 Built-in Artifact Parameter Sweep Support
+
+**Problem**: Running sensitivity analyses requires creating modified artifacts for each
+parameter value. In this project, sweeping BBBM duration with MCMC-consistent refitting
+required: (1) patching module-level variables, (2) re-running the full MCMC fitting
+pipeline, (3) writing new HDF artifacts, (4) running simulations against each artifact.
+This loop took ~10 minutes per parameter value and required custom orchestration code.
+
+**Suggestion**: A sweep utility that automates the artifact→simulation pipeline:
+```python
+from vivarium.tools import parameter_sweep
+results = parameter_sweep(
+    spec_path,
+    parameter='alzheimers.bbbm_weibull_scale',
+    values=[3, 5, 6.76, 10, 15],
+    scenarios=['baseline', 'bbbm_testing_and_treatment'],
+    metrics=['person_years_by_state', 'yll', 'dalys'],
+)
+```
+
+### 13.10 YLL Tracking as a Built-in Observer
+
+**Problem**: Computing Years of Life Lost (YLL) requires tracking deaths per step,
+looking up each deceased simulant's remaining life expectancy from the artifact, and
+accumulating across the simulation. Every analysis notebook that needs YLL must
+implement this from scratch, including the artifact lookup for TMRLE (theoretical
+minimum risk life expectancy).
+
+**Suggestion**: A built-in YLL observer that tracks deaths and computes YLL
+automatically:
+```python
+sim = InteractiveContext(spec_path, configuration={
+    'observers': {'yll': {'enabled': True}},
+})
+# After running:
+yll_df = sim.get_observer_results('yll')  # per-step YLL by cause
+```
+
+## 14. Sensitivity Analysis Notebooks
+
+### BBBM Duration Sensitivity (without MCMC refitting)
+- `tests/bbbm_duration_sensitivity.ipynb`
+- Sweeps Weibull scale from 3-30, patching the transition rate but NOT refitting
+  the MCMC consistent rates. This means all other rates (incidence, prevalence
+  structure) remain at their default values — only the BBBM→MCI hazard changes.
+- Useful for understanding the direct mechanical effect of BBBM duration on DALYs.
+
+### BBBM Duration with Consistent Rates (with MCMC refitting)
+- `tests/bbbm_duration_consistent_rates.ipynb`
+- Same Weibull scale sweep, but regenerates artifacts using the MCMC fitter in
+  `consistent_rates.py`. This adjusts the Susceptible→BBBM incidence rate to
+  maintain observed total-population dementia prevalence.
+- Key insight: MCMC correctly holds total-population dementia prevalence constant
+  (prevalence_any × dem_conditional), but conditional prevalence (fraction of
+  diseased who have dementia vs BBBM/MCI) varies structurally with BBBM duration.
+  Longer BBBM duration → more of the diseased are in BBBM → lower conditional
+  dementia prevalence → different DALYs averted profile.
+
+### Disability Weight Reference Values
+
+From the artifact (`united_states_of_america.hdf`):
+
+| Weight | draw_0 | Mean across draws | Used in |
+|---|---|---|---|
+| MCI DW | 0.0312 | 0.0213 | treatment_effect_analysis (draw_0), tornado/bbbm (mean) |
+| Dementia DW (age 65+, female) | 0.307-0.431 | 0.258 (approx) | treatment_effect_analysis (~0.31), tornado/bbbm (0.258) |
+
+The dementia DW varies by age (higher at older ages). The draw_0 value is a single
+realization; the mean across 500 draws provides a more stable estimate.
