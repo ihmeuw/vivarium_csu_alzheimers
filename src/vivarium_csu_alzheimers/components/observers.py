@@ -1,5 +1,10 @@
+from pathlib import Path
+
 import pandas as pd
+from vivarium import Component
 from vivarium.framework.engine import Builder
+from vivarium.framework.event import Event
+from vivarium.framework.population import SimulantData
 from vivarium.framework.results import Observer
 from vivarium.framework.time import get_time_stamp
 from vivarium_public_health import ResultsStratifier as ResultsStratifier_
@@ -14,7 +19,10 @@ from vivarium_csu_alzheimers.constants.data_values import (
     TESTING_STATES,
     TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
 )
-from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
+from vivarium_csu_alzheimers.constants.models import (
+    ALZHEIMERS_DISEASE_MODEL,
+    TREATMENT_DISEASE_MODEL,
+)
 from vivarium_csu_alzheimers.utilities import get_timedelta_from_step_size
 
 
@@ -436,3 +444,161 @@ class TreatmentObserver(DiseaseObserver):
         if measure == "treatment_duration":
             measure_name = "treatment_duration_count"
         return pd.Series(measure_name, index=results.index)
+
+
+class SimulantLineListObserver(Component):
+    """Observer that captures simulant-level event dates for life extension analysis.
+
+    Produces one row per simulant with dates for key disease and treatment
+    milestones. The line list is stored as the ``line_list`` attribute after
+    the simulation ends. Call ``to_csv(path)`` to write it to disk.
+
+    Columns that remain blank (NaT) indicate the event did not occur for
+    that simulant during the simulation.
+    """
+
+    @property
+    def name(self) -> str:
+        return "simulant_line_list_observer"
+
+    @property
+    def columns_created(self) -> list[str]:
+        return [
+            "date_of_birth",
+            "mci_event_time",
+            "dementia_event_time",
+            "treatment_start_time",
+            "treatment_end_time",
+        ]
+
+    @property
+    def columns_required(self) -> list[str]:
+        return [
+            "alive",
+            "tracked",
+            "age",
+            "entrance_time",
+            "exit_time",
+            COLUMNS.DISEASE_STATE,
+            COLUMNS.PREVIOUS_DISEASE_STATE,
+            COLUMNS.BBBM_ENTRANCE_TIME,
+            COLUMNS.TREATMENT_STATE,
+        ]
+
+    @property
+    def initialization_requirements(self) -> list[str]:
+        return ["age", "entrance_time"]
+
+    def setup(self, builder: Builder) -> None:
+        self.clock = builder.time.clock()
+        self.step_size = builder.time.step_size()
+        self.draw = builder.configuration.input_data.input_draw_number
+        self.random_seed = builder.configuration.randomness.random_seed
+        self.location = Path(builder.configuration.input_data.artifact_path).stem
+        self._all_simulant_ids = pd.Index([])
+        self.line_list = pd.DataFrame()
+
+    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
+        new_sims = pop_data.index
+        self._all_simulant_ids = self._all_simulant_ids.union(new_sims)
+
+        pop = self.population_view.subview(["age", "entrance_time"]).get(new_sims)
+        initialization = pd.DataFrame(index=new_sims)
+        initialization["date_of_birth"] = pop["entrance_time"] - pd.to_timedelta(
+            pop["age"] * 365.25, unit="D"
+        )
+        initialization["mci_event_time"] = pd.NaT
+        initialization["dementia_event_time"] = pd.NaT
+        initialization["treatment_start_time"] = pd.NaT
+        initialization["treatment_end_time"] = pd.NaT
+        self.population_view.update(initialization)
+
+    def on_collect_metrics(self, event: Event) -> None:
+        pop = self.population_view.get(event.index)
+        event_time = self.clock() + self.step_size()
+
+        # Detect BBBM -> MCI transitions
+        new_mci = (
+            (pop[COLUMNS.DISEASE_STATE] == ALZHEIMERS_DISEASE_MODEL.MCI_STATE)
+            & (
+                pop[COLUMNS.PREVIOUS_DISEASE_STATE]
+                == ALZHEIMERS_DISEASE_MODEL.BBBM_STATE
+            )
+            & pop["mci_event_time"].isna()
+        )
+        if new_mci.any():
+            update = pd.DataFrame(
+                {"mci_event_time": event_time}, index=pop.index[new_mci]
+            )
+            self.population_view.update(update)
+
+        # Detect MCI -> Dementia transitions
+        new_dementia = (
+            (
+                pop[COLUMNS.DISEASE_STATE]
+                == ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE
+            )
+            & (
+                pop[COLUMNS.PREVIOUS_DISEASE_STATE]
+                == ALZHEIMERS_DISEASE_MODEL.MCI_STATE
+            )
+            & pop["dementia_event_time"].isna()
+        )
+        if new_dementia.any():
+            update = pd.DataFrame(
+                {"dementia_event_time": event_time}, index=pop.index[new_dementia]
+            )
+            self.population_view.update(update)
+
+        # Detect treatment initiation (entering treatment_effect)
+        new_treatment = (
+            pop[COLUMNS.TREATMENT_STATE] == TREATMENT_DISEASE_MODEL.TREATMENT_EFFECT
+        ) & pop["treatment_start_time"].isna()
+        if new_treatment.any():
+            update = pd.DataFrame(
+                {"treatment_start_time": event_time}, index=pop.index[new_treatment]
+            )
+            self.population_view.update(update)
+
+        # Detect treatment cessation (entering no_effect_after_treatment)
+        treatment_ended = (
+            (
+                pop[COLUMNS.TREATMENT_STATE]
+                == TREATMENT_DISEASE_MODEL.NO_EFFECT_AFTER_TREATMENT
+            )
+            & pop["treatment_end_time"].isna()
+            & pop["treatment_start_time"].notna()
+        )
+        if treatment_ended.any():
+            update = pd.DataFrame(
+                {"treatment_end_time": event_time}, index=pop.index[treatment_ended]
+            )
+            self.population_view.update(update)
+
+    def on_simulation_end(self, event: Event) -> None:
+        self.line_list = self._build_line_list()
+
+    def _build_line_list(self) -> pd.DataFrame:
+        pop = self.population_view.get(self._all_simulant_ids)
+        return pd.DataFrame(
+            {
+                "simulant_id": pop.index,
+                "draw": self.draw,
+                "random_seed": self.random_seed,
+                "location": self.location,
+                "date_of_birth": pop["date_of_birth"],
+                "date_of_death": pop["exit_time"],
+                "date_of_bbbm_incidence": pop[COLUMNS.BBBM_ENTRANCE_TIME],
+                "date_of_treatment_initiation": pop["treatment_start_time"],
+                "date_of_treatment_cessation": pop["treatment_end_time"],
+                "date_of_mci_incidence": pop["mci_event_time"],
+                "date_of_dementia_incidence": pop["dementia_event_time"],
+            },
+            index=pop.index,
+        )
+
+    def to_csv(self, path: str) -> None:
+        """Write the line list to a CSV file."""
+        if self.line_list.empty:
+            self.line_list = self._build_line_list()
+        self.line_list.to_csv(path, index=False)

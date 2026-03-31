@@ -4,6 +4,7 @@ from .observers import (
     BBBMTestingObserver,
     NewSimulantsObserver,
     ResultsStratifier,
+    SimulantLineListObserver,
     TreatmentObserver,
 )
 from .population import AlzheimersIncidence, AlzheimersPopulation
