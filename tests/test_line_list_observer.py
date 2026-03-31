@@ -51,6 +51,7 @@ def _make_observer(pop_df, clock_time=pd.Timestamp("2030-01-01"), step_days=182)
     obs.location = "united_states_of_america"
     obs._all_simulant_ids = pop_df.index.copy()
     obs.line_list = pd.DataFrame()
+    obs.results_dir = None
     obs._population_view = MockPopulationView(pop_df)
     return obs
 
@@ -390,6 +391,32 @@ class TestToCsv:
 
         loaded = pd.read_csv(path)
         assert len(loaded) == 2
+
+
+class TestOnSimulationEnd:
+    def test_auto_saves_csv_when_results_dir_set(self, tmp_path):
+        pop = _base_pop(3)
+        obs = _make_observer(pop)
+        obs.results_dir = tmp_path
+
+        obs.on_simulation_end(_collect_event(pop.index))
+
+        output = tmp_path / "simulant_line_list.csv"
+        assert output.exists()
+        loaded = pd.read_csv(output)
+        assert len(loaded) == 3
+        assert "simulant_id" in loaded.columns
+
+    def test_no_save_when_results_dir_none(self, tmp_path):
+        pop = _base_pop(2)
+        obs = _make_observer(pop)
+        obs.results_dir = None
+
+        obs.on_simulation_end(_collect_event(pop.index))
+
+        # line_list built in memory but no file written
+        assert len(obs.line_list) == 2
+        assert not list(tmp_path.iterdir())
 
 
 # ---------------------------------------------------------------------------

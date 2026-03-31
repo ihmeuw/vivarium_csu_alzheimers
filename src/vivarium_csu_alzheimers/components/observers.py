@@ -495,6 +495,12 @@ class SimulantLineListObserver(Component):
         self.draw = builder.configuration.input_data.input_draw_number
         self.random_seed = builder.configuration.randomness.random_seed
         self.location = Path(builder.configuration.input_data.artifact_path).stem
+        try:
+            self.results_dir = Path(
+                builder.configuration.output_data.results_directory
+            )
+        except Exception:
+            self.results_dir = None
         self._all_simulant_ids = pd.Index([])
         self.line_list = pd.DataFrame()
 
@@ -577,6 +583,9 @@ class SimulantLineListObserver(Component):
 
     def on_simulation_end(self, event: Event) -> None:
         self.line_list = self._build_line_list()
+        if self.results_dir is not None:
+            output_path = self.results_dir / "simulant_line_list.csv"
+            self.line_list.to_csv(output_path, index=False)
 
     def _build_line_list(self) -> pd.DataFrame:
         pop = self.population_view.get(self._all_simulant_ids)

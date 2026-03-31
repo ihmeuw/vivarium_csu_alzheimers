@@ -117,3 +117,15 @@ The ``-v`` flag will log verbosely, so you will get log messages every time
 step. For more ways to run simulations, see the tutorials at
 https://vivarium.readthedocs.io/en/latest/tutorials/running_a_simulation/index.html
 and https://vivarium.readthedocs.io/en/latest/tutorials/exploration.html
+
+
+Running Tests
+-------------
+
+To run the fast unit tests::
+
+   (vivarium_csu_alzheimers) :~$ python -m pytest tests/ -v
+
+To run all tests including slow integration tests (requires the data artifact)::
+
+   (vivarium_csu_alzheimers) :~$ python -m pytest tests/ -v --runslow
