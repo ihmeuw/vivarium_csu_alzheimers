@@ -51,13 +51,16 @@ class BBBMTransitionRate(RateTransition):
         self.rate_conversion_type = self.configuration["rate_conversion_type"]
 
     def compute_transition_rate(self, index: pd.Index) -> pd.Series:
-        entrance_time = self.population_view.get(index)["bbbm_entrance_time"]
+        transition_rate = pd.Series(0.0, index=index)
+        living = self.population_view.get(index, query='alive == "alive"').index
+        entrance_time = self.population_view.get(living)["bbbm_entrance_time"]
         current_time = self.clock()
         time_diff_numeric_years = (current_time - entrance_time).dt.total_seconds() / (
             365.0 * 24 * 3600
         )
 
-        return hazard(time_diff_numeric_years, BBBM_HAZARD_DIST)
+        transition_rate.loc[living] = hazard(time_diff_numeric_years, BBBM_HAZARD_DIST)
+        return transition_rate
 
 
 class BBBMDiseaseState(DiseaseState):

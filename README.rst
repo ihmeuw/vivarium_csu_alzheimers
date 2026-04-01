@@ -137,3 +137,11 @@ To run the fast unit tests::
 To run all tests including slow integration tests (requires the data artifact)::
 
    (vivarium_csu_alzheimers) :~$ python -m pytest tests/ -v --runslow
+
+Additional notes
+----------------
+
+The pattern I used to compare individual's livetimes in baseline and intervention scenarios
+seems unsuited to large scale runs.  Instead it would be convenient to be able to run multiple
+branches together, and then make a comparison and save that, instead of saving the line list
+and making the comparison afterwards.
