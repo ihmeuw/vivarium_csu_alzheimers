@@ -118,6 +118,14 @@ step. For more ways to run simulations, see the tutorials at
 https://vivarium.readthedocs.io/en/latest/tutorials/running_a_simulation/index.html
 and https://vivarium.readthedocs.io/en/latest/tutorials/exploration.html
 
+To run multiple simulations in parallel, use psimulate on the IHME cluster.
+For convenience of running on my laptop, here is a serial version of psimulate,
+called ssimulate::
+
+  ssimulate run \
+    src/vivarium_csu_alzheimers/model_specifications/model_spec.yaml \
+    src/vivarium_csu_alzheimers/model_specifications/branches/ssimulate_test.yaml \
+    -i united_states_of_america.hdf
 
 Running Tests
 -------------
