@@ -122,10 +122,10 @@ To run multiple simulations in parallel, use psimulate on the IHME cluster.
 For convenience of running on my laptop, here is a serial version of psimulate,
 called ssimulate::
 
-  ssimulate run \
-    src/vivarium_csu_alzheimers/model_specifications/model_spec.yaml \
-    src/vivarium_csu_alzheimers/model_specifications/branches/ssimulate_test.yaml \
-    -i united_states_of_america.hdf
+    ssimulate run \
+      src/vivarium_csu_alzheimers/model_specifications/model_spec.yaml \
+      src/vivarium_csu_alzheimers/model_specifications/branches/ssimulate_test.yaml \
+      -i united_states_of_america.hdf
 
 Running Tests
 -------------
