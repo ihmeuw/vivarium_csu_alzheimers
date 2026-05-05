@@ -117,3 +117,31 @@ The ``-v`` flag will log verbosely, so you will get log messages every time
 step. For more ways to run simulations, see the tutorials at
 https://vivarium.readthedocs.io/en/latest/tutorials/running_a_simulation/index.html
 and https://vivarium.readthedocs.io/en/latest/tutorials/exploration.html
+
+To run multiple simulations in parallel, use psimulate on the IHME cluster.
+For convenience of running on my laptop, here is a serial version of psimulate,
+called ssimulate::
+
+    ssimulate run \
+      src/vivarium_csu_alzheimers/model_specifications/model_spec.yaml \
+      src/vivarium_csu_alzheimers/model_specifications/branches/ssimulate_test.yaml \
+      -i united_states_of_america.hdf
+
+Running Tests
+-------------
+
+To run the fast unit tests::
+
+   (vivarium_csu_alzheimers) :~$ python -m pytest tests/ -v
+
+To run all tests including slow integration tests (requires the data artifact)::
+
+   (vivarium_csu_alzheimers) :~$ python -m pytest tests/ -v --runslow
+
+Additional notes
+----------------
+
+The pattern I used to compare individual's livetimes in baseline and intervention scenarios
+seems unsuited to large scale runs.  Instead it would be convenient to be able to run multiple
+branches together, and then make a comparison and save that, instead of saving the line list
+and making the comparison afterwards.

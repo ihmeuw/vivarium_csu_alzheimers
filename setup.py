@@ -99,5 +99,6 @@ if __name__ == "__main__":
         entry_points="""
             [console_scripts]
             make_artifacts=vivarium_csu_alzheimers.tools.cli:make_artifacts
+            ssimulate=vivarium_csu_alzheimers.tools.ssimulate:ssimulate
         """,
     )
