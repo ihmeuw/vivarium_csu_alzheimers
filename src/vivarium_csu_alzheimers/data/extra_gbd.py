@@ -1,6 +1,7 @@
 import pandas as pd
 from vivarium_gbd_access import constants as gbd_constants
 from vivarium_gbd_access import utilities as vi_utils
+from vivarium_gbd_access.gbd import get_draws
 from vivarium_inputs import globals as vi_globals
 from vivarium_inputs import utility_data
 
@@ -33,7 +34,7 @@ def load_emr_dismod(location: str) -> pd.DataFrame:
 
 def load_dementia_dismod(location, measure_name):
     location_id = utility_data.get_location_id(location)
-    data = vi_utils.get_draws(
+    data = get_draws(
         source=gbd_constants.SOURCES.EPI,
         gbd_id_type="modelable_entity_id",
         gbd_id=24351,  # Unadjusted dementia (post-mortality) -  from DisMod, post-mortality modeling

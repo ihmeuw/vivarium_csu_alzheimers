@@ -151,6 +151,12 @@ CSF_PET_LOCATION_TESTING_RATES = {
         TESTING_RATES.CSF: TestingRates(mean=0.044, ci_lower=0.022, ci_upper=0.066),
         TESTING_RATES.PET: TestingRates(mean=0.061, ci_lower=0.03, ci_upper=0.091),
     },
+    "Singapore": {
+        # No Singapore-specific source available; use the generic-Asia fallback shared
+        # with Japan, Taiwan, Israel, and Brazil.
+        TESTING_RATES.CSF: TestingRates(mean=0.133, ci_lower=0.067, ci_upper=0.2),
+        TESTING_RATES.PET: TestingRates(mean=0.149, ci_lower=0.075, ci_upper=0.224),
+    },
 }
 
 

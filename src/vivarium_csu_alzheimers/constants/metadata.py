@@ -26,6 +26,7 @@ LOCATIONS = [
     "Israel",
     "Taiwan (Province of China)",
     "Spain",
+    "Singapore",
 ]
 
 ARTIFACT_INDEX_COLUMNS = [
