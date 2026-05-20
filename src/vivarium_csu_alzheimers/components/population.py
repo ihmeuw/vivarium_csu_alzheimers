@@ -237,7 +237,7 @@ class AlzheimersIncidence(Component):
         return pop_structure
 
     def load_prevalence(self, builder: Builder) -> pd.Series:
-        prevalence = builder.data.load(data_keys.ALZHEIMERS_CONSISTENT.PREVALENCE_ANY)
+        prevalence = builder.data.load(data_keys.ALZHEIMERS_CONSISTENT.AD_PREVALENCE)
 
         # Updating age_end to match configuration since some simulants are living past 125
         prevalence.loc[prevalence["age_end"] == 125, "age_end"] = self.age_end

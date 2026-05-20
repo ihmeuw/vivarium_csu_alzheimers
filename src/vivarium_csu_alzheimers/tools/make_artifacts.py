@@ -46,10 +46,10 @@ def check_for_existing(
 
     if existing:
         if not append:
-            click.confirm(
-                f"Existing artifacts found for {existing}. Do you want to delete and rebuild?",
-                abort=True,
-            )
+            #click.confirm(
+            #    f"Existing artifacts found for {existing}. Do you want to delete and rebuild?",
+            #    abort=True,
+            #)
             for loc in existing:
                 path = output_dir / f"{loc}.hdf"
                 logger.info(f"Deleting artifact at {str(path)}.")
@@ -249,9 +249,8 @@ def build_single_location_artifact(
             builder.load_and_write_data(artifact, key, location, years, key in replace_keys)
 
     consistent_rates.generate_consistent_rates(artifact)
-    consistent_rates.generate_consistent_susceptible_to_bbbm_transition_count(artifact)
-    consistent_rates.generate_consistent_dementia_conditional_prevalence(artifact)
-    consistent_rates.generate_consistent_csmr(artifact)
+    consistent_rates.generate_consistent_data_for_population_components(artifact)
+    consistent_rates.generate_consistent_data_for_disease_components(artifact)
 
     logger.info(f"**Done building -- {location}**")
 

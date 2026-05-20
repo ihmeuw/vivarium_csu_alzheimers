@@ -20,6 +20,7 @@ from vivarium_csu_alzheimers.constants.data_values import (
     DW_BBBM,
     EMR_BBBM,
     EMR_MCI,
+    MCI_AVG_DURATION,
 )
 from vivarium_csu_alzheimers.constants.models import ALZHEIMERS_DISEASE_MODEL
 from vivarium_csu_alzheimers.data.mci_hazard import hazard
@@ -172,39 +173,70 @@ class Alzheimers(Component):
             ),
             excess_mortality_rate=EMR_MCI,
         )
-        alzheimers_state = DiseaseState(
-            ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE,
+        mild_dementia_state = DiseaseState(
+            ALZHEIMERS_DISEASE_MODEL.MILD_DEMENTIA_STATE,
+            allow_self_transition=True,
             birth_prevalence=0.0,
             prevalence=lambda builder: builder.data.load(
-                ALZHEIMERS.DEMENTIA_CONDITIONAL_PREVALENCE
+                ALZHEIMERS.MILD_DEMENTIA_CONDITIONAL_PREVALENCE
             ),
-            disability_weight=lambda builder: builder.data.load(ALZHEIMERS.DISABILITY_WEIGHT),
-            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR),
+            disability_weight=lambda builder: builder.data.load(
+                ALZHEIMERS.MILD_DEMENTIA_DISABILITY_WEIGHT
+            ),
+            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR_MILD),
+        )
+        moderate_dementia_state = DiseaseState(
+            ALZHEIMERS_DISEASE_MODEL.MODERATE_DEMENTIA_STATE,
+            allow_self_transition=True,
+            birth_prevalence=0.0,
+            prevalence=lambda builder: builder.data.load(
+                ALZHEIMERS.MODERATE_DEMENTIA_CONDITIONAL_PREVALENCE
+            ),
+            disability_weight=lambda builder: builder.data.load(
+                ALZHEIMERS.MODERATE_DEMENTIA_DISABILITY_WEIGHT
+            ),
+            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR_MODERATE),
+        )
+        severe_dementia_state = DiseaseState(
+            ALZHEIMERS_DISEASE_MODEL.SEVERE_DEMENTIA_STATE,
+            allow_self_transition=True,
+            birth_prevalence=0.0,
+            prevalence=lambda builder: builder.data.load(
+                ALZHEIMERS.SEVERE_DEMENTIA_CONDITIONAL_PREVALENCE
+            ),
+            disability_weight=lambda builder: builder.data.load(
+                ALZHEIMERS.SEVERE_DEMENTIA_DISABILITY_WEIGHT
+            ),
+            excess_mortality_rate=lambda builder: builder.data.load(ALZHEIMERS.EMR_SEVERE),
         )
 
-        # Add transitions between states
+        # AD progression transitions
         bbbm_state.add_bbbm_transition(output=mci_state)
         mci_state.add_rate_transition(
-            output=alzheimers_state,
+            output=mild_dementia_state,
+            transition_rate=1 / MCI_AVG_DURATION,
+        )
+        mild_dementia_state.add_rate_transition(
+            output=moderate_dementia_state,
             transition_rate=lambda builder: builder.data.load(
-                ALZHEIMERS.MCI_TO_DEMENTIA_TRANSITION_RATE
+                ALZHEIMERS.MILD_TO_MODERATE_DEMENTIA_TRANSITION_RATE
+            ),
+        )
+        moderate_dementia_state.add_rate_transition(
+            output=severe_dementia_state,
+            transition_rate=lambda builder: builder.data.load(
+                ALZHEIMERS.MODERATE_TO_SEVERE_DEMENTIA_TRANSITION_RATE
             ),
         )
 
         return AlzheimersModel(
             ALZHEIMERS_DISEASE_MODEL.NAME,
             initial_state=bbbm_state,
-            states=[bbbm_state, mci_state, alzheimers_state],
+            states=[
+                bbbm_state,
+                mci_state,
+                mild_dementia_state,
+                moderate_dementia_state,
+                severe_dementia_state,
+            ],
         )
-
-    def _get_alzheimers_disease_state_prevalence(self, builder: Builder) -> pd.DataFrame:
-        """Get the Alzheimer's disease state prevalence table."""
-        bbbm_prevalence = builder.data.load(ALZHEIMERS.BBBM_CONDITIONAL_PREVALENCE)
-        mci_prevalence = builder.data.load(ALZHEIMERS.MCI_CONDITIONAL_PREVALENCE)
-        alz_prevalence = bbbm_prevalence.copy()
-        alz_prevalence["value"] = 1.0
-        alz_prevalence["value"] = alz_prevalence["value"] - (
-            bbbm_prevalence["value"] + mci_prevalence["value"]
-        )
-
-        return alz_prevalence
