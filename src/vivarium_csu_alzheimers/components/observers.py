@@ -538,11 +538,12 @@ class SimulantLineListObserver(Component):
             )
             self.population_view.update(update)
 
-        # Detect MCI -> Dementia transitions
+        # Detect MCI -> Dementia transitions. Under the enhanced 3-state stack
+        # MCI always enters dementia at the mild stage.
         new_dementia = (
             (
                 pop[COLUMNS.DISEASE_STATE]
-                == ALZHEIMERS_DISEASE_MODEL.ALZHEIMERS_DISEASE_STATE
+                == ALZHEIMERS_DISEASE_MODEL.MILD_DEMENTIA_STATE
             )
             & (
                 pop[COLUMNS.PREVIOUS_DISEASE_STATE]
