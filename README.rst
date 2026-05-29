@@ -81,7 +81,7 @@ steps to the process of creating an environment using these files::
   (vivarium_csu_alzheimers) :~$ pip install -r vivarium_csu_alzheimers_lock_pip.txt
   (vivarium_csu_alzheimers) :~$ pip install -e .
 
-The above installation is recommended, but these archival files might be helpful in the future. 
+The standard installation above is recommended, but these archival files might be helpful in the future. 
 This was written in May of 2026.
 
 Usage
