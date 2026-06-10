@@ -60,6 +60,29 @@ are installing and running things in an isolated programming environment
 so it doesn't conflict with other source code and libraries on your
 system.
 
+Alternative Installation Using "Lock" Files
+-------------------------------------------
+
+To help with running this model after completion, we also have archival "lock" files, which are text 
+descriptions of which packages (with which exact versions) are part of the environment. This allows 
+us to rerun an older model, built on prior versions of software packages. These files are tracked 
+in this git repository. The main disadvantage of the lock files is that they could stop working 
+over time if packages are removed from the conda (or PyPI) package repositories. We primarily use 
+conda-forge, which avoids removing packages "if possible."
+
+Because certain packages we use can only be installed with pip and not with conda, there are a few 
+steps to the process of creating an environment using these files::
+
+  ...Create a conda environment with all the conda packages...
+  :~$ conda create --name vivarium_csu_alzheimers --file vivarium_csu_alzheimers_lock_conda.txt
+  ...Activate the conda environment...
+  :~$ conda activate vivarium_csu_alzheimers
+  ...Install the pip-only packages...
+  (vivarium_csu_alzheimers) :~$ pip install -r vivarium_csu_alzheimers_lock_pip.txt
+  (vivarium_csu_alzheimers) :~$ pip install -e .
+
+The standard installation above is recommended, but these archival files might be helpful in the future. 
+This was written in May of 2026.
 
 Usage
 -----

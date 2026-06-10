@@ -3,12 +3,42 @@
     "title": "ihmeuw/vivarium_csu_alzheimers: Archival release",
     "upload_type": "software",
     "creators": [
-//        {
-//            "orcid": "0000-0000-0000-0000",
-//            "affiliation": "Institute for Health Metrics and Evaluation",
-//            "name": "TODO: Add authors names, affiliation, and orcid (if applicable) to `creators` array"
-//        }
+        {
+            "orcid": "0000-0002-5775-2719",
+            "affiliation": "Institute for Health Metrics and Evaluation",
+            "name": "James Albright"
+        },
+        {
+            "orcid": "0009-0004-6649-7010",
+            "affiliation": "Institute for Health Metrics and Evaluation",
+            "name": "Steve Bachmeier"
+        },
+        {
+            "orcid": "0000-0001-8649-7561",
+            "affiliation": "Institute for Health Metrics and Evaluation",
+            "name": "Rajan Mudambi"
+        },
+        {
+            "orcid": "0000-0001-8397-4123",
+            "affiliation": "Institute for Health Metrics and Evaluation",
+            "name": "Nathaniel Blair-Stahn"
+        },
+        {
+            "orcid": "0009-0000-5097-0943",
+            "affiliation": "Institute for Health Metrics and Evaluation",
+            "name": "Tyler Yandrofski"
+        },
+        {
+            "orcid": "0009-0005-7858-0222",
+            "affiliation": "Institute for Health Metrics and Evaluation",
+            "name": "Sylvia Lutze"
+        },
+        {
+            "orcid": "0000-0001-6033-4713",
+            "affiliation": "Institute for Health Metrics and Evaluation",
+            "name": "Abraham Flaxman"
+        }
     ],
     "access_right": "open",
-    "description": "<p>TODO: add description (e.g., Archival release of simulation software.)</p>"
+    "description": "Archival release of Alzheimer's disease hypothetical testing and treatment simulation software."
 }
