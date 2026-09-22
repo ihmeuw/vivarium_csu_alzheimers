@@ -84,10 +84,10 @@ not something that can be specified and installed with the rest of the package's
 dependencies via ``pip``. If you encounter HDF5-related errors, you should
 install hdf tooling from within your environment like so::
 
-  (vivarium_csu_alzheimers) :~$ conda install hdf5
+  (<your environment>) :~$ conda install hdf5
 
-The ``(vivarium_csu_alzheimers)`` that precedes your shell prompt will probably show
-up by default, though it may not.  It's just a visual reminder that you
+The environment name in parentheses that precedes your shell prompt will probably
+show up by default, though it may not.  It's just a visual reminder that you
 are installing and running things in an isolated programming environment
 so it doesn't conflict with other source code and libraries on your
 system.
@@ -157,7 +157,7 @@ in the ``model_specifications`` directory.
 
 With this model specification file and your conda environment active, you can then run simulations by, e.g.::
 
-   (vivarium_csu_alzheimers) :~$ simulate run -v /<REPO_INSTALLATION_DIRECTORY>/vivarium_csu_alzheimers/src/vivarium_csu_alzheimers/model_specifications/model_spec.yaml
+   (vivarium_csu_alzheimers_simulation) :~$ simulate run -v /<REPO_INSTALLATION_DIRECTORY>/vivarium_csu_alzheimers/src/vivarium_csu_alzheimers/model_specifications/model_spec.yaml
 
 The ``-v`` flag will log verbosely, so you will get log messages every time
 step. For more ways to run simulations, see the tutorials at
