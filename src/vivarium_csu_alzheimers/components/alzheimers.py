@@ -82,14 +82,13 @@ class AlzheimersModel(DiseaseModel):
         pop_data
             The population data object.
         """
-        if pop_data.user_data.get("sim_state") == "time_step":
-            self.initialization_weights_pipelines = [
-                state.birth_prevalence_pipeline for state in self.states
-            ]
-        else:
-            self.initialization_weights_pipelines = [
-                state.prevalence_pipeline for state in self.states
-            ]
+        use_birth_prevalence = pop_data.user_data.get("sim_state") == "time_step"
+        self.initialization_weights_pipelines = [
+            state.birth_prevalence_pipeline
+            if use_birth_prevalence
+            else state.prevalence_pipeline
+            for state in self.states
+        ]
 
         super(DiseaseModel, self).initialize_state(pop_data)
 
