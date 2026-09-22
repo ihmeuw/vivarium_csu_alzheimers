@@ -92,29 +92,20 @@ are installing and running things in an isolated programming environment
 so it doesn't conflict with other source code and libraries on your
 system.
 
-Alternative Installation Using "Lock" Files
--------------------------------------------
+Reproducing the Archived Model
+------------------------------
 
-To help with running this model after completion, we also have archival "lock" files, which are text 
-descriptions of which packages (with which exact versions) are part of the environment. This allows 
-us to rerun an older model, built on prior versions of software packages. These files are tracked 
-in this git repository. The main disadvantage of the lock files is that they could stop working 
-over time if packages are removed from the conda (or PyPI) package repositories. We primarily use 
-conda-forge, which avoids removing packages "if possible."
+The published results were produced before this model was migrated onto the
+vivarium-suite framework packages, and that version cannot be installed alongside
+the current one: the old ``vivarium`` distribution and the current
+``vivarium-engine`` both own the ``vivarium`` namespace.
 
-Because certain packages we use can only be installed with pip and not with conda, there are a few 
-steps to the process of creating an environment using these files::
+To reproduce it, use the `Archiving release
+<https://github.com/ihmeuw/vivarium_csu_alzheimers/releases/tag/Archiving>`_, which
+carries that version of the code together with the conda and pip lock files
+describing the exact environment it ran in.
 
-  ...Create a conda environment with all the conda packages...
-  :~$ conda create --name vivarium_csu_alzheimers --file vivarium_csu_alzheimers_lock_conda.txt
-  ...Activate the conda environment...
-  :~$ conda activate vivarium_csu_alzheimers
-  ...Install the pip-only packages...
-  (vivarium_csu_alzheimers) :~$ pip install -r vivarium_csu_alzheimers_lock_pip.txt
-  (vivarium_csu_alzheimers) :~$ pip install -e .
-
-The standard installation above is recommended, but these archival files might be helpful in the future. 
-This was written in May of 2026.
+New lock files will be generated when the current version of the model is archived.
 
 Usage
 -----
