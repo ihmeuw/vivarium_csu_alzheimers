@@ -156,13 +156,18 @@ class Treatment(Component):
         )
         self.population_view.initialize(propensity.rename(COLUMNS.TREATMENT_PROPENSITY))
 
+    def get_waiting_for_treatment_index(self, index: pd.Index[int]) -> pd.Index[int]:
+        """Returns the subset of the given index that is waiting for treatment."""
+        return self.population_view.get_filtered_index(
+            index,
+            query=f"{COLUMNS.TREATMENT_STATE} == "
+            f"'{TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE}'",
+        )
+
     def initialize_treatment_duration(self, pop_data: SimulantData) -> None:
         """Initialize the treatment duration of simulants who start out in treatment."""
-        treatment_states = self.population_view.get(pop_data.index, COLUMNS.TREATMENT_STATE)
         durations = pd.Series(np.nan, index=pop_data.index, name=COLUMNS.TREATMENT_DURATION)
-        waiting_for_treatment_idx = treatment_states.index[
-            treatment_states == TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE
-        ]
+        waiting_for_treatment_idx = self.get_waiting_for_treatment_index(pop_data.index)
         if not waiting_for_treatment_idx.empty:
             durations.loc[waiting_for_treatment_idx] = self.get_treatment_duration(
                 waiting_for_treatment_idx
@@ -223,11 +228,7 @@ class Treatment(Component):
         all simulants who entered waiting_for_treatment during this time step
         have their treatment duration set.
         """
-        waiting_for_treatment_idx = self.population_view.get_filtered_index(
-            event.index,
-            query=f"{COLUMNS.TREATMENT_STATE} == "
-            f"'{TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE}'",
-        )
+        waiting_for_treatment_idx = self.get_waiting_for_treatment_index(event.index)
         if not waiting_for_treatment_idx.empty:
             durations = self.get_treatment_duration(waiting_for_treatment_idx)
             self.population_view.update(
