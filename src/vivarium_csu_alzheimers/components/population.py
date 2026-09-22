@@ -6,7 +6,6 @@ from vivarium.engine.framework.event import Event
 from vivarium.engine.framework.population import SimulantData
 from vivarium.public_health import utilities
 from vivarium.public_health.population import ScaledPopulation
-from vivarium.public_health.population.base_population import BasePopulation
 
 from vivarium_csu_alzheimers.constants import data_keys
 from vivarium_csu_alzheimers.constants.metadata import ARTIFACT_INDEX_COLUMNS
@@ -89,7 +88,7 @@ class AlzheimersPopulation(ScaledPopulation):
             event.index, query="is_alive == True"
         )
         delta = utilities.to_years(event.step_size)
-        self.population_view.update("age", lambda age: age.loc[living_idx] + delta)
+        self.population_view.update("age", lambda age: age + delta, index=living_idx)
 
     def _load_population_structure(self, builder: Builder) -> pd.DataFrame:
         """Overwriting this method to deal with multi-year population structure and custom age groups."""
