@@ -15,28 +15,60 @@ We recommend installing `Miniforge <https://github.com/conda-forge/miniforge>`_.
 
 Once you have conda installed, you should open up your normal shell
 (if you're on linux or OSX) or the ``git bash`` shell if you're on windows.
-You'll then make an environment, clone this repository, then install
-all necessary requirements as follows::
 
-  :~$ conda create --name=vivarium_csu_alzheimers python=3.11 git git-lfs
-  ...conda will download python and base dependencies...
-  :~$ conda activate vivarium_csu_alzheimers
-  (vivarium_csu_alzheimers) :~$ git clone https://github.com/ihmeuw/vivarium_csu_alzheimers.git
+You'll then clone this repository and make the necessary environments.
+The first step is to clone the repo::
+
+  :~$ git clone https://github.com/ihmeuw/vivarium_csu_alzheimers.git
   ...git will copy the repository from github and place it in your current directory...
-  (vivarium_csu_alzheimers) :~$ cd vivarium_csu_alzheimers
-  (vivarium_csu_alzheimers) :~$ pip install -e .
+  :~$ cd vivarium_csu_alzheimers
+
+There are two environment options: a **local conda environment** (for personal machines)
+or a **shared environment on the cluster** with a lightweight venv wrapper.
+
+To create or update an environment, use ``source environment.sh``. This will
+automatically create the environment if it doesn't exist, or update it if it
+is stale.
+
+**Local conda environment** (default)::
+
+  :~$ source environment.sh
+  ...creates/activates the simulation conda environment...
+  :~$ source environment.sh -t artifact
+  ...creates/activates the artifact conda environment...
+
+To deactivate a local conda environment, run ``conda deactivate``.
+
+**Shared environment on the cluster** (recommended for cluster development)::
+
+  :~$ source environment.sh -s
+  ...creates/activates a venv overlay on the shared simulation environment...
+  :~$ source environment.sh -s -t artifact
+  ...creates/activates a venv overlay on the shared artifact environment...
+
+To deactivate a shared cluster environment, run ``deactivate``.
+
+Additional options are available; pass the ``-h`` flag to see them
+(e.g. ``-f`` to force a rebuild, ``-l`` to install git lfs).
+
+Alternatively, users can manually create conda environments as follows::
+
+  :~$ conda create --name=vivarium_csu_alzheimers_simulation python=3.11 git git-lfs
+  ...conda will download python and base dependencies...
+  :~$ conda activate vivarium_csu_alzheimers_simulation
+  (vivarium_csu_alzheimers_simulation) :~$ pip install -e .[dev]
+  ...pip will install vivarium and other requirements...
+  (vivarium_csu_alzheimers_simulation) :~$ conda deactivate
+  :~$ conda create --name=vivarium_csu_alzheimers_artifact python=3.11 git git-lfs
+  ...conda will download python and base dependencies...
+  :~$ conda activate vivarium_csu_alzheimers_artifact
+  (vivarium_csu_alzheimers_artifact) :~$ pip install -e .[data]
   ...pip will install vivarium and other requirements...
 
-Supported Python versions: 3.10, 3.11
+Supported Python versions: 3.11
 
 Note the ``-e`` flag that follows pip install. This will install the python
 package in-place, which is important for making the model specifications later.
-
-To install requirements from a provided requirements.txt (e.g. installing an
-archived repository with the exact same requirements it was run with), replace
-`pip install -e .` with the following::
-
-  (vivarium_csu_alzheimers) :~$ pip install -r requirements.txt
 
 Cloning the repository should take a fair bit of time as git must fetch
 the data artifact associated with the demo (several GB of data) from the

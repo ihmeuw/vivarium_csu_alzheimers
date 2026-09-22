@@ -1,14 +1,12 @@
 import numpy as np
 import pandas as pd
-from vivarium import Component
-from vivarium.framework.engine import Builder
-from vivarium.framework.event import Event
-from vivarium.framework.population import SimulantData
-from vivarium_public_health import utilities
-from vivarium_public_health.population import ScaledPopulation
-from vivarium_public_health.population.data_transformations import (
-    load_population_structure,
-)
+from vivarium.engine import Component
+from vivarium.engine.framework.engine import Builder
+from vivarium.engine.framework.event import Event
+from vivarium.engine.framework.population import SimulantData
+from vivarium.public_health import utilities
+from vivarium.public_health.population import ScaledPopulation
+from vivarium.public_health.population.base_population import BasePopulation
 
 from vivarium_csu_alzheimers.constants import data_keys
 from vivarium_csu_alzheimers.constants.metadata import ARTIFACT_INDEX_COLUMNS
@@ -27,11 +25,11 @@ class AlzheimersPopulation(ScaledPopulation):
 
     def setup(self, builder: Builder) -> None:
         super().setup(builder)
-        self.key_columns = builder.configuration.randomness.key_columns
+        self.location = self.get_data(builder, self.config.location)
 
-    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
+    def initialize_population(self, pop_data: SimulantData) -> None:
         if pop_data.user_data.get("sim_state") != "time_step":
-            super().on_initialize_simulants(pop_data)
+            super().initialize_population(pop_data)
             return
 
         if "demographic_counts" in pop_data.user_data:
@@ -68,11 +66,11 @@ class AlzheimersPopulation(ScaledPopulation):
             start += value
 
         # Update additional population columns
-        new_simulants["alive"] = "alive"
+        new_simulants["location"] = self.location
         new_simulants["entrance_time"] = pop_data.creation_time
         new_simulants["exit_time"] = pd.NaT
 
-        self.population_view.update(new_simulants)
+        self.population_view.initialize(new_simulants)
         # NOTE: This only works with key_columns because this component creates age and entrance_time
         self.register_simulants(new_simulants[self.key_columns])
 
@@ -87,16 +85,21 @@ class AlzheimersPopulation(ScaledPopulation):
         which means that simulants on age bin boundaries land in the older age bin
         than they should have.
         """
-        population = self.population_view.get(event.index, query="alive == 'alive'")
-        population["age"] += utilities.to_years(event.step_size)
-        self.population_view.update(population)
+        living_idx = self.population_view.get_filtered_index(
+            event.index, query="is_alive == True"
+        )
+        delta = utilities.to_years(event.step_size)
+        self.population_view.update("age", lambda age: age.loc[living_idx] + delta)
 
     def _load_population_structure(self, builder: Builder) -> pd.DataFrame:
         """Overwriting this method to deal with multi-year population structure and custom age groups."""
         scaling_factor = self.get_data(builder, self.scaling_factor)
         # Population does not have under 5 age groups
         scaling_factor = scaling_factor[scaling_factor["age_start"] >= 5]
-        population_structure = load_population_structure(builder)
+        # Deliberately skip ScaledPopulation's scaling; we apply our own below.
+        population_structure = super(ScaledPopulation, self)._load_population_structure(
+            builder
+        )
         if not isinstance(scaling_factor, pd.DataFrame):
             raise ValueError(
                 f"Scaling factor must be a pandas DataFrame. Provided value: {scaling_factor}"
@@ -124,7 +127,7 @@ class AlzheimersPopulation(ScaledPopulation):
 class AlzheimersIncidence(Component):
     """Class to handle the incidence of Alzheimer's disease.
 
-    This is heavily based on the vivarium_public_health FertilityCrudeBirthRate
+    This is heavily based on the vivarium.public_health FertilityCrudeBirthRate
     class. It determines which simulants will be added to the simulation.
 
     Notes

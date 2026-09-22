@@ -1,9 +1,11 @@
 import pandas as pd
-from vivarium import Component
-from vivarium.framework.engine import Builder
-from vivarium.framework.population import SimulantData
-from vivarium.framework.values import list_combiner, union_post_processor
-from vivarium_public_health.disease import (
+from vivarium.engine import Component
+from vivarium.engine.framework.engine import Builder
+from vivarium.engine.framework.population import SimulantData
+from vivarium.public_health.causal_factor.calibration_constant import (
+    register_risk_affected_rate_producer,
+)
+from vivarium.public_health.disease import (
     BaseDiseaseState,
     DiseaseModel,
     DiseaseState,
@@ -26,32 +28,25 @@ from vivarium_csu_alzheimers.data.mci_hazard import hazard
 
 
 class BBBMTransitionRate(RateTransition):
-    @property
-    def columns_required(self) -> list[str]:
-        return super().columns_required + [COLUMNS.BBBM_ENTRANCE_TIME]
-
     def setup(self, builder: Builder) -> None:
         self.clock = builder.time.clock()
         self.step_size = builder.configuration.time.step_size / 365.0
-        # Code below is copy/paste from super().setup but need bbbm entrance time column
-        paf = builder.lookup.build_table(0)
-        self.joint_paf = builder.value.register_value_producer(
-            f"{self.transition_rate_pipeline_name}.paf",
-            source=lambda index: [paf(index)],
-            component=self,
-            preferred_combiner=list_combiner,
-            preferred_post_processor=union_post_processor,
-        )
-        self.transition_rate = builder.value.register_rate_producer(
-            self.transition_rate_pipeline_name,
+        # Code below is copy/paste from super().setup but need bbbm entrance time attribute
+        self.transition_rate_table = self.build_lookup_table(builder, "transition_rate")
+        register_risk_affected_rate_producer(
+            builder=builder,
+            name=self.transition_rate_pipeline,
             source=self.compute_transition_rate,
-            component=self,
-            required_resources=["alive", self.joint_paf, COLUMNS.BBBM_ENTRANCE_TIME],
+            required_resources=[
+                "is_alive",
+                self.transition_rate_table,
+                COLUMNS.BBBM_ENTRANCE_TIME,
+            ],
         )
         self.rate_conversion_type = self.configuration["rate_conversion_type"]
 
     def compute_transition_rate(self, index: pd.Index) -> pd.Series:
-        entrance_time = self.population_view.get(index)["bbbm_entrance_time"]
+        entrance_time = self.population_view.get(index, COLUMNS.BBBM_ENTRANCE_TIME)
         current_time = self.clock()
         time_diff_numeric_years = (current_time - entrance_time).dt.total_seconds() / (
             365.0 * 24 * 3600
@@ -75,7 +70,7 @@ class AlzheimersModel(DiseaseModel):
     def name(self) -> str:
         return "disease_model.alzheimers_disease_and_other_dementias"
 
-    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
+    def initialize_state(self, pop_data: SimulantData) -> None:
         """Initialize the simulants in the population.
 
         HACK: Use birth prevalence for simulants entering on time_step
@@ -88,16 +83,15 @@ class AlzheimersModel(DiseaseModel):
             The population data object.
         """
         if pop_data.user_data.get("sim_state") == "time_step":
-            initialization_table_name = "birth_prevalence"
+            self.initialization_weights_pipelines = [
+                state.birth_prevalence_pipeline for state in self.states
+            ]
         else:
-            initialization_table_name = "prevalence"
-
-        for state in self.states:
-            state.lookup_tables["initialization_weights"] = state.lookup_tables[
-                initialization_table_name
+            self.initialization_weights_pipelines = [
+                state.prevalence_pipeline for state in self.states
             ]
 
-        super(DiseaseModel, self).on_initialize_simulants(pop_data)
+        super(DiseaseModel, self).initialize_state(pop_data)
 
 
 class Alzheimers(Component):
@@ -110,18 +104,6 @@ class Alzheimers(Component):
     def sub_components(self) -> list[Component]:
         return [self.disease_model]
 
-    @property
-    def columns_created(self) -> list[str]:
-        return [COLUMNS.BBBM_ENTRANCE_TIME]
-
-    @property
-    def columns_required(self) -> list[str]:
-        return [COLUMNS.ENTRANCE_TIME]
-
-    @property
-    def initialization_requirements(self):
-        return [COLUMNS.ENTRANCE_TIME, self.randomness]
-
     def __init__(self):
         super().__init__()
         self.disease_model = self._create_disease_model()
@@ -129,8 +111,13 @@ class Alzheimers(Component):
     def setup(self, builder: Builder) -> None:
         self.randomness = builder.randomness.get_stream(self.name)
         self.step_size = builder.configuration.time.step_size / 365.0
+        builder.population.register_initializer(
+            initializer=self.initialize_bbbm_entrance_time,
+            columns=[COLUMNS.BBBM_ENTRANCE_TIME],
+            required_resources=[COLUMNS.ENTRANCE_TIME, self.randomness],
+        )
 
-    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
+    def initialize_bbbm_entrance_time(self, pop_data: SimulantData) -> None:
         """Initialize BBBM entrance time for new simulants."""
         new_simulants = pd.DataFrame(index=pop_data.index)
         if pop_data.user_data.get("sim_state") == "time_step":
@@ -147,7 +134,7 @@ class Alzheimers(Component):
             )
             new_simulants[COLUMNS.BBBM_ENTRANCE_TIME] = bbbm_entrance_time
 
-        self.population_view.update(new_simulants)
+        self.population_view.initialize(new_simulants)
 
     def _create_disease_model(self) -> AlzheimersModel:
         bbbm_state = BBBMDiseaseState(
@@ -193,7 +180,7 @@ class Alzheimers(Component):
 
         return AlzheimersModel(
             ALZHEIMERS_DISEASE_MODEL.NAME,
-            initial_state=bbbm_state,
+            residual_state=bbbm_state,
             states=[bbbm_state, mci_state, alzheimers_state],
         )
 

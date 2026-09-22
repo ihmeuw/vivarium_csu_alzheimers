@@ -1,5 +1,56 @@
 [build-system]
-requires = ["packaging", "setuptools"]
+requires = ["setuptools>=61.0", "setuptools_scm[toml]>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vivarium-csu-alzheimers"
+description = "Vivarium simulation model for the vivarium_csu_alzheimers project."
+readme = "README.rst"
+requires-python = ">=3.11"
+license = {text = "BSD-3-Clause"}
+authors = [{name = "The vivarium developers", email = "vivarium.dev@gmail.com"}]
+dynamic = ["version"]
+dependencies = [
+    "vivarium-dependencies<2.0.0",
+    "vivarium-dependencies[pandas,numpy,scipy,click,tables,loguru]",
+    "vivarium-build-utils>=4.0.0,<5.0.0",
+    "vivarium-engine>=5.10.0,<6.0.0",
+    "vivarium-public-health>=6.6.1,<7.0.0",
+    "jinja2",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+test = ["vivarium-dependencies[pytest]"]
+cluster = ["vivarium-cluster-tools[cluster]>=4.0.0,<5.0.0"]
+interactive = ["vivarium-dependencies[interactive]"]
+lint = ["vivarium-dependencies[lint]"]
+data = [
+    "vivarium-inputs>=8.0.0,<9.0.0",
+    "vivarium-gbd-access>=6.0.0,<7.0.0",
+    # Capped below v7 by vivarium-inputs, which requires <7.0.0
+    "vivarium-gbd-mapping>=6.0.0,<7.0.0",
+    "xarray",
+    # Required by vivarium_csu_alzheimers.data.consistent_rates
+    "jax",
+    "numpyro",
+    "diffrax",
+    "interpax",
+    "vivarium-csu-alzheimers[cluster]",
+]
+dev = ["vivarium-csu-alzheimers[interactive,test,cluster,lint]"]
+
+[project.urls]
+Homepage = "https://github.com/ihmeuw/vivarium_csu_alzheimers"
+
+[project.scripts]
+make_artifacts = "vivarium_csu_alzheimers.tools.cli:make_artifacts"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
+tag_regex = '^(?P<prefix>v)?(?P<version>[^\+]+)(?P<suffix>.*)?$'
 
 [tool.black]
 line_length = 94
