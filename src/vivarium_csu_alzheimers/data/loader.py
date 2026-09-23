@@ -15,8 +15,8 @@ for an example.
 
 import numpy as np
 import pandas as pd
-from gbd_mapping import causes, covariates, risk_factors
-from vivarium.framework.artifact import EntityKey
+from vivarium.artifact import EntityKey
+from vivarium.gbd_mapping import causes, covariates, risk_factors
 from vivarium_inputs import globals as vi_globals
 from vivarium_inputs import interface
 from vivarium_inputs import utilities as vi_utils

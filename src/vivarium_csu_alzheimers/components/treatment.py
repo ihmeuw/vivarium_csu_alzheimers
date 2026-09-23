@@ -6,12 +6,11 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from vivarium import Component
-from vivarium.framework.engine import Builder
-from vivarium.framework.event import Event
-from vivarium.framework.population import SimulantData
-from vivarium.framework.resource import Resource
-from vivarium_public_health import (
+from vivarium.engine import Component
+from vivarium.engine.framework.engine import Builder
+from vivarium.engine.framework.event import Event
+from vivarium.engine.framework.population import SimulantData
+from vivarium.public_health import (
     DiseaseModel,
     DiseaseState,
     RiskEffect,
@@ -47,32 +46,52 @@ class TreatmentModel(DiseaseModel):
         """We want treatment to occur after testing updates."""
         return 7
 
-    @property
-    def columns_created(self) -> list[str]:
-        """Override because we create the column in Treatment."""
-        return []
-
-    @property
-    def columns_required(self) -> list[str]:
-        """Need to add the column that we removed from column_created here."""
-        return super().columns_required + [COLUMNS.TREATMENT_STATE]
-
-    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
-        """Typical DiseaseModel initialization except we do not initialize the state column.
-
-        We skip the super's (Machine's) on_initialize_simulants call because we do
-        not want to initialize the disease states here since we are handling that
-        in the Treatment component.
+    def __init__(
+        self,
+        cause: str,
+        initial_state_source: Callable[[pd.Index[int]], pd.Series[str]],
+        **kwargs: Any,
+    ) -> None:
         """
-        if pop_data.user_data.get("age_end", self.configuration_age_end) == 0:
-            initialization_table_name = "birth_prevalence"
-        else:
-            initialization_table_name = "prevalence"
+        Parameters
+        ----------
+        cause
+            The name of the cause of disease.
+        initial_state_source
+            A callable that maps the index of the simulants being initialized to
+            the states they should start in.
+        kwargs
+            Additional keyword arguments for DiseaseModel.
+        """
+        super().__init__(cause, **kwargs)
+        self.initial_state_source = initial_state_source
 
-        for state in self.states:
-            state.lookup_tables["initialization_weights"] = state.lookup_tables[
-                initialization_table_name
-            ]
+    def setup(self, builder: Builder) -> None:
+        """Typical DiseaseModel setup except for how the initial states are chosen.
+
+        The code below is copy/paste from DiseaseModel.setup and Machine.setup except
+        that the state initializer takes the states chosen by the Treatment component
+        (see Treatment.get_initial_treatment_states) rather than sampling them from
+        the states' prevalence.
+        """
+        self.randomness = builder.randomness.get_stream(self.name)
+        builder.population.register_initializer(
+            initializer=self.initialize_state,
+            columns=self.state_column,
+            required_resources=[COLUMNS.TREATMENT_PROPENSITY, COLUMNS.BBBM_TEST_RESULT],
+        )
+
+        self.csmr_table = self.build_lookup_table(builder, "cause_specific_mortality_rate")
+
+        builder.value.register_attribute_modifier(
+            "cause_specific_mortality_rate",
+            self.adjust_cause_specific_mortality_rate,
+            required_resources=["age", "sex"],
+        )
+
+    def initialize_state(self, pop_data: SimulantData) -> None:
+        initial_states = self.initial_state_source(pop_data.index)
+        self.population_view.initialize(initial_states.rename(self.state_column))
 
 
 class Treatment(Component):
@@ -81,26 +100,6 @@ class Treatment(Component):
     @property
     def sub_components(self) -> list[Component]:
         return [self.disease_model]
-
-    @property
-    def initialization_requirements(self) -> list[str | Resource]:
-        return [self.randomness]
-
-    @property
-    def columns_created(self) -> list[str]:
-        return [
-            COLUMNS.TREATMENT_PROPENSITY,
-            COLUMNS.TREATMENT_STATE,
-            COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME,
-            COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT,
-            COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_TIME,
-            COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_COUNT,
-            COLUMNS.TREATMENT_DURATION,
-        ]
-
-    @property
-    def columns_required(self) -> list[str]:
-        return [COLUMNS.BBBM_TEST_RESULT]
 
     def __init__(self):
         super().__init__()
@@ -120,101 +119,107 @@ class Treatment(Component):
         self.scenario = scenarios.INTERVENTION_SCENARIOS[
             builder.configuration.intervention.scenario
         ]
+        builder.population.register_initializer(
+            initializer=self.initialize_propensity,
+            columns=[COLUMNS.TREATMENT_PROPENSITY],
+            required_resources=[self.randomness],
+        )
+        builder.population.register_initializer(
+            initializer=self.initialize_treatment_duration,
+            columns=[COLUMNS.TREATMENT_DURATION],
+            required_resources=[COLUMNS.TREATMENT_STATE, self.randomness],
+        )
         # register an exposure pipeline that just turns around
-        builder.value.register_value_producer(
+        builder.value.register_attribute_producer(
             f"{COLUMNS.TREATMENT_STATE}.exposure",
             source=self.get_treatment_states,
-            component=self,
             required_resources=[COLUMNS.TREATMENT_STATE],
         )
-        builder.value.register_value_modifier(
+        builder.value.register_attribute_modifier(
             "treatment_effect.dwell_time",
             modifier=self.modify_dwell_time,
-            component=self,
-            required_resources=[COLUMNS.TREATMENT_DURATION, "treatment_effect.dwell_time"],
+            required_resources=[COLUMNS.TREATMENT_DURATION],
         )
-        builder.value.register_value_modifier(
+        builder.value.register_attribute_modifier(
             "waning_effect.dwell_time",
             modifier=self.modify_dwell_time,
-            component=self,
-            required_resources=[COLUMNS.TREATMENT_DURATION, "waning_effect.dwell_time"],
+            required_resources=[COLUMNS.TREATMENT_DURATION],
         )
 
     def get_treatment_states(self, index: pd.Index) -> pd.Series:
-        return self.population_view.subview(COLUMNS.TREATMENT_STATE).get(index).squeeze()
+        return self.population_view.get(index, COLUMNS.TREATMENT_STATE)
 
-    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
-        """Initialize treatment propensity for new simulants."""
-        # Create the propensity column
+    def initialize_propensity(self, pop_data: SimulantData) -> None:
+        """Initialize the treatment propensity for new simulants."""
         propensity = self.randomness.get_draw(
             pop_data.index, additional_key=COLUMNS.TREATMENT_PROPENSITY
         )
-        propensity.name = COLUMNS.TREATMENT_PROPENSITY
-        # We need the propensity column to exist in the population view in the
-        # `start_treatment_probs` call below, so update now.
-        self.population_view.update(propensity)
+        self.population_view.initialize(propensity.rename(COLUMNS.TREATMENT_PROPENSITY))
 
-        # Initialize the treatment state column as well as treatment decision
-        # event time and count columns
-        # HACK: We need to manually do this here rather than relying on the TreatmentModel
-        #   and DiseaseState classes because vivarium simulations by default do not
-        #   include newly-initialized simulants when making decisions for a given
-        #   time step, i.e. simulants need to be both tested and treated during
-        #   initialization (without this they would be tested on initialization but
-        #   not run through the treatment logic until the following time step).
-        #
-        #   NOTE: We do this here in Treatment rather than in the TreatmentModel
-        #   Because we need to know the location to apply the appropriate
-        #   treatment probabilities which requires access to the builder.
-        #
-        #   NOTE: We are only special-casing the waiting_for_treatment and
-        #   no_effect_never_treated states here because it's critical that we not
-        #   skip potential treatment for initialized simulants; all other states
-        #   in the disease model (aside from Susceptible) are downstream of starting
-        #   treatment and since no simulants are initialized having already started
-        #   treatment, they can be handled in the normal way.
-        positive_results = self.has_positive_results(pop_data.index)
+    def get_waiting_for_treatment_index(self, index: pd.Index[int]) -> pd.Index[int]:
+        """Returns the subset of the given index that is waiting for treatment."""
+        return self.population_view.get_filtered_index(
+            index,
+            query=f"{COLUMNS.TREATMENT_STATE} == "
+            f"'{TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE}'",
+        )
+
+    def initialize_treatment_duration(self, pop_data: SimulantData) -> None:
+        """Initialize the treatment duration of simulants who start out in treatment."""
+        durations = pd.Series(np.nan, index=pop_data.index, name=COLUMNS.TREATMENT_DURATION)
+        waiting_for_treatment_idx = self.get_waiting_for_treatment_index(pop_data.index)
+        if not waiting_for_treatment_idx.empty:
+            durations.loc[waiting_for_treatment_idx] = self.get_treatment_duration(
+                waiting_for_treatment_idx
+            )
+        self.population_view.initialize(durations)
+
+    def get_initial_treatment_states(self, index: pd.Index[int]) -> pd.Series[str]:
+        """Chooses the treatment states that simulants are initialized into.
+
+        HACK: We need to manually do this here rather than relying on the TreatmentModel
+        and DiseaseState classes because vivarium simulations by default do not
+        include newly-initialized simulants when making decisions for a given
+        time step, i.e. simulants need to be both tested and treated during
+        initialization (without this they would be tested on initialization but
+        not run through the treatment logic until the following time step).
+
+        Notes
+        -----
+        We do this here in Treatment rather than in the TreatmentModel because we
+        need to know the location to apply the appropriate treatment probabilities
+        which requires access to the builder.
+
+        We are only special-casing the waiting_for_treatment and
+        no_effect_never_treated states here because it's critical that we not
+        skip potential treatment for initialized simulants; all other states
+        in the disease model (aside from Susceptible) are downstream of starting
+        treatment and since no simulants are initialized having already started
+        treatment, they can be handled in the normal way. The corresponding event
+        times and counts are initialized by PositiveTestDecisionState, below.
+
+        Parameters
+        ----------
+        index
+            The index of the simulants being initialized.
+
+        Returns
+        -------
+            The treatment state of each simulant being initialized.
+        """
+        states = pd.Series(
+            f"{TREATMENT_DISEASE_MODEL.SUSCEPTIBLE_STATE}_to_treatment", index=index
+        )
+        positive_results = self.has_positive_results(index)
         positive_results_idx = positive_results[positive_results == 1].index
         start_treatment_probs = self.start_treatment_probs(positive_results_idx)
-        # During initialization, we can only update the entire pop_data and so we cannot
-        # just get the positive_results idx here.
         start_treatment_idx = (start_treatment_probs[start_treatment_probs == 1]).index
         decline_treatment_idx = positive_results_idx.difference(start_treatment_idx)
-        event_time = pop_data.creation_time + get_timedelta_from_step_size(self.step_size)
-        update = pd.DataFrame(
-            data={
-                COLUMNS.TREATMENT_STATE: f"{TREATMENT_DISEASE_MODEL.SUSCEPTIBLE_STATE}_to_treatment",
-                COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME: pd.NaT,
-                COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT: 0,
-                COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_TIME: pd.NaT,
-                COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_COUNT: 0,
-                COLUMNS.TREATMENT_DURATION: np.nan,
-            },
-            index=pop_data.index,
-        )
-        update.loc[
-            start_treatment_idx,
-            [
-                COLUMNS.TREATMENT_STATE,
-                COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME,
-                COLUMNS.WAITING_FOR_TREATMENT_EVENT_COUNT,
-            ],
-        ] = [TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE, event_time, 1]
-        if not start_treatment_idx.empty:
-            update.loc[
-                start_treatment_idx, COLUMNS.TREATMENT_DURATION
-            ] = self.get_treatment_duration(start_treatment_idx)
-
-        update.loc[
-            decline_treatment_idx,
-            [
-                COLUMNS.TREATMENT_STATE,
-                COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_TIME,
-                COLUMNS.NO_EFFECT_NEVER_TREATED_EVENT_COUNT,
-            ],
-        ] = [TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE, event_time, 1]
-
-        self.population_view.update(update)
+        states.loc[start_treatment_idx] = TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE
+        states.loc[
+            decline_treatment_idx
+        ] = TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE
+        return states
 
     def on_time_step_cleanup(self, event: Event) -> None:
         """Set treatment duration for simulants in waiting_for_treatment state.
@@ -223,16 +228,14 @@ class Treatment(Component):
         all simulants who entered waiting_for_treatment during this time step
         have their treatment duration set.
         """
-        pop = self.population_view.get(event.index)
-        waiting_for_treatment_idx = pop.index[
-            pop[COLUMNS.TREATMENT_STATE]
-            == TREATMENT_DISEASE_MODEL.WAITING_FOR_TREATMENT_STATE
-        ]
+        waiting_for_treatment_idx = self.get_waiting_for_treatment_index(event.index)
         if not waiting_for_treatment_idx.empty:
-            pop.loc[
-                waiting_for_treatment_idx, COLUMNS.TREATMENT_DURATION
-            ] = self.get_treatment_duration(waiting_for_treatment_idx)
-            self.population_view.update(pop)
+            durations = self.get_treatment_duration(waiting_for_treatment_idx)
+            self.population_view.update(
+                COLUMNS.TREATMENT_DURATION,
+                lambda _: durations.rename(COLUMNS.TREATMENT_DURATION),
+                index=waiting_for_treatment_idx,
+            )
 
     def _create_treatment_mode(self) -> TreatmentModel:
 
@@ -307,7 +310,8 @@ class Treatment(Component):
 
         return TreatmentModel(
             TREATMENT_DISEASE_MODEL.NAME,
-            initial_state=susceptible,
+            initial_state_source=self.get_initial_treatment_states,
+            residual_state=susceptible,
             states=[
                 susceptible,
                 positive_test,
@@ -322,14 +326,14 @@ class Treatment(Component):
 
     def has_positive_results(self, index: pd.Index[int]) -> pd.Series[float]:
         """Returns 1 if the bbbm test result is positive, 0 otherwise."""
-        pop = self.population_view.subview(COLUMNS.BBBM_TEST_RESULT).get(index)
+        test_results = self.population_view.get(index, COLUMNS.BBBM_TEST_RESULT)
         is_positive = pd.Series(0.0, index=index)
-        is_positive[pop[COLUMNS.BBBM_TEST_RESULT] == BBBM_TEST_RESULTS.POSITIVE] = 1.0
+        is_positive[test_results == BBBM_TEST_RESULTS.POSITIVE] = 1.0
         return is_positive
 
     def start_treatment_probs(self, index: pd.Index[int]) -> pd.Series[float]:
         """Returns 1 if the propensity is less that treatment probability, 0 otherwise."""
-        pop = self.population_view.subview(COLUMNS.TREATMENT_PROPENSITY).get(index)
+        propensity = self.population_view.get(index, COLUMNS.TREATMENT_PROPENSITY)
         event_date = self.clock() + get_timedelta_from_step_size(self.step_size)
         probs = pd.Series(0.0, index=index)
 
@@ -348,7 +352,7 @@ class Treatment(Component):
             rates = [rate for _, rate in TREATMENT_PROBS_RAMP]
             treatment_prob = np.interp(event_date.value, timestamps, rates)
 
-        probs[pop[COLUMNS.TREATMENT_PROPENSITY] < treatment_prob] = 1.0
+        probs[propensity < treatment_prob] = 1.0
         return probs
 
     def decline_treatment_probs(self, index: pd.Index[int]) -> pd.Series[float]:
@@ -390,9 +394,7 @@ class Treatment(Component):
         -------
             Modified dwell time in days
         """
-        treatment_length = (
-            self.population_view.subview(COLUMNS.TREATMENT_DURATION).get(index).squeeze()
-        )
+        treatment_length = self.population_view.get(index, COLUMNS.TREATMENT_DURATION)
         # Treatment length is in months, target is dwell time in days (float)
         effect_duration = (treatment_length / TREATMENT_FULL_DURATION) * target
         # Round to nearest timestep
@@ -401,24 +403,35 @@ class Treatment(Component):
 
 
 class PositiveTestDecisionState(DiseaseState):
-    """Override initialization of the columns so that Treatment can handle it."""
+    """A treatment state that simulants can be initialized directly into.
 
-    @property
-    def columns_created(self):
-        # Remove the columns created during DiseaseState since they will be
-        # created in Treatment
-        return []
+    The Treatment component decides during initialization which simulants start out
+    waiting for treatment and which have declined it. This state records the
+    corresponding event time and count rather than the empty values the base state
+    would provide.
+    """
 
-    @property
-    def columns_required(self):
-        # Need to add the columns that we removed from column_created here
-        return super().columns_required + [self.event_count_column, self.event_time_column]
+    def setup(self, builder: Builder) -> None:
+        super().setup(builder)
+        self.step_size = builder.configuration.time.step_size
 
-    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
-        """Adds this state's columns to the simulation state table."""
-        for transition in self.transition_set:
-            if transition.start_active:
-                transition.set_active(pop_data.index)
+    def get_initial_event_times(self, pop_data: SimulantData) -> pd.DataFrame:
+        """Records an event for simulants initialized into this state.
+
+        Notes
+        -----
+        The treatment state column is already a required resource of this state's
+        initializer (DiseaseState requires its model's state column), so it is
+        guaranteed to have been initialized by the Treatment component by now.
+        """
+        pop_update = super().get_initial_event_times(pop_data)
+        treatment_states = self.population_view.get(pop_data.index, self.model)
+        initialized_in_state = treatment_states == self.state_id
+        pop_update.loc[
+            initialized_in_state, self.event_time_column
+        ] = pop_data.creation_time + get_timedelta_from_step_size(self.step_size)
+        pop_update.loc[initialized_in_state, self.event_count_column] = 1
+        return pop_update
 
 
 class TreatmentRiskEffect(RiskEffect):
@@ -435,10 +448,6 @@ class TreatmentRiskEffect(RiskEffect):
         defaults[self.name]["data_sources"]["population_attributable_fraction"] = 0.0
         return defaults
 
-    @property
-    def columns_required(self) -> list[str]:
-        return [f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT}_event_time"]
-
     def __init__(self, target: str):
         super().__init__(risk="treatment.treatment", target=target)
 
@@ -446,7 +455,6 @@ class TreatmentRiskEffect(RiskEffect):
         super().setup(builder)
         self.clock = builder.time.clock()
         self.step_size = builder.time.step_size()
-        self.waning_dwell_time_pipeline = builder.value.get_value("waning_effect.dwell_time")
 
     def get_distribution_type(self, builder: Builder) -> str:
         """Returns the type of distribution for the exposure.
@@ -474,12 +482,12 @@ class TreatmentRiskEffect(RiskEffect):
         """
 
         def generate_relative_risk(index: pd.Index) -> pd.Series:
-            rr = self.lookup_tables["relative_risk"](index)
+            rr = self.relative_risk_table(index)
             if len(rr.unique()) != 1:
                 raise NotImplementedError("Only a single relative risk value is supported.")
             rr_min = rr.iloc[0]
 
-            exposure = self.exposure(index)
+            exposure = self.population_view.get(index, self.exposure_name)
             relative_risk = pd.Series(index=index, dtype=float)
 
             affected_states = [
@@ -516,18 +524,18 @@ class TreatmentRiskEffect(RiskEffect):
         waning_mask = exposure == TREATMENT_DISEASE_MODEL.WANING_EFFECT
         if waning_mask.any():
             event_date = self.clock() + self.step_size()
+            waning_index = waning_mask[waning_mask].index
             waning_start_date = pd.to_datetime(
-                (
-                    self.population_view.subview(
-                        f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT}_event_time"
-                    )
-                    .get(waning_mask[waning_mask].index)
-                    .squeeze()
+                self.population_view.get(
+                    waning_index,
+                    f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT}_event_time",
                 )
             )
 
             # Dwell times are number of days in waning effect
-            dwell_times = self.waning_dwell_time_pipeline(waning_mask[waning_mask].index)
+            dwell_times = self.population_view.get(
+                waning_index, f"{TREATMENT_DISEASE_MODEL.WANING_EFFECT}.dwell_time"
+            )
             dwell_times = dwell_times / (self.step_size() / pd.Timedelta(days=1))
             waning_end_date = waning_start_date + get_timedelta_from_step_size(
                 self.step_size().days, dwell_times

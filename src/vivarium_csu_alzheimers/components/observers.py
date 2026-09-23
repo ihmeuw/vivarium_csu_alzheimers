@@ -1,10 +1,10 @@
 import pandas as pd
-from vivarium.framework.engine import Builder
-from vivarium.framework.results import Observer
-from vivarium.framework.time import get_time_stamp
-from vivarium_public_health import ResultsStratifier as ResultsStratifier_
-from vivarium_public_health.results import DiseaseObserver, PublicHealthObserver
-from vivarium_public_health.utilities import to_years
+from vivarium.engine.framework.engine import Builder
+from vivarium.engine.framework.results import Observer
+from vivarium.engine.framework.time import get_time_stamp
+from vivarium.public_health import ResultsStratifier as ResultsStratifier_
+from vivarium.public_health.results import DiseaseObserver, PublicHealthObserver
+from vivarium.public_health.utilities import to_years
 
 from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AGE_MAX,
@@ -24,8 +24,7 @@ class ResultsStratifier(ResultsStratifier_):
         self.step_size = builder.configuration.time.step_size
         super().setup(builder)
 
-    @staticmethod
-    def get_age_bins(builder: Builder) -> pd.DataFrame:
+    def get_age_bins(self, builder: Builder) -> pd.DataFrame:
         """Get the age bins for stratifying by age.
 
         Parameters
@@ -37,17 +36,7 @@ class ResultsStratifier(ResultsStratifier_):
         -------
             The age bins for stratifying by age.
         """
-        raw_age_bins = builder.data.load("population.age_bins")
-        age_start = builder.configuration.population.initialization_age_min
-        exit_age = builder.configuration.population.untracking_age
-
-        age_start_mask = age_start < raw_age_bins["age_end"]
-        exit_age_mask = raw_age_bins["age_start"] < exit_age if exit_age else True
-
-        age_bins = raw_age_bins.loc[age_start_mask & exit_age_mask, :].copy()
-        age_bins["age_group_name"] = (
-            age_bins["age_group_name"].str.replace(" ", "_").str.lower()
-        )
+        age_bins = super().get_age_bins(builder)
         # FIXME: MIC-4083 simulants can age past 125
         max_age = age_bins["age_end"].max()
         age_bins.loc[age_bins["age_end"] == max_age, "age_end"] = 200
@@ -73,26 +62,26 @@ class ResultsStratifier(ResultsStratifier_):
         builder.results.register_stratification(
             name="testing_state",
             categories=list(TESTING_STATES),
-            requires_columns=[COLUMNS.TESTING_STATE],
+            requires_attributes=[COLUMNS.TESTING_STATE],
         )
         builder.results.register_stratification(
             name="bbbm_test_results",
             categories=list(BBBM_TEST_RESULTS),
-            requires_columns=[COLUMNS.BBBM_TEST_RESULT],
+            requires_attributes=[COLUMNS.BBBM_TEST_RESULT],
         )
         builder.results.register_stratification(
             name="semester",
             categories=["first", "second"],
             mapper=self.map_semester,
             is_vectorized=True,
-            requires_columns=["event_time"],
+            requires_attributes=["event_time"],
         )
         builder.results.register_stratification(
             name="treatment_durations",
             categories=list(range(10)),
             mapper=self.map_treatment_durations,
             is_vectorized=True,
-            requires_columns=[COLUMNS.TREATMENT_DURATION],
+            requires_attributes=[COLUMNS.TREATMENT_DURATION],
         )
 
 
@@ -106,7 +95,7 @@ class NewSimulantsObserver(Observer):
     def register_observations(self, builder: Builder) -> None:
         builder.results.register_adding_observation(
             name="counts_new_simulants",
-            requires_columns=["entrance_time"],
+            requires_attributes=["entrance_time"],
             additional_stratifications=self.configuration.include,
             excluded_stratifications=self.configuration.exclude,
             aggregator=self.count_new_simulants,
@@ -123,7 +112,7 @@ class BaselineTestingObserver(PublicHealthObserver):
 
     def register_observations(self, builder: Builder) -> None:
         pop_filter = (
-            'alive == "alive" and tracked == True '
+            "is_alive == True "
             f'and {COLUMNS.PREVIOUS_DISEASE_STATE} == "{ALZHEIMERS_DISEASE_MODEL.BBBM_STATE}" '
             f'and {COLUMNS.DISEASE_STATE} != "{ALZHEIMERS_DISEASE_MODEL.BBBM_STATE}" '
             f'and {COLUMNS.BBBM_TEST_RESULT} != "{BBBM_TEST_RESULTS.POSITIVE}"'
@@ -147,10 +136,9 @@ class BBBMTestingObserver(PublicHealthObserver):
     """Observer to track BBBM testing metrics."""
 
     @property
-    def columns_required(self) -> list[str]:
+    def required_attributes(self) -> list[str]:
         return [
-            "alive",
-            "tracked",
+            "is_alive",
             COLUMNS.BBBM_TEST_DATE,
             COLUMNS.DISEASE_STATE,
             COLUMNS.AGE,
@@ -166,14 +154,14 @@ class BBBMTestingObserver(PublicHealthObserver):
 
     def register_observations(self, builder: Builder) -> None:
         # TODO: clarify whether the default pop_filter to PublicHealthObserver
-        #   should include alive == "alive" (it currently doesn't)
-        pop_filter = 'alive == "alive" and tracked == True'
+        #   should include is_alive == True (it currently doesn't)
+        pop_filter = "is_alive == True"
 
         self.register_adding_observation(
             builder=builder,
             name="counts_bbbm_tests",
             pop_filter=pop_filter,
-            requires_columns=["alive", "tracked", COLUMNS.BBBM_TEST_DATE],
+            requires_attributes=["is_alive", COLUMNS.BBBM_TEST_DATE],
             additional_stratifications=self.configuration.include,
             excluded_stratifications=self.configuration.exclude,
             aggregator=self.count_bbbm_tests,
@@ -182,7 +170,7 @@ class BBBMTestingObserver(PublicHealthObserver):
             builder=builder,
             name="counts_newly_eligible_for_bbbm_testing",
             pop_filter=pop_filter,
-            requires_columns=self.columns_required,
+            requires_attributes=self.required_attributes,
             additional_stratifications=self.configuration.include,
             excluded_stratifications=self.configuration.exclude,
             aggregator=self.count_newly_eligible_simulants,
@@ -191,9 +179,8 @@ class BBBMTestingObserver(PublicHealthObserver):
             builder=builder,
             name="person_time_eligible_for_bbbm_testing",
             pop_filter=pop_filter,
-            requires_columns=[
-                "alive",
-                "tracked",
+            requires_attributes=[
+                "is_alive",
                 COLUMNS.DISEASE_STATE,
                 COLUMNS.AGE,
                 COLUMNS.BBBM_TEST_DATE,
@@ -207,7 +194,7 @@ class BBBMTestingObserver(PublicHealthObserver):
             builder=builder,
             name="person_time_ever_eligible_for_bbbm_testing",
             pop_filter=pop_filter,
-            requires_columns=["alive", "tracked", COLUMNS.BBBM_TEST_EVER_ELIGIBLE],
+            requires_attributes=["is_alive", COLUMNS.BBBM_TEST_EVER_ELIGIBLE],
             additional_stratifications=self.configuration.include
             + [ALZHEIMERS_DISEASE_MODEL.NAME],
             excluded_stratifications=self.configuration.exclude,
@@ -300,13 +287,6 @@ class BBBMTestingObserver(PublicHealthObserver):
 
 
 class TreatmentObserver(DiseaseObserver):
-    @property
-    def columns_required(self) -> list[str]:
-        return super().columns_required + [
-            COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME,
-            COLUMNS.TREATMENT_DURATION,
-        ]
-
     def __init__(self) -> None:
         super().__init__("treatment")
 
@@ -324,8 +304,8 @@ class TreatmentObserver(DiseaseObserver):
         self.register_adding_observation(
             builder=builder,
             name="treatment_duration",
-            pop_filter='alive == "alive" and tracked==True',
-            requires_columns=[
+            pop_filter="is_alive == True",
+            requires_attributes=[
                 COLUMNS.WAITING_FOR_TREATMENT_EVENT_TIME,
             ],
             additional_stratifications=self.configuration.include + ["treatment_durations"],
@@ -347,7 +327,7 @@ class TreatmentObserver(DiseaseObserver):
         builder.results.register_stratification(
             self.disease,
             categories,
-            requires_columns=[self.disease],
+            requires_attributes=[self.disease],
         )
 
     def register_transition_stratification(self, builder: Builder) -> None:
@@ -379,7 +359,7 @@ class TreatmentObserver(DiseaseObserver):
             categories=transitions,
             excluded_categories=excluded_categories,
             mapper=self.map_transitions,
-            requires_columns=[self.disease, self.previous_state_column_name],
+            requires_attributes=[self.disease, self.previous_state_column_name],
             is_vectorized=True,
         )
 
