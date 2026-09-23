@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from vivarium import Component
-from vivarium.framework.event import Event
-from vivarium.framework.population import SimulantData
-from vivarium.framework.resource import Resource
-from vivarium.types import Time
+from vivarium.engine import Component
+from vivarium.engine.framework.event import Event
+from vivarium.engine.framework.population import SimulantData
+from vivarium.engine.types import Time
 
 from vivarium_csu_alzheimers.constants import scenarios
 from vivarium_csu_alzheimers.constants.data_keys import TESTING_RATES
@@ -34,7 +33,7 @@ class Testing(Component):
         return 6
 
     @property
-    def columns_created(self) -> list[str]:
+    def created_columns(self) -> list[str]:
         return [
             COLUMNS.TESTING_PROPENSITY,
             COLUMNS.TESTING_STATE,
@@ -44,14 +43,6 @@ class Testing(Component):
             COLUMNS.BBBM_TEST_EVER_ELIGIBLE,
         ]
 
-    @property
-    def columns_required(self) -> list[str]:
-        return [COLUMNS.DISEASE_STATE, COLUMNS.AGE]
-
-    @property
-    def initialization_requirements(self) -> list[str | Resource]:
-        return [COLUMNS.DISEASE_STATE, self.randomness, COLUMNS.AGE]
-
     def setup(self, builder) -> None:
         self.randomness = builder.randomness.get_stream(self.name)
         self.csf_testing_rate = builder.data.load(TESTING_RATES.CSF)["value"].item()
@@ -60,15 +51,21 @@ class Testing(Component):
             builder.configuration.intervention.scenario
         ]
         self.step_size = builder.configuration.time.step_size
+        builder.population.register_initializer(
+            initializer=self.initialize_testing,
+            columns=self.created_columns,
+            required_resources=[COLUMNS.DISEASE_STATE, self.randomness, COLUMNS.AGE],
+        )
 
-    def on_initialize_simulants(self, pop_data: SimulantData) -> None:
+    def initialize_testing(self, pop_data: SimulantData) -> None:
         """Initialize testing propensity and testing history for new simulants."""
-        pop = self.population_view.subview(
+        pop = self.population_view.get(
+            pop_data.index,
             [
                 COLUMNS.DISEASE_STATE,
                 COLUMNS.AGE,
-            ]
-        ).get(pop_data.index)
+            ],
+        )
 
         # Initialize columns
         pop[COLUMNS.TESTING_PROPENSITY] = self.randomness.get_draw(
@@ -101,14 +98,20 @@ class Testing(Component):
             event_time=event_time,
         )
 
-        self.population_view.update(pop)
+        self.population_view.initialize(pop[self.created_columns])
 
     def on_time_step(self, event: Event) -> None:
-        pop = self.population_view.get(event.index)
+        pop = self.population_view.get(
+            event.index, self.created_columns + [COLUMNS.DISEASE_STATE, COLUMNS.AGE]
+        )
         self._update_baseline_testing(pop)
         eligible_mask = self._get_bbbm_eligible_simulants(pop, event.time)
         self._update_bbbm_testing(pop, eligible_mask, event_time=event.time)
-        self.population_view.update(pop)
+        self.population_view.update(
+            self.created_columns,
+            lambda _: pop[self.created_columns],
+            index=event.index,
+        )
 
     ##################
     # Helper methods #

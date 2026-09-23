@@ -15,28 +15,60 @@ We recommend installing `Miniforge <https://github.com/conda-forge/miniforge>`_.
 
 Once you have conda installed, you should open up your normal shell
 (if you're on linux or OSX) or the ``git bash`` shell if you're on windows.
-You'll then make an environment, clone this repository, then install
-all necessary requirements as follows::
 
-  :~$ conda create --name=vivarium_csu_alzheimers python=3.11 git git-lfs
-  ...conda will download python and base dependencies...
-  :~$ conda activate vivarium_csu_alzheimers
-  (vivarium_csu_alzheimers) :~$ git clone https://github.com/ihmeuw/vivarium_csu_alzheimers.git
+You'll then clone this repository and make the necessary environments.
+The first step is to clone the repo::
+
+  :~$ git clone https://github.com/ihmeuw/vivarium_csu_alzheimers.git
   ...git will copy the repository from github and place it in your current directory...
-  (vivarium_csu_alzheimers) :~$ cd vivarium_csu_alzheimers
-  (vivarium_csu_alzheimers) :~$ pip install -e .
+  :~$ cd vivarium_csu_alzheimers
+
+There are two environment options: a **local conda environment** (for personal machines)
+or a **shared environment on the cluster** with a lightweight venv wrapper.
+
+To create or update an environment, use ``source environment.sh``. This will
+automatically create the environment if it doesn't exist, or update it if it
+is stale.
+
+**Local conda environment** (default)::
+
+  :~$ source environment.sh
+  ...creates/activates the simulation conda environment...
+  :~$ source environment.sh -t artifact
+  ...creates/activates the artifact conda environment...
+
+To deactivate a local conda environment, run ``conda deactivate``.
+
+**Shared environment on the cluster** (recommended for cluster development)::
+
+  :~$ source environment.sh -s
+  ...creates/activates a venv overlay on the shared simulation environment...
+  :~$ source environment.sh -s -t artifact
+  ...creates/activates a venv overlay on the shared artifact environment...
+
+To deactivate a shared cluster environment, run ``deactivate``.
+
+Additional options are available; pass the ``-h`` flag to see them
+(e.g. ``-f`` to force a rebuild, ``-l`` to install git lfs).
+
+Alternatively, users can manually create conda environments as follows::
+
+  :~$ conda create --name=vivarium_csu_alzheimers_simulation python=3.11 git git-lfs
+  ...conda will download python and base dependencies...
+  :~$ conda activate vivarium_csu_alzheimers_simulation
+  (vivarium_csu_alzheimers_simulation) :~$ pip install -e .[dev]
+  ...pip will install vivarium and other requirements...
+  (vivarium_csu_alzheimers_simulation) :~$ conda deactivate
+  :~$ conda create --name=vivarium_csu_alzheimers_artifact python=3.11 git git-lfs
+  ...conda will download python and base dependencies...
+  :~$ conda activate vivarium_csu_alzheimers_artifact
+  (vivarium_csu_alzheimers_artifact) :~$ pip install -e .[data]
   ...pip will install vivarium and other requirements...
 
-Supported Python versions: 3.10, 3.11
+Supported Python versions: 3.11
 
 Note the ``-e`` flag that follows pip install. This will install the python
 package in-place, which is important for making the model specifications later.
-
-To install requirements from a provided requirements.txt (e.g. installing an
-archived repository with the exact same requirements it was run with), replace
-`pip install -e .` with the following::
-
-  (vivarium_csu_alzheimers) :~$ pip install -r requirements.txt
 
 Cloning the repository should take a fair bit of time as git must fetch
 the data artifact associated with the demo (several GB of data) from the
@@ -52,37 +84,28 @@ not something that can be specified and installed with the rest of the package's
 dependencies via ``pip``. If you encounter HDF5-related errors, you should
 install hdf tooling from within your environment like so::
 
-  (vivarium_csu_alzheimers) :~$ conda install hdf5
+  (<your environment>) :~$ conda install hdf5
 
-The ``(vivarium_csu_alzheimers)`` that precedes your shell prompt will probably show
-up by default, though it may not.  It's just a visual reminder that you
+The environment name in parentheses that precedes your shell prompt will probably
+show up by default, though it may not.  It's just a visual reminder that you
 are installing and running things in an isolated programming environment
 so it doesn't conflict with other source code and libraries on your
 system.
 
-Alternative Installation Using "Lock" Files
--------------------------------------------
+Reproducing the Archived Model
+------------------------------
 
-To help with running this model after completion, we also have archival "lock" files, which are text 
-descriptions of which packages (with which exact versions) are part of the environment. This allows 
-us to rerun an older model, built on prior versions of software packages. These files are tracked 
-in this git repository. The main disadvantage of the lock files is that they could stop working 
-over time if packages are removed from the conda (or PyPI) package repositories. We primarily use 
-conda-forge, which avoids removing packages "if possible."
+The published results were produced before this model was migrated onto the
+vivarium-suite framework packages, and that version cannot be installed alongside
+the current one: the old ``vivarium`` distribution and the current
+``vivarium-engine`` both own the ``vivarium`` namespace.
 
-Because certain packages we use can only be installed with pip and not with conda, there are a few 
-steps to the process of creating an environment using these files::
+To reproduce it, use the `Archiving release
+<https://github.com/ihmeuw/vivarium_csu_alzheimers/releases/tag/Archiving>`_, which
+carries that version of the code together with the conda and pip lock files
+describing the exact environment it ran in.
 
-  ...Create a conda environment with all the conda packages...
-  :~$ conda create --name vivarium_csu_alzheimers --file vivarium_csu_alzheimers_lock_conda.txt
-  ...Activate the conda environment...
-  :~$ conda activate vivarium_csu_alzheimers
-  ...Install the pip-only packages...
-  (vivarium_csu_alzheimers) :~$ pip install -r vivarium_csu_alzheimers_lock_pip.txt
-  (vivarium_csu_alzheimers) :~$ pip install -e .
-
-The standard installation above is recommended, but these archival files might be helpful in the future. 
-This was written in May of 2026.
+New lock files will be generated when the current version of the model is archived.
 
 Usage
 -----
@@ -134,7 +157,7 @@ in the ``model_specifications`` directory.
 
 With this model specification file and your conda environment active, you can then run simulations by, e.g.::
 
-   (vivarium_csu_alzheimers) :~$ simulate run -v /<REPO_INSTALLATION_DIRECTORY>/vivarium_csu_alzheimers/src/vivarium_csu_alzheimers/model_specifications/model_spec.yaml
+   (vivarium_csu_alzheimers_simulation) :~$ simulate run -v /<REPO_INSTALLATION_DIRECTORY>/vivarium_csu_alzheimers/src/vivarium_csu_alzheimers/model_specifications/model_spec.yaml
 
 The ``-v`` flag will log verbosely, so you will get log messages every time
 step. For more ways to run simulations, see the tutorials at

@@ -11,7 +11,7 @@ import pandas as pd
 from diffrax import Dopri5, ODETerm, SaveAt, diffeqsolve
 from numpyro import distributions as dist
 from numpyro import infer
-from vivarium.framework.artifact import Artifact
+from vivarium.artifact import Artifact
 
 from vivarium_csu_alzheimers.constants import data_keys
 from vivarium_csu_alzheimers.constants.data_values import (

@@ -1,6 +1,6 @@
 import click
 from loguru import logger
-from vivarium.framework.utilities import handle_exceptions
+from vivarium.engine.framework.utilities import handle_exceptions
 
 from vivarium_csu_alzheimers.constants import metadata, paths
 from vivarium_csu_alzheimers.tools import build_artifacts, configure_logging_to_terminal
