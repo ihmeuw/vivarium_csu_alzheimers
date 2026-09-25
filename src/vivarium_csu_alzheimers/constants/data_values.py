@@ -139,7 +139,7 @@ CSF_PET_LOCATION_TESTING_RATES = {
         TESTING_RATES.CSF: TestingRates(mean=0.133, ci_lower=0.067, ci_upper=0.2),
         TESTING_RATES.PET: TestingRates(mean=0.149, ci_lower=0.075, ci_upper=0.224),
     },
-    "Taiwan (Province of China)": {
+    "Taiwan": {
         TESTING_RATES.CSF: TestingRates(mean=0.133, ci_lower=0.067, ci_upper=0.2),
         TESTING_RATES.PET: TestingRates(mean=0.149, ci_lower=0.075, ci_upper=0.224),
     },

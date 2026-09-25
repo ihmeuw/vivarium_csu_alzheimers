@@ -109,7 +109,7 @@ def load_population_location(
 
 
 def load_forecast(param: str, location: str, years: int | str | list[int]) -> pd.DataFrame:
-    loc_id = utility_data.get_location_id(location)
+    loc_id = utility_data.resolve_location(location)
     age_mapping = get_data(data_keys.POPULATION.AGE_BINS, location, years)
     return table_from_nc(
         FORECAST_NC_DATA_FILEPATHS_DICT, param, loc_id, location, age_mapping
@@ -257,7 +257,12 @@ def reshape_to_vivarium_format(df, location):
     df = df[
         ~df.age_group_id.isin(metadata.UNEXPECTED_AGE_GROUPS)
     ]  # unexpected age groups cause vi_utils.scrub_gbd_conventions to fail
-    df = vi_utils.reshape(df, value_cols=vi_globals.DRAW_COLUMNS)
+    # NOTE: the draw columns come from this repo's own DRAW_COUNT rather than
+    # vi_globals.DRAW_COLUMNS. vivarium_inputs halved NUM_DRAWS to 250 for GBD 2023,
+    # but this model's artifact -- and the FHS forecast data it is combined with --
+    # carry 500. Using the shorter list would push draw_250..draw_499 into the index
+    # rather than truncating, silently corrupting the frame.
+    df = vi_utils.reshape(df, value_cols=list(ARTIFACT_COLUMNS))
     df = vi_utils.scrub_gbd_conventions(df, location)
     df = vi_utils.split_interval(df, interval_column="age", split_column_prefix="age")
     df = vi_utils.split_interval(df, interval_column="year", split_column_prefix="year")
@@ -541,7 +546,9 @@ def load_dementia_proportions(
     merged = vi_utils.sort_hierarchical_data(merged)
 
     # fake draws from value (for multiplication with incidence and prevalence)
-    df = pd.DataFrame(columns=vi_globals.DRAW_COLUMNS, index=merged.index)
+    # These must match the artifact's draw count, not vi_globals.DRAW_COLUMNS -- see
+    # the note in reshape_to_vivarium_format.
+    df = pd.DataFrame(columns=ARTIFACT_COLUMNS, index=merged.index)
     for col in df.columns:
         df[col] = merged.value
     return df
