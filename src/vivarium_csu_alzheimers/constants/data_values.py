@@ -17,6 +17,13 @@ from vivarium_csu_alzheimers.constants.models import (
 REMISSION_RATE = 0.1
 MEAN_SOJOURN_TIME = 10
 
+# Fraction of mixed-dementia cases judged to include Alzheimer's pathology. The
+# modelled case definition is Alzheimer's disease plus this share of mixed dementia,
+# not Alzheimer's alone. (Source: Brenowitz WD, Hubbard RA, Keene CD, et al.
+# Mixed neuropathologies and estimated rates of clinical progression in a large
+# autopsy sample. Alzheimer's & Dementia 2017; 13: 654-62, Figure 1.)
+FRACTION_MIXED_THAT_INCLUDES_AD = 0.939
+
 
 ##############################
 # Screening Model Parameters #

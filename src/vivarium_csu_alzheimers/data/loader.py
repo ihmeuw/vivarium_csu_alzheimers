@@ -519,8 +519,6 @@ def load_csf_pet_testing_rates(
 def load_dementia_proportions(
     key: str, location: str, years: int | str | list[int] | None = None
 ) -> pd.DataFrame:
-    fraction_mixed_that_includes_ad = 0.939  # based on Figure 1 of Brenowitz et al. Mixed neuropathologies and estimated rates of clinical progression in a large autopsy sample. Alzheimer’s & Dementia 2017; 13: 654–62.
-    
     df = pd.read_csv(DEMENTIA_PROPORTIONS_PATH)
     bins = load_age_bins(None, None).index.to_frame().reset_index(drop=True)
     merged = pd.merge(df, bins, on="age_group_name", how="left")
@@ -544,7 +542,7 @@ def load_dementia_proportions(
         .drop(["age_group_name", "type_label", "age_group_id"], axis=1)
         .rename({"proportion": "value"}, axis=1)
         +
-        fraction_mixed_that_includes_ad *
+        data_values.FRACTION_MIXED_THAT_INCLUDES_AD *
         df_mixed.set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
         .drop(["age_group_name", "type_label", "age_group_id"], axis=1)
         .rename({"proportion": "value"}, axis=1)
