@@ -526,7 +526,7 @@ def load_dementia_proportions(
     merged = pd.merge(df, bins, on="age_group_name", how="left")
     
     df_ad = merged[
-        (merged.type_label == "Alzheimer's disease")  # AD only, no mixed
+        (merged.type_label == "Alzheimer's disease")  # AD; mixed is added below
         & (merged.age_group_name != "All Age")
     ]
     df_ad["year_start"] = 2023
