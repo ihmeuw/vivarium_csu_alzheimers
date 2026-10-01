@@ -253,7 +253,53 @@ def build_single_location_artifact(
     consistent_rates.generate_consistent_dementia_conditional_prevalence(artifact)
     consistent_rates.generate_consistent_csmr(artifact)
 
+    validate_draw_counts(artifact)
+
     logger.info(f"**Done building -- {location}**")
+
+
+# Keys whose draw count is knowingly not metadata.DRAW_COUNT. mci_disability_weight
+# reads dw_full.csv directly and never passes through a draw-column list, so it has
+# carried 1000 draws since long before we changed the number of draws.
+DRAW_COUNT_EXEMPTIONS = {data_keys.ALZHEIMERS.MCI_DISABILITY_WEIGHT}
+
+
+def validate_draw_counts(artifact) -> None:
+    """Warn if the artifact mixes draw counts.
+
+    vivarium_inputs moved NUM_DRAWS from 500 to 250 for GBD 2023 while this repo still
+    declares DRAW_COUNT = 500 (see MIC-7550). Keys served straight from
+    vivarium_inputs therefore arrive with 250 draws while the rest carry 500, and a
+    mixed artifact is dangerous rather than merely untidy: downstream code combining
+    two such keys aligns on the 250 intersection and silently drops the rest.
+
+    This warns rather than raises because MIC-7550 is undecided and raising would
+    block artifact builds in the meantime. Do not ship an artifact that trips it.
+    """
+    offenders = {}
+    for key in artifact.keys:
+        data = artifact.load(key)
+        columns = getattr(data, "columns", None)
+        if columns is None:
+            continue
+        n_draws = len([c for c in columns if str(c).startswith("draw_")])
+        if n_draws and n_draws != metadata.DRAW_COUNT and key not in DRAW_COUNT_EXEMPTIONS:
+            offenders[key] = n_draws
+
+    if offenders:
+        detail = ", ".join(f"{key} has {n}" for key, n in sorted(offenders.items()))
+        logger.warning(
+            f"ARTIFACT MIXES DRAW COUNTS. Expected {metadata.DRAW_COUNT} "
+            f"(metadata.DRAW_COUNT) but {detail}. Downstream code combining a "
+            "500-draw key with a 250-draw one will align on the 250 intersection "
+            "and silently drop the rest, so this artifact should not be used for "
+            "runs. See MIC-7550 -- this is the vivarium_inputs NUM_DRAWS=250 "
+            "divergence, not a transient failure."
+        )
+    else:
+        logger.info(
+            f"Draw-count check passed: all keys carry {metadata.DRAW_COUNT} draws."
+        )
 
 
 if __name__ == "__main__":

@@ -24,7 +24,8 @@ LOCATIONS = [
     "Japan",
     "Germany",
     "Israel",
-    "Taiwan (Province of China)",
+    # GBD renamed this location; "Taiwan (Province of China)" no longer resolves.
+    "Taiwan",
     "Spain",
 ]
 
