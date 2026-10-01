@@ -26,13 +26,19 @@ cluster = ["vivarium-cluster-tools[cluster]>=4.0.0,<5.0.0"]
 interactive = ["vivarium-dependencies[interactive]"]
 lint = ["vivarium-dependencies[lint]"]
 data = [
-    "vivarium-inputs>=8.0.0,<9.0.0",
+    # FIXME: pinned to the shared-function migration branch until it releases (MIC-6303).
+    "vivarium-inputs @ git+https://github.com/ihme-internal/vivarium_inputs.git@pnast/feature/mic-6303-drop-get-draws",
     "vivarium-gbd-access>=6.0.0,<7.0.0",
     # Capped below v7 by vivarium-inputs, which requires <7.0.0
     "vivarium-gbd-mapping>=6.0.0,<7.0.0",
     "xarray",
+    # Required by vivarium_csu_alzheimers.data.forecasts
+    "netcdf4",
     # Required by vivarium_csu_alzheimers.data.consistent_rates
-    "jax",
+    # jax >=0.7.2 requires numpy>=2.0, which conflicts with the GBD
+    # shared-function stack's numpy<2 pin. Constrain jax so uv backtracks the
+    # whole jax stack to a numpy-1-compatible set rather than overriding it.
+    "jax<0.7.2",
     "numpyro",
     "diffrax",
     "interpax",
@@ -45,6 +51,9 @@ Homepage = "https://github.com/ihmeuw/vivarium_csu_alzheimers"
 
 [project.scripts]
 make_artifacts = "vivarium_csu_alzheimers.tools.cli:make_artifacts"
+
+[tool.uv]
+override-dependencies = ["pandas<3.0.0", "sqlalchemy>=2.0.0,<3.0.0", "numpy<2.0.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
