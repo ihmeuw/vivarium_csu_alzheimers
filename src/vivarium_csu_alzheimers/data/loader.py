@@ -522,16 +522,31 @@ def load_dementia_proportions(
     df = pd.read_csv(DEMENTIA_PROPORTIONS_PATH)
     bins = load_age_bins(None, None).index.to_frame().reset_index(drop=True)
     merged = pd.merge(df, bins, on="age_group_name", how="left")
-    merged = merged[
-        (merged.type_label == "Alzheimer's disease")  # AD only, no mixed
+
+    df_ad = merged[
+        (merged.type_label == "Alzheimer's disease")  # AD; mixed is added below
         & (merged.age_group_name != "All Age")
     ]
-    merged["year_start"] = 2023
-    merged["year_end"] = 2024
-    merged = (
-        merged.set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
-        .drop(["age_group_name", "type_label", "age_group_id"], axis=1)
-        .rename({"proportion": "value"}, axis=1)
+    df_ad["year_start"] = 2023
+    df_ad["year_end"] = 2024
+
+    df_mixed = merged[
+        (merged.type_label == "Mixed dementia")  # mixed
+        & (merged.age_group_name != "All Age")
+    ]
+    df_mixed["year_start"] = 2023
+    df_mixed["year_end"] = 2024
+
+    merged = df_ad.set_index(["sex", "age_start", "age_end", "year_start", "year_end"]).drop(
+        ["age_group_name", "type_label", "age_group_id"], axis=1
+    ).rename(
+        {"proportion": "value"}, axis=1
+    ) + data_values.FRACTION_MIXED_THAT_INCLUDES_AD * df_mixed.set_index(
+        ["sex", "age_start", "age_end", "year_start", "year_end"]
+    ).drop(
+        ["age_group_name", "type_label", "age_group_id"], axis=1
+    ).rename(
+        {"proportion": "value"}, axis=1
     )
 
     # add <40 age groups
