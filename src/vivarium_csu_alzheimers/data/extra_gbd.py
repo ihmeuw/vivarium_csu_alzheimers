@@ -9,7 +9,9 @@ from vivarium_inputs import utility_data
 
 from vivarium_csu_alzheimers.constants.metadata import DRAW_COUNT
 
-DEMENTIA_ME_ID = 24351  # Unadjusted dementia (post-mortality), from DisMod post-mortality modeling
+DEMENTIA_ME_ID = (
+    24351  # Unadjusted dementia (post-mortality), from DisMod post-mortality modeling
+)
 GBD_2023_RELEASE_ID = 16
 DEMENTIA_SEX_IDS = SEX.MALE + SEX.FEMALE
 
@@ -83,15 +85,15 @@ def _zero_fill_missing_age_groups(
 ) -> pd.DataFrame:
     """Fill missing values with 0.
 
-    The dementia DisMod model only returns data from age group 40-44 upward. 
+    The dementia DisMod model only returns data from age group 40-44 upward.
     """
     expected_age_groups = get_age_group_id(release_id)
     draw_cols = [col for col in data.columns if str(col).startswith("draw_")]
     key_cols = ["age_group_id", "sex_id"]
 
-    grid = pd.MultiIndex.from_product(
-        [expected_age_groups, sex_id], names=key_cols
-    ).to_frame(index=False)
+    grid = pd.MultiIndex.from_product([expected_age_groups, sex_id], names=key_cols).to_frame(
+        index=False
+    )
     filled = grid.merge(data, on=key_cols, how="left")
     filled[draw_cols] = filled[draw_cols].fillna(0.0)
 

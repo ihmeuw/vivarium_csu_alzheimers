@@ -338,9 +338,7 @@ def validate_draw_counts(artifact) -> None:
             "divergence, not a transient failure."
         )
     else:
-        logger.info(
-            f"Draw-count check passed: all keys carry {metadata.DRAW_COUNT} draws."
-        )
+        logger.info(f"Draw-count check passed: all keys carry {metadata.DRAW_COUNT} draws.")
 
 
 if __name__ == "__main__":
