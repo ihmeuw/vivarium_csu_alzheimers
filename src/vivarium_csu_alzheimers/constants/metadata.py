@@ -23,7 +23,6 @@ LOCATIONS = [
     "Japan",
     "Germany",
     "Israel",
-    # GBD renamed this location; "Taiwan (Province of China)" no longer resolves.
     "Taiwan",
     "Spain",
 ]

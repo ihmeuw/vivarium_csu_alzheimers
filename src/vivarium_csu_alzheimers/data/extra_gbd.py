@@ -54,13 +54,14 @@ def _get_dementia_dismod_draws(
 ) -> pd.DataFrame:
     """Pull DisMod draws for the dementia modelable entity, aggregating location if needed.
 
-    DisMod draw files hold only the locations the model was actually run for, which are
-    most detailed; a national aggregate such as the USA (location_id 102) is not among
-    them and the underlying call raises rather than returning nothing.
+    Typically only most detailed locations are modeled, so aggregate locations must be computed.
 
-    ``gbd.get_modelable_entity_draws`` is the equivalent library getter, but it accepts
-    neither ``measure_id`` nor ``n_draws``, both of which this model needs -- the
-    artifact carries exactly 500 draws. So its dimension choices are mirrored here instead.
+    ``base_data.get_modelable_entity_draws`` is the equivalent library getter, but its
+    signature does not include ``measure_id`` or ``n_draws``, both of which this
+    model needs: it pulls prevalence and EMR separately rather than all measures,
+    and the DisMod model returns 1000 draws where the artifact uses ``metadata.DRAW_COUNT``,
+    so the draws must be downsampled on read. Its dimension choices are otherwis
+    mirrored here.
     """
     data = base_data.get_model_estimates(
         modelable_entity_id=DEMENTIA_ME_ID,
