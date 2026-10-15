@@ -43,6 +43,9 @@ MAX_RHAT = 1.01
 MIN_ESS = 100
 MAX_DIVERGENCE_FRACTION = 0.01
 INITIAL_RATE = 0.05
+# Scale of the soft ODE-consistency penalty (log-ratio units). 0.005 is what model10.0
+# used; the enhanced (severity) lineage used 0.02.
+ODE_SIGMA = 0.005
 
 # Knots are sampled on an unbounded latent scale and mapped to rates: fractions
 # (prevalence and the conditional state shares) through a logistic, hazards through an
@@ -199,7 +202,7 @@ class BBBM_AD_Model:
 
             include_consistency_constraints = True
             if include_consistency_constraints:
-                sigma = 0.005
+                sigma = ODE_SIGMA
 
                 def ode_function(t, y, args):
                     S, BBBM, MCI, D, new_D = y
