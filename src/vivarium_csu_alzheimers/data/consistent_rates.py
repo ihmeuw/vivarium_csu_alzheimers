@@ -37,15 +37,20 @@ from vivarium_csu_alzheimers.constants.data_values import (
 MCMC_SEED = 0
 NUM_CHAINS = 4
 NUM_WARMUP = 1000
-NUM_SAMPLES_PER_CHAIN = 500
+NUM_SAMPLES_PER_CHAIN = 1250
 TARGET_ACCEPT_PROB = 0.95
 MAX_RHAT = 1.01
 MIN_ESS = 100
 MAX_DIVERGENCE_FRACTION = 0.01
 INITIAL_RATE = 0.05
-# Scale of the soft ODE-consistency penalty (log-ratio units). 0.005 is what model10.0
-# used; the enhanced (severity) lineage used 0.02.
-ODE_SIGMA = 0.005
+# Scale of the soft defect penalty of the multiple-shooting consistency constraint
+# (log-ratio units). model10.0 used 0.005; the enhanced (severity) lineage used 0.02.
+# On the archived USA inputs, 0.005 cannot be sampled to convergence by NUTS (after 1000
+# warmup with a dense mass matrix: ~400 leapfrog steps per iteration, ESS 4, split r_hat
+# 1.8), while 0.02 mixes (~130 steps, ESS 20-300 per 500 samples) and moves the Male
+# posterior means by 2-9% at ages 65-90, inside the archived fit's own chain-to-chain
+# noise.
+ODE_SIGMA = 0.02
 
 # Knots are sampled on an unbounded latent scale and mapped to rates: fractions
 # (prevalence and the conditional state shares) through a logistic, hazards through an
