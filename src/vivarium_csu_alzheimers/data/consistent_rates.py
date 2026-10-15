@@ -1,5 +1,7 @@
 """NumPyro/JAX implementation of DisMod-AT, refactored from notebook 2024_07_28a_dismod_ipd_ai_refactor.ipynb
 """
+import math
+import time
 from typing import Callable, Iterable
 
 import interpax
@@ -9,8 +11,10 @@ import numpy as np
 import numpyro
 import pandas as pd
 from diffrax import Dopri5, ODETerm, SaveAt, diffeqsolve
+from loguru import logger
 from numpyro import distributions as dist
 from numpyro import infer
+from numpyro.diagnostics import summary as numpyro_summary
 from vivarium.artifact import Artifact
 from vivarium_inputs import globals as vi_globals
 
@@ -19,6 +23,36 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AVG_DURATION,
     MCI_AVG_DURATION,
 )
+
+# Sampler settings.
+#
+# The model10.0 artifacts were fit with one chain of 500 iterations whose consecutive
+# states were written straight into draw_0..draw_499, with no convergence check. On the
+# archived USA inputs that chain had lag-1 autocorrelation ~0.9 (ESS 25-45 of 500 for
+# Male, 3-6 for Female, with divergences) and hit the NUTS tree-depth cap on every
+# iteration. The settings below trade bit-reproducibility (never guaranteed across CPU
+# generations with XLA anyway) for statistical reproducibility: several chains, a
+# convergence gate that fails the build, and artifact draws that are near-independent
+# posterior samples.
+MCMC_SEED = 0
+NUM_CHAINS = 4
+NUM_WARMUP = 1000
+NUM_SAMPLES_PER_CHAIN = 500
+TARGET_ACCEPT_PROB = 0.95
+MAX_RHAT = 1.01
+MIN_ESS = 100
+MAX_DIVERGENCE_FRACTION = 0.01
+INITIAL_RATE = 0.05
+
+# Knots are sampled on an unbounded latent scale and mapped to rates: fractions
+# (prevalence and the conditional state shares) through a logistic, hazards through an
+# exponential. The archived fit sampled the rates themselves from a normal truncated to
+# [0, 1], which NUTS cannot scale across knots that range from 1e-10 (age 30) to 0.5.
+FRACTION_PARAMS = ("p", "delta_BBBM", "delta_MCI")
+HAZARD_PARAMS = ("h_S_to_BBBM", "i", "f", "m")
+FRACTION_PRIOR = (0.0, 2.0)  # logit scale: median 0.5, 95% of mass in (0.02, 0.98)
+HAZARD_PRIOR = (math.log(INITIAL_RATE), 2.0)  # log scale: 95% of mass in (1e-3, 2.5)
+MCMC_DIAGNOSTICS_KEY = "cause.alzheimers_consistent.mcmc_diagnostics"
 
 
 def generate_consistent_rates(art: Artifact):
@@ -48,6 +82,8 @@ def generate_consistent_rates(art: Artifact):
         "ode_errors": "cause.alzheimers_consistent.ode_errors",
     }
 
+    numpyro.enable_x64()
+
     # fit model separately for Male and Female
     model_dict = {}
     ages = np.arange(30, 101, 5)
@@ -69,6 +105,12 @@ def generate_consistent_rates(art: Artifact):
         # create and fit the model
         model_dict[sex] = BBBM_AD_Model(ages, [2025], sex)
         model_dict[sex].fit(ages, df_data)
+
+    write_or_replace(
+        art,
+        MCMC_DIAGNOSTICS_KEY,
+        pd.concat([model.diagnostics for model in model_dict.values()]),
+    )
 
     # store consistent rates in artifact
     for rate_type in save_key.keys():
@@ -97,18 +139,13 @@ class BBBM_AD_Model:
         years = self.years
         ages = self.ages
 
+        knot_shape = (len(ages), len(years))
+
         def numpyro_model():
             knot_val_dict = {}
-            for param in ["p", "delta_BBBM", "delta_MCI", "h_S_to_BBBM", "i", "f", "m"]:
-                knot_val_dict[param] = numpyro.sample(
-                    f"{param}",
-                    dist.TruncatedNormal(
-                        loc=jnp.zeros((len(ages), len(years))),
-                        scale=jnp.ones((len(ages), len(years))),
-                        low=0.0,
-                        high=1.0,
-                    ),
-                )
+            for param in FRACTION_PARAMS + HAZARD_PARAMS:
+                z = numpyro.sample(f"{param}_z", dist.Normal(jnp.zeros(knot_shape), 1.0))
+                knot_val_dict[param] = numpyro.deterministic(param, transform_knots(param, z))
 
             p = at_param(
                 f"p",
@@ -252,31 +289,50 @@ class BBBM_AD_Model:
                 log_pr = dist.Normal(0, sigma).log_prob(ode_errors).sum()
                 numpyro.factor(f"ode_consistency_factor", log_pr)
 
+        numpyro.enable_x64()
+        init_values = {
+            f"{param}_z": initial_latent(param, knot_shape)
+            for param in FRACTION_PARAMS + HAZARD_PARAMS
+        }
         sampler = infer.MCMC(
             infer.NUTS(
                 numpyro_model,
-                init_strategy=numpyro.infer.init_to_value(
-                    values={
-                        f"p": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"delta_BBBM": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"delta_MCI": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"h_S_to_BBBM": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"i": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"f": jnp.ones([len(ages), len(years)]) * 0.05,
-                        f"m": jnp.ones([len(ages), len(years)]) * 0.05,
-                    }
-                ),
+                init_strategy=numpyro.infer.init_to_value(values=init_values),
+                target_accept_prob=TARGET_ACCEPT_PROB,
+                dense_mass=True,
             ),
-            num_warmup=500,
-            num_samples=vi_globals.NUM_DRAWS,  # each sample becomes one draw column
-            num_chains=1,
-            progress_bar=True,
+            num_warmup=NUM_WARMUP,
+            num_samples=NUM_SAMPLES_PER_CHAIN,
+            num_chains=NUM_CHAINS,
+            chain_method="sequential",
+            progress_bar=False,
         )
 
-        sampler.run(
-            jax.random.PRNGKey(0),
+        start = time.time()
+        sampler.run(jax.random.PRNGKey(MCMC_SEED), extra_fields=("diverging", "num_steps"))
+        elapsed = time.time() - start
+
+        by_chain = sampler.get_samples(group_by_chain=True)
+        extra = sampler.get_extra_fields()
+        divergence_fraction = float(np.mean(np.asarray(extra["diverging"])))
+        mean_steps = float(np.mean(np.asarray(extra["num_steps"])))
+        self.summary = numpyro_summary(
+            {name: by_chain[name] for name in FRACTION_PARAMS + HAZARD_PARAMS}, prob=0.9
         )
-        self.samples = sampler.get_samples()
+        self.diagnostics = diagnostics_table(
+            self.summary, ages, years, self.sex, FRACTION_PARAMS + HAZARD_PARAMS
+        )
+        logger.info(
+            f"consistent rates {self.sex}: {NUM_CHAINS} chains x {NUM_SAMPLES_PER_CHAIN} "
+            f"samples in {elapsed / 60:.1f} min; {mean_steps:.0f} leapfrog steps/iter; "
+            f"divergent {100 * divergence_fraction:.2f}%; "
+            f"max r_hat {self.diagnostics.r_hat.max():.3f}; "
+            f"min ESS {self.diagnostics.n_eff.min():.0f}"
+        )
+        check_convergence(self.summary, divergence_fraction, self.sex)
+
+        # One artifact draw per near-independent posterior sample, taken across chains.
+        self.samples = thin_samples(by_chain, vi_globals.NUM_DRAWS)
 
     def get_rate(self, param, year):
         assert hasattr(self, "samples"), "Must run fit() first"
@@ -301,6 +357,91 @@ class BBBM_AD_Model:
         return pd.DataFrame(rate_table).set_index(
             ["sex", "age_start", "age_end", "year_start", "year_end"]
         )
+
+
+def transform_knots(name: str, z) -> jnp.ndarray:
+    """Map standard-normal latent knots to rates on their natural scale."""
+    mu, sd = FRACTION_PRIOR if name in FRACTION_PARAMS else HAZARD_PRIOR
+    x = mu + sd * jnp.asarray(z)
+    return jax.nn.sigmoid(x) if name in FRACTION_PARAMS else jnp.exp(x)
+
+
+def initial_latent(name: str, shape) -> jnp.ndarray:
+    """Latent value at which ``transform_knots`` returns ``INITIAL_RATE`` everywhere."""
+    mu, sd = FRACTION_PRIOR if name in FRACTION_PARAMS else HAZARD_PRIOR
+    target = (
+        math.log(INITIAL_RATE / (1 - INITIAL_RATE))
+        if name in FRACTION_PARAMS
+        else math.log(INITIAL_RATE)
+    )
+    return jnp.full(shape, (target - mu) / sd)
+
+
+def thin_samples(samples_by_chain: dict, n_draws: int) -> dict:
+    """Pick ``n_draws`` posterior samples spread evenly along every chain, interleaved so
+    that neighbouring artifact draws come from different chains."""
+    first = next(iter(samples_by_chain.values()))
+    n_chains, n_samples = first.shape[:2]
+    per_chain = math.ceil(n_draws / n_chains)
+    if per_chain > n_samples:
+        raise ValueError(
+            f"Need {n_draws} draws from {n_chains} chains of {n_samples} samples; "
+            f"raise NUM_SAMPLES_PER_CHAIN to at least {per_chain}."
+        )
+    picks = np.linspace(0, n_samples - 1, per_chain).round().astype(int)
+    thinned = {}
+    for name, value in samples_by_chain.items():
+        value = np.asarray(value)[:, picks]  # (chains, per_chain, ...)
+        interleaved = np.swapaxes(value, 0, 1).reshape((-1,) + value.shape[2:])
+        thinned[name] = interleaved[:n_draws]
+    return thinned
+
+
+def check_convergence(summary: dict, divergence_fraction: float, sex: str) -> None:
+    """Fail the artifact build unless every monitored site mixed and converged.
+
+    NaN diagnostics come from sites the data pin to a constant; they are not failures.
+    """
+    problems = []
+    for name, stats in summary.items():
+        r_hat = np.asarray(stats["r_hat"], dtype=float)
+        n_eff = np.asarray(stats["n_eff"], dtype=float)
+        if np.nanmax(r_hat, initial=-np.inf) > MAX_RHAT:
+            problems.append(f"{name}: max r_hat {np.nanmax(r_hat):.3f} > {MAX_RHAT}")
+        if np.nanmin(n_eff, initial=np.inf) < MIN_ESS:
+            problems.append(f"{name}: min ESS {np.nanmin(n_eff):.0f} < {MIN_ESS}")
+    if divergence_fraction > MAX_DIVERGENCE_FRACTION:
+        problems.append(
+            f"{100 * divergence_fraction:.2f}% divergent transitions "
+            f"> {100 * MAX_DIVERGENCE_FRACTION:.0f}%"
+        )
+    if problems:
+        raise RuntimeError(
+            f"Consistent-rates MCMC for {sex} did not converge; refusing to write an "
+            "artifact from it. " + "; ".join(problems)
+        )
+
+
+def diagnostics_table(summary: dict, ages, years, sex: str, params) -> pd.DataFrame:
+    """One row per (parameter, age, year) with the chain diagnostics, for the artifact."""
+    rows = []
+    for name in params:
+        stats = summary[name]
+        for i, age in enumerate(ages):
+            for j, year in enumerate(years):
+                rows.append(
+                    dict(
+                        sex=sex,
+                        parameter=name,
+                        age_start=int(age),
+                        year_start=int(year),
+                        mean=float(np.asarray(stats["mean"])[i, j]),
+                        sd=float(np.asarray(stats["std"])[i, j]),
+                        n_eff=float(np.asarray(stats["n_eff"])[i, j]),
+                        r_hat=float(np.asarray(stats["r_hat"])[i, j]),
+                    )
+                )
+    return pd.DataFrame(rows).set_index(["sex", "parameter", "age_start", "year_start"])
 
 
 def at_param(name: str, ages, years, knot_val) -> Callable:
