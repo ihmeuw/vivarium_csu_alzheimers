@@ -93,7 +93,8 @@ STYLE = {"old": dict(color="C0", ls="--"), "new": dict(color="C1", ls="-")}
 for i, k in enumerate(EXTRA):
     STYLE[k] = dict(color=f"C{i + 2}", ls=":")
 
-CONSISTENT_KEYS = [k for k in sorted(arts["new"].keys) if k.startswith("cause.alzheimers_consistent.")]
+CONSISTENT_KEYS = [k for k in sorted(arts["new"].keys)
+                   if k.startswith("cause.alzheimers_consistent.") and "mcmc_diagnostics" not in k]
 print("\\n".join(CONSISTENT_KEYS))"""
 )
 
@@ -369,9 +370,27 @@ fig.tight_layout()"""
 )
 
 md(
-    """## Take-aways
+    """## Take-aways (USA, archived model10.0 inputs; written 2026-10-15)
 
-(filled in after running against a real new-sampler artifact)"""
+- **The archived Female chain never converged.** Its 500 draws have lag-1 autocorrelation
+  ~0.9 and an effective sample size of 3–6 per knot, with 5 divergent transitions. The new
+  sampler (4 chains × 1250, sigma 0.02) and an independent chain of the *old* sampler
+  (seed 1, sigma 0.005) agree with each other within 0.3–4% at ages 65–90 for both sexes,
+  and both disagree with the archived Female rates by 7–65% (S→BBBM hazard worst). The
+  published model12.2 USA runs used those archived Female rates.
+- **Male rates are stable.** New vs archive 1–8%, inside the old sampler's own
+  chain-to-chain noise.
+- **Sigma 0.02 vs 0.005 does not move the sim-relevant rates**: new (0.02) vs seed 1
+  (0.005) is within 0.3–4%. It does make the posterior sampleable: ~130–170 leapfrog steps
+  per iteration instead of 1023, every knot ESS > 320, r_hat ≤ 1.012, no divergences.
+- **Uncertainty was understated for Female**: the new posterior sd is 2–5× the archived
+  chain's (which barely moved) and 1.05–1.2× the seed-1 chain's.
+- **Draws are now near-independent** (lag-1 autocorrelation ~0.01 vs 0.85–0.89), so
+  `input_draw_number` picks genuinely different posterior samples.
+- **Unchanged by any of this**: both old and new fits sit ~25% below GBD dementia
+  prevalence above age 80 while matching GBD incidence and EMR closely. That is a property
+  of the model (the consistency constraint plus a fixed BBBM/MCI duration), not of the
+  sampler, and is worth a separate look."""
 )
 
 nb["cells"] = cells
