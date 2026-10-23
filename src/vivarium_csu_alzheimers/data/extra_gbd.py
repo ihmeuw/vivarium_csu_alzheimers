@@ -7,8 +7,6 @@ from vivarium_gbd_access.gbd.demographics import get_age_group_id
 from vivarium_inputs import globals as vi_globals
 from vivarium_inputs import utility_data
 
-from vivarium_csu_alzheimers.constants.metadata import DRAW_COUNT
-
 DEMENTIA_ME_ID = (
     24351  # Unadjusted dementia (post-mortality), from DisMod post-mortality modeling
 )
@@ -16,8 +14,10 @@ GBD_2023_RELEASE_ID = 16
 DEMENTIA_SEX_IDS = SEX.MALE + SEX.FEMALE
 
 
+# The cached loaders take n_draws so that the draw count is part of the cache key. If it
+# were only a default further down, a change to NUM_DRAWS would still return old pulls.
 @vi_utils.cache
-def load_incidence_dismod(location: str) -> pd.DataFrame:
+def load_incidence_dismod(location: str, n_draws: int = vi_globals.NUM_DRAWS) -> pd.DataFrame:
     """
     Gets total population incidence rate from Dis-Mod.
 
@@ -30,17 +30,19 @@ def load_incidence_dismod(location: str) -> pd.DataFrame:
     Abie interpreted hazard as = incident cases count / (total population years * (1 - prevalence)),
     so incidence would = incident cases count / total population years after cancelling.
     """
-    return load_dementia_dismod(location, "Incidence rate")
+    return load_dementia_dismod(location, "Incidence rate", n_draws)
 
 
 @vi_utils.cache
-def load_prevalence_dismod(location: str) -> pd.DataFrame:
-    return load_dementia_dismod(location, "Prevalence")
+def load_prevalence_dismod(
+    location: str, n_draws: int = vi_globals.NUM_DRAWS
+) -> pd.DataFrame:
+    return load_dementia_dismod(location, "Prevalence", n_draws)
 
 
 @vi_utils.cache
-def load_emr_dismod(location: str) -> pd.DataFrame:
-    return load_dementia_dismod(location, "Excess mortality rate")
+def load_emr_dismod(location: str, n_draws: int = vi_globals.NUM_DRAWS) -> pd.DataFrame:
+    return load_dementia_dismod(location, "Excess mortality rate", n_draws)
 
 
 @aggregate_to_requested_location
@@ -50,7 +52,7 @@ def _get_dementia_dismod_draws(
     measure_id: int,
     release_id: int = GBD_2023_RELEASE_ID,
     sex_id: list[int] = DEMENTIA_SEX_IDS,
-    n_draws: int = DRAW_COUNT,
+    n_draws: int = vi_globals.NUM_DRAWS,
 ) -> pd.DataFrame:
     """Pull DisMod draws for the dementia modelable entity, aggregating location if needed.
 
@@ -59,7 +61,7 @@ def _get_dementia_dismod_draws(
     ``base_data.get_modelable_entity_draws`` is the equivalent library getter, but its
     signature does not include ``measure_id`` or ``n_draws``, both of which this
     model needs: it pulls prevalence and EMR separately rather than all measures,
-    and the DisMod model returns 1000 draws where the artifact uses ``metadata.DRAW_COUNT``,
+    and the DisMod model returns 1000 draws where the artifact uses ``vi_globals.NUM_DRAWS``,
     so the draws must be downsampled on read. Its dimension choices are otherwis
     mirrored here.
     """
@@ -109,12 +111,13 @@ def _zero_fill_missing_age_groups(
     return filled[list(data.columns)]
 
 
-def load_dementia_dismod(location, measure_name):
+def load_dementia_dismod(location, measure_name, n_draws):
     location_id = utility_data.resolve_location(location)
     data = _get_dementia_dismod_draws(
         location_id=location_id,
         year_id=2023,
         measure_id=vi_globals.MEASURES[measure_name],
+        n_draws=n_draws,
     )
     return _zero_fill_missing_age_groups(
         data, release_id=GBD_2023_RELEASE_ID, sex_id=DEMENTIA_SEX_IDS

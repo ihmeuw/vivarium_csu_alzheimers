@@ -1,7 +1,5 @@
 from typing import NamedTuple
 
-import pandas as pd
-
 ####################
 # Project metadata #
 ####################
@@ -34,9 +32,6 @@ ARTIFACT_INDEX_COLUMNS = [
     "year_start",
     "year_end",
 ]
-
-DRAW_COUNT = 500
-ARTIFACT_COLUMNS = pd.Index([f"draw_{i}" for i in range(DRAW_COUNT)])
 
 UNEXPECTED_AGE_GROUPS = [27, 33, 164]
 
