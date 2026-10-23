@@ -20,8 +20,11 @@ def table_from_nc(fname_dict, param, loc_id, loc_name, age_mapping):
     elif param in ["migration", "mortality"]:
         var_name = "value"
 
+    # The FHS files carry 500 draws. Keep the first NUM_DRAWS so that draw i lines up
+    # with draw i of the GBD data, which vivarium_inputs truncates the same way.
     pop_ts = ds[var_name].sel(
         location_id=loc_id,
+        draw=list(range(vi_globals.NUM_DRAWS)),
     )
 
     if param != "migration":

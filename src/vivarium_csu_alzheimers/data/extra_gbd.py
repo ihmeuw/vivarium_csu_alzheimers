@@ -7,7 +7,6 @@ from vivarium_gbd_access.gbd.demographics import get_age_group_id
 from vivarium_inputs import globals as vi_globals
 from vivarium_inputs import utility_data
 
-from vivarium_csu_alzheimers.constants.metadata import DRAW_COUNT
 
 DEMENTIA_ME_ID = (
     24351  # Unadjusted dementia (post-mortality), from DisMod post-mortality modeling
@@ -50,7 +49,7 @@ def _get_dementia_dismod_draws(
     measure_id: int,
     release_id: int = GBD_2023_RELEASE_ID,
     sex_id: list[int] = DEMENTIA_SEX_IDS,
-    n_draws: int = DRAW_COUNT,
+    n_draws: int = vi_globals.NUM_DRAWS,
 ) -> pd.DataFrame:
     """Pull DisMod draws for the dementia modelable entity, aggregating location if needed.
 
@@ -59,7 +58,7 @@ def _get_dementia_dismod_draws(
     ``base_data.get_modelable_entity_draws`` is the equivalent library getter, but its
     signature does not include ``measure_id`` or ``n_draws``, both of which this
     model needs: it pulls prevalence and EMR separately rather than all measures,
-    and the DisMod model returns 1000 draws where the artifact uses ``metadata.DRAW_COUNT``,
+    and the DisMod model returns 1000 draws where the artifact uses ``vi_globals.NUM_DRAWS``,
     so the draws must be downsampled on read. Its dimension choices are otherwis
     mirrored here.
     """

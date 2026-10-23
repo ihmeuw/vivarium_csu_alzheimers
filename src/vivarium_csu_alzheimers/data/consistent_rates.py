@@ -12,6 +12,7 @@ from diffrax import Dopri5, ODETerm, SaveAt, diffeqsolve
 from numpyro import distributions as dist
 from numpyro import infer
 from vivarium.artifact import Artifact
+from vivarium_inputs import globals as vi_globals
 
 from vivarium_csu_alzheimers.constants import data_keys
 from vivarium_csu_alzheimers.constants.data_values import (
@@ -267,7 +268,7 @@ class BBBM_AD_Model:
                 ),
             ),
             num_warmup=500,
-            num_samples=500,
+            num_samples=vi_globals.NUM_DRAWS,  # each sample becomes one draw column
             num_chains=1,
             progress_bar=True,
         )
@@ -442,7 +443,7 @@ def generate_consistent_susceptible_to_bbbm_transition_count(art):
         suffixes=("", "_prev"),
     ).set_index(["sex", "age_start", "age_end", "year_start", "year_end"])
 
-    for i in range(500):
+    for i in range(vi_globals.NUM_DRAWS):
         df[f"draw_{i}"] *= df[f"draw_{i}_rate"] * (1 - df[f"draw_{i}_prev"])
         del df[f"draw_{i}_rate"]
         del df[f"draw_{i}_prev"]
