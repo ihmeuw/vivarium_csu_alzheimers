@@ -24,7 +24,6 @@ from vivarium_inputs import utility_data
 from vivarium_inputs.mapping_extension import alternative_risk_factors
 
 from vivarium_csu_alzheimers.constants import data_keys, data_values, metadata
-from vivarium_csu_alzheimers.constants.metadata import ARTIFACT_COLUMNS
 from vivarium_csu_alzheimers.constants.paths import (
     DEMENTIA_PROPORTIONS_PATH,
     FORECAST_NC_DATA_FILEPATHS_DICT,
@@ -257,12 +256,7 @@ def reshape_to_vivarium_format(df, location):
     df = df[
         ~df.age_group_id.isin(metadata.UNEXPECTED_AGE_GROUPS)
     ]  # unexpected age groups cause vi_utils.scrub_gbd_conventions to fail
-    # NOTE: the draw columns come from this repo's own DRAW_COUNT rather than
-    # vi_globals.DRAW_COLUMNS. vivarium_inputs halved NUM_DRAWS to 250 for GBD 2023,
-    # but this model's artifact -- and the FHS forecast data it is combined with --
-    # carry 500. Using the shorter list would push draw_250..draw_499 into the index
-    # rather than truncating, silently corrupting the frame.
-    df = vi_utils.reshape(df, value_cols=list(ARTIFACT_COLUMNS))
+    df = vi_utils.reshape(df, value_cols=vi_globals.DRAW_COLUMNS)
     df = vi_utils.scrub_gbd_conventions(df, location)
     df = vi_utils.split_interval(df, interval_column="age", split_column_prefix="age")
     df = vi_utils.split_interval(df, interval_column="year", split_column_prefix="year")
@@ -517,8 +511,8 @@ def load_csf_pet_testing_rates(
         mean=rate.mean,
         ninety_five_pct_confidence_interval=(rate.ci_lower, rate.ci_upper),
     )
-    draws = get_random_variable_draws(ARTIFACT_COLUMNS, key, dist)
-    return pd.DataFrame([draws], columns=ARTIFACT_COLUMNS)
+    draws = get_random_variable_draws(pd.Index(vi_globals.DRAW_COLUMNS), key, dist)
+    return pd.DataFrame([draws], columns=vi_globals.DRAW_COLUMNS)
 
 
 def load_dementia_proportions(
@@ -561,9 +555,7 @@ def load_dementia_proportions(
     merged = vi_utils.sort_hierarchical_data(merged)
 
     # fake draws from value (for multiplication with incidence and prevalence)
-    # These must match the artifact's draw count, not vi_globals.DRAW_COLUMNS -- see
-    # the note in reshape_to_vivarium_format.
-    df = pd.DataFrame(columns=ARTIFACT_COLUMNS, index=merged.index)
+    df = pd.DataFrame(columns=vi_globals.DRAW_COLUMNS, index=merged.index)
     for col in df.columns:
         df[col] = merged.value
     return df
@@ -576,5 +568,5 @@ def load_treatment_rrs(
         data_values.TREATMENT_RR_MIN,
         data_values.TREATMENT_RR_MAX,
     )
-    draws = get_random_variable_draws(ARTIFACT_COLUMNS, key, dist)
-    return pd.DataFrame([draws], columns=ARTIFACT_COLUMNS)
+    draws = get_random_variable_draws(pd.Index(vi_globals.DRAW_COLUMNS), key, dist)
+    return pd.DataFrame([draws], columns=vi_globals.DRAW_COLUMNS)
