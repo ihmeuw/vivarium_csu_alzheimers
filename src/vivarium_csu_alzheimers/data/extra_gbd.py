@@ -7,7 +7,6 @@ from vivarium_gbd_access.gbd.demographics import get_age_group_id
 from vivarium_inputs import globals as vi_globals
 from vivarium_inputs import utility_data
 
-
 DEMENTIA_ME_ID = (
     24351  # Unadjusted dementia (post-mortality), from DisMod post-mortality modeling
 )
@@ -18,9 +17,7 @@ DEMENTIA_SEX_IDS = SEX.MALE + SEX.FEMALE
 # The cached loaders take n_draws so that the draw count is part of the cache key. If it
 # were only a default further down, a change to NUM_DRAWS would still return old pulls.
 @vi_utils.cache
-def load_incidence_dismod(
-    location: str, n_draws: int = vi_globals.NUM_DRAWS
-) -> pd.DataFrame:
+def load_incidence_dismod(location: str, n_draws: int = vi_globals.NUM_DRAWS) -> pd.DataFrame:
     """
     Gets total population incidence rate from Dis-Mod.
 
