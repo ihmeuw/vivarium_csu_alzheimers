@@ -24,8 +24,9 @@ One row per location. For each location three artifacts are compared:
   250 consecutive iterations written as the draws, no convergence check
   (`artifact_comparisons/main250/`, see `PROVENANCE.txt` there).
 - **refit** — the same inputs refit with this branch's sampler
-  (`notebooks/refit_consistent_rates.py` → `artifact_comparisons/refit250/`): 4 chains,
-  1000 warmup, 1250 samples each, convergence gate, thinned to 250 near-independent draws.
+  (`notebooks/refit_consistent_rates.py` → `artifact_comparisons/refit250/`): knots from
+  age 40 with zero rows below, curvature prior on the log S→BBBM hazard, 4 chains, 1000
+  warmup, 1250 samples each, convergence gate, thinned to 250 near-independent draws.
 - **archive** — the model10.0 artifact used for the published runs (old sampler, 500 draws,
   inputs of January 2026), for reference only.
 
@@ -77,6 +78,10 @@ for loc in LOCATIONS:
         "refit": REFIT_DIR / f"{loc}.hdf",
         "archive": ARCHIVE_DIR / f"{ARCHIVE_NAMES.get(loc, loc)}.hdf",
     }
+    log = REFIT_DIR / f"{loc}.log"
+    refit_done = log.exists() and "refit written" in log.read_text(errors="replace")
+    if not refit_done:  # the refit script copies the input first and fits in place
+        paths.pop("refit")
     arts[loc] = {label: Artifact(p) for label, p in paths.items() if p.exists()}
     print(f"{loc:26s} " + ", ".join(f"{k}={'yes' if k in arts[loc] else 'no':3s}" for k in paths))
 STYLE = {"main": dict(color="C0", ls="--"), "refit": dict(color="C1", ls="-"), "archive": dict(color="C2", ls=":")}"""
@@ -142,11 +147,14 @@ for loc in LOCATIONS:
     for sex, chains, n, minutes, steps, div, rhat, ess in found:
         rows.append(dict(location=loc, sex=sex, minutes=float(minutes), steps_per_iter=int(steps),
                          divergent_pct=float(div), max_r_hat=float(rhat), min_ess=int(ess)))
-gate = pd.DataFrame(rows).set_index(["location", "sex"]).sort_index()
-display(gate)
 print(f"gate: MAX_RHAT={cr.MAX_RHAT}, MIN_ESS={cr.MIN_ESS}, MAX_DIVERGENCE_FRACTION={cr.MAX_DIVERGENCE_FRACTION}")
-print(f"total wall time: {gate.minutes.sum() / 60:.1f} h; "
-      f"worst r_hat {gate.max_r_hat.max():.3f}; smallest ESS {gate.min_ess.min()}")"""
+if rows:
+    gate = pd.DataFrame(rows).set_index(["location", "sex"]).sort_index()
+    display(gate)
+    print(f"total wall time: {gate.minutes.sum() / 60:.1f} h; "
+          f"worst r_hat {gate.max_r_hat.max():.3f}; smallest ESS {gate.min_ess.min()}")
+else:
+    print("no refit logs found yet")"""
 )
 
 code(
@@ -201,7 +209,8 @@ display(table["main vs archive"].unstack("sex").unstack("key").round(3))"""
 code(
     """# Summary across keys and sexes: one number per location and comparison
 summary = table.groupby(level="location").mean()
-summary["worst key, refit vs main"] = table["refit vs main"].groupby(level="location").idxmax().map(lambda t: f"{t[1]} {t[2]}")
+worst = table["refit vs main"].dropna().groupby(level="location").idxmax()
+summary["worst key, refit vs main"] = worst.map(lambda t: f"{t[1]} {t[2]}")
 display(summary.round(3))"""
 )
 

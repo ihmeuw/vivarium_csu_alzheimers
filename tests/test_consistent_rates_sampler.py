@@ -102,3 +102,74 @@ def test_diagnostics_table_has_one_row_per_param_and_stratum():
     assert len(df) == 2
     assert {"r_hat", "n_eff", "mean", "sd"} <= set(df.columns)
     assert df.index.names == ["sex", "parameter", "age_start", "year_start"]
+
+
+def test_split_unmodelled_ages_drops_zero_cells_and_names_their_ages():
+    import pandas as pd
+
+    rows = []
+    for age in (30, 35, 40):
+        for measure, mean in [
+            ("p_dementia", 0.0),
+            ("i_dementia", 0.0),
+            ("f", 0.0),
+            ("m_all", 0.001),
+        ]:
+            if age == 40:
+                mean = 0.01
+            rows.append(
+                dict(age_start=age + 2.5, measure=measure, mean=mean, standard_error=1e-8)
+            )
+    df = pd.DataFrame(rows)
+    kept, young = cr.split_unmodelled_ages(df)
+    assert young == [30, 35]
+    assert (kept["mean"] > 0).all()
+    # all-cause mortality is never zero, so it stays at every age
+    assert sorted(kept.loc[kept.measure == "m_all", "age_start"] - 2.5) == [30, 35, 40]
+    assert len(kept) == 2 + 4  # m_all at the two young ages, all four measures at 40
+
+
+def test_split_unmodelled_ages_with_nothing_to_drop():
+    import pandas as pd
+
+    df = pd.DataFrame(
+        dict(age_start=[42.5], measure=["p_dementia"], mean=[0.01], standard_error=[1e-3])
+    )
+    kept, young = cr.split_unmodelled_ages(df)
+    assert young == []
+    assert len(kept) == 1
+
+
+def _rate_table(sex, ages, value):
+    import pandas as pd
+
+    idx = pd.MultiIndex.from_tuples(
+        [(sex, a, a + 5, 2025, 2026) for a in ages],
+        names=["sex", "age_start", "age_end", "year_start", "year_end"],
+    )
+    return pd.DataFrame({"draw_0": value, "draw_1": value * 2}, index=idx)
+
+
+def test_pad_unmodelled_ages_writes_zero_rows_for_rates_and_copies_for_shares():
+    import pandas as pd
+
+    fitted = _rate_table("Female", [40, 45], 0.5)
+    padded = cr.pad_unmodelled_ages(fitted, [30, 35], "p")
+    assert list(padded.index.get_level_values("age_start")) == [30, 35, 40, 45]
+    assert (padded.loc[("Female", 30)] == 0).all().all()
+    assert (padded.loc[("Female", 35)] == 0).all().all()
+    pd.testing.assert_frame_equal(
+        padded.loc[[("Female", 40, 45, 2025, 2026)]], fitted.iloc[[0]]
+    )
+
+    shares = cr.pad_unmodelled_ages(fitted, [30, 35], "delta_BBBM")
+    assert (shares.loc[("Female", 30)].values == fitted.loc[("Female", 40)].values).all()
+    emr = cr.pad_unmodelled_ages(fitted, [30, 35], "f")
+    assert (emr.loc[("Female", 35)].values == fitted.loc[("Female", 40)].values).all()
+
+
+def test_pad_unmodelled_ages_without_young_ages_is_identity():
+    import pandas as pd
+
+    fitted = _rate_table("Male", [40, 45], 0.1)
+    pd.testing.assert_frame_equal(cr.pad_unmodelled_ages(fitted, [], "p"), fitted)

@@ -25,8 +25,10 @@ two artifacts for one location:
   knots sampled on [0, 1], 500 warmup iterations, then 250 consecutive iterations written
   as `draw_0..draw_249`, no convergence check.
 - **new** — the same raw GBD inputs refit with the sampler on branch
-  `abie/consistent-rates-sampler`: latent-scale knots, several chains, convergence gate,
-  draws thinned across chains, `cause.alzheimers_consistent.mcmc_diagnostics` written.
+  `abie/consistent-rates-sampler`: latent-scale knots from age 40 (the first age with GBD
+  dementia data; ages 30 and 35 are written as zero prevalence and zero inflow), a light
+  curvature prior on the log S→BBBM hazard, several chains, convergence gate, draws
+  thinned across chains, `cause.alzheimers_consistent.mcmc_diagnostics` written.
 
 Optionally more artifacts (`EXTRA`) — by default the archived model10.0 artifact (old
 sampler, 500 draws, inputs pulled in January 2026), so that input drift and sampler
@@ -88,6 +90,9 @@ for label, path in [("old", OLD_ARTIFACT), ("new", NEW_ARTIFACT), *EXTRA.items()
 
 code(
     """arts = {"old": Artifact(OLD_ARTIFACT), "new": Artifact(NEW_ARTIFACT)}
+assert "cause.alzheimers_consistent.mcmc_diagnostics" in arts["new"].keys, (
+    "NEW_ARTIFACT has no mcmc_diagnostics key: the refit has not finished writing it"
+)
 arts.update({k: Artifact(v) for k, v in EXTRA.items()})
 STYLE = {"old": dict(color="C0", ls="--"), "new": dict(color="C1", ls="-")}
 for i, k in enumerate(EXTRA):
@@ -320,6 +325,17 @@ code(
 table = pd.concat(tables, names=["key", "sex"])
 print(f"Mean |relative difference| of stratum means vs old, ages {AGES_OF_INTEREST[0]}–{AGES_OF_INTEREST[1]}:")
 display(table.unstack("sex").round(3))"""
+)
+
+code(
+    """# The same table with the archive as the reference. If "new" sits closer to the archive than
+# "old" does, the old sampler's chain for this location wandered, not the inputs.
+if any("archive" in k for k in arts):
+    ref = next(k for k in arts if "archive" in k)
+    tables = {k.replace("cause.alzheimers_consistent.", "~."): rel_diff_table(k, ref=ref) for k in keys_scatter}
+    table_archive = pd.concat(tables, names=["key", "sex"])
+    print(f"Mean |relative difference| of stratum means vs {ref}, ages {AGES_OF_INTEREST[0]}–{AGES_OF_INTEREST[1]}:")
+    display(table_archive.unstack("sex").round(3))"""
 )
 
 md(

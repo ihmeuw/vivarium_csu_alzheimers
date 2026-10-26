@@ -65,6 +65,22 @@ FRACTION_PRIOR = (0.0, 2.0)  # logit scale: median 0.5, 95% of mass in (0.02, 0.
 HAZARD_PRIOR = (math.log(INITIAL_RATE), 2.0)  # log scale: 95% of mass in (1e-3, 2.5)
 MCMC_DIAGNOSTICS_KEY = "cause.alzheimers_consistent.mcmc_diagnostics"
 
+# GBD reports no dementia below age 40: prevalence, incidence and excess mortality there
+# are exactly 0 in every draw. Fed to the likelihood with standard error 1e-8 they make a
+# hard wall that the fit can satisfy in two ways: no AD states at all, or AD states that
+# are all pre-dementia (dementia share 0). On the USA Female inputs one of four chains
+# sat on the second branch at the NUTS tree-depth cap, so the gate refused the fit, and the
+# consistency penalty between 35 and 40 dragged the age-40 knot 3.6 standard errors below
+# the GBD prevalence there. The knots now start at the youngest age with GBD dementia data
+# (``split_unmodelled_ages``), and the younger ages are written as zero AD prevalence and
+# zero inflow (``pad_unmodelled_ages``), which is what the old fits produced to within
+# 1e-7 anyway: the archived USA artifact sends 3 of 721,000 new BBBM entrants in below 40.
+# The S -> BBBM hazard is only seen through the ODE, so adjacent age knots can trade off
+# against each other in a zigzag that chains explore with opposite phase. A light penalty
+# on the second difference of the log rate removes that direction (first differences are
+# left free). Same values as the severity branch.
+AGE_SMOOTHNESS = {"h_S_to_BBBM": (10.0, 0.25)}  # name: (sigma on first, second differences)
+
 
 def generate_consistent_rates(art: Artifact):
     """Generates consistent rates for sim of BBBM-AD
@@ -113,9 +129,13 @@ def generate_consistent_rates(art: Artifact):
             ]
         )
 
+        df_data, young_ages = split_unmodelled_ages(df_data)
+        fit_ages = np.array([a for a in ages if a not in young_ages])
+
         # create and fit the model
-        model_dict[sex] = BBBM_AD_Model(ages, [2025], sex)
-        model_dict[sex].fit(ages, df_data)
+        model_dict[sex] = BBBM_AD_Model(fit_ages, [2025], sex)
+        model_dict[sex].young_ages = young_ages
+        model_dict[sex].fit(fit_ages, df_data)
 
     write_or_replace(
         art,
@@ -128,7 +148,11 @@ def generate_consistent_rates(art: Artifact):
         # generate data for this rate_type
         df_out = []
         for model in model_dict.values():
-            df_out.append(model.get_rate(rate_type, 2025))
+            df_out.append(
+                pad_unmodelled_ages(
+                    model.get_rate(rate_type, 2025), model.young_ages, rate_type
+                )
+            )
         df_out = pd.concat(df_out)
 
         # store generated data in artifact
@@ -157,6 +181,8 @@ class BBBM_AD_Model:
             for param in FRACTION_PARAMS + HAZARD_PARAMS:
                 z = numpyro.sample(f"{param}_z", dist.Normal(jnp.zeros(knot_shape), 1.0))
                 knot_val_dict[param] = numpyro.deterministic(param, transform_knots(param, z))
+            for name, (sigma_first, sigma_second) in AGE_SMOOTHNESS.items():
+                add_age_smoothness_factors(knot_val_dict, name, sigma_first, sigma_second)
 
             p = at_param(
                 f"p",
@@ -340,6 +366,10 @@ class BBBM_AD_Model:
             f"max r_hat {self.diagnostics.r_hat.max():.3f}; "
             f"min ESS {self.diagnostics.n_eff.min():.0f}"
         )
+        # Kept on the object even when the gate below raises, so that a failed fit can be
+        # inspected chain by chain.
+        self.samples_by_chain = {name: np.asarray(value) for name, value in by_chain.items()}
+        self.extra_fields = {name: np.asarray(value) for name, value in extra.items()}
         check_convergence(self.summary, divergence_fraction, self.sex)
 
         # One artifact draw per near-independent posterior sample, taken across chains.
@@ -526,6 +556,58 @@ def data_model(
         f"{name}_obs", dist.Normal(loc=rate_pred, scale=rate_obs_scale), obs=rate_obs_loc
     )
     return rate_obs
+
+
+def split_unmodelled_ages(df_data: pd.DataFrame) -> tuple[pd.DataFrame, list[int]]:
+    """Drop observations whose GBD mean is exactly 0 and name the knot ages where the
+    dementia prevalence was 0 (the ages GBD does not model dementia at)."""
+    zero = df_data["mean"] <= 0
+    young = df_data.loc[zero & (df_data.measure == "p_dementia"), "age_start"] - 2.5
+    young_ages = sorted(int(round(a)) for a in young.unique())
+    return df_data[~zero].reset_index(drop=True), young_ages
+
+
+ZERO_AT_UNMODELLED_AGES = ("p", "h_S_to_BBBM", "i", "ode_errors")
+
+
+def pad_unmodelled_ages(df_out: pd.DataFrame, young_ages, rate_type: str) -> pd.DataFrame:
+    """Add rows for the knot ages left out of the fit.
+
+    Prevalence of any AD state, the S -> BBBM hazard, dementia incidence and the ODE
+    error are 0 there. The state shares and the excess mortality rate copy the youngest
+    fitted age; nobody is in an AD state at those ages, so their values never act, but
+    the simulation's lookup tables need a row.
+    """
+    if not young_ages:
+        return df_out
+    rows = []
+    for sex in df_out.index.get_level_values("sex").unique():
+        sub = df_out.xs(sex, level="sex", drop_level=False)
+        age_start = sub.index.get_level_values("age_start")
+        youngest = sub[age_start == age_start.min()]
+        for age in young_ages:
+            row = youngest.copy()
+            if rate_type in ZERO_AT_UNMODELLED_AGES:
+                row[:] = 0.0
+            row.index = pd.MultiIndex.from_tuples(
+                [(sex, age, age + 5, y0, y1) for (_, _, _, y0, y1) in youngest.index],
+                names=df_out.index.names,
+            )
+            rows.append(row)
+    return pd.concat([df_out, *rows]).sort_index()
+
+
+def add_age_smoothness_factors(
+    knots: dict, name: str, sigma_first: float, sigma_second: float
+):
+    """Normal penalties on the first and second differences along age of the log rate."""
+    log_vals = jnp.log(knots[name])  # shape (n_age, n_year)
+    d1 = jnp.diff(log_vals, axis=0)
+    d2 = jnp.diff(d1, axis=0)
+    numpyro.factor(f"{name}_age_first_diff", dist.Normal(0.0, sigma_first).log_prob(d1).sum())
+    numpyro.factor(
+        f"{name}_age_second_diff", dist.Normal(0.0, sigma_second).log_prob(d2).sum()
+    )
 
 
 def transform_to_data(

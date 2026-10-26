@@ -12,6 +12,28 @@ writes with the keys that the sampler on this branch writes from the same inputs
 Each notebook is generated from its `build_*.py` script. Edit the builder and re-run it;
 do not edit the notebook by hand.
 
+## What the branch changes in the sampler
+
+Compared with `main`, `consistent_rates.py` on this branch:
+
+- samples the knots on an unbounded latent scale (logit for fractions, log for hazards)
+  instead of a normal truncated to [0, 1];
+- fits knots from the first age with GBD dementia data (40) and writes the younger ages as
+  zero AD prevalence and zero inflow, instead of feeding the all-zero GBD cells at 30 and
+  35 to the likelihood with standard error 1e-8 (a hard wall that made one chain in four
+  sit at the tree-depth cap and biased the age-40 knot);
+- adds a light curvature prior on the log S→BBBM hazard across age knots (second
+  differences, sd 0.25), which removes a zigzag that chains explored with opposite phase;
+- uses `ODE_SIGMA = 0.02` for the consistency penalty (main: 0.005, which NUTS cannot
+  sample to convergence);
+- runs 4 chains of 1000 warmup and 1250 samples with target acceptance 0.95 and a dense
+  mass matrix, refuses the build unless every knot has `r_hat <= 1.02`, `ESS >= 100` and
+  divergences stay below 1%, thins to `NUM_DRAWS` draws interleaved across chains, and
+  writes the per-knot diagnostics to `cause.alzheimers_consistent.mcmc_diagnostics`.
+
+`fit_one_sex.py` fits one sex of one artifact and keeps every chain in a pickle even when
+the gate refuses the fit; `inspect_chains.py` describes that pickle chain by chain.
+
 ## Setup (no cluster, no GBD access needed)
 
 ```bash
