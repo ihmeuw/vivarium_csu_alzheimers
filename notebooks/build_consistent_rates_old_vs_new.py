@@ -387,7 +387,28 @@ fig.tight_layout()"""
 md(
     """## Take-aways (USA, main's 250-draw inputs of 2026-10-23; written 2026-10-26)
 
-*(filled in after the refit ran; see the executed notebook)*
+- **The gate works.** The first version of this sampler, with knots from age 30, refused
+  the USA Female fit on these inputs: one chain of four ran at the NUTS tree-depth cap in a
+  second mode that the exact-zero GBD cells at ages 30 and 35 create (no AD states, or AD
+  states that are all pre-dementia). Fitting from age 40 and smoothing the S→BBBM hazard
+  across age removed both problems: 63–83 leapfrog steps per iteration, no divergences,
+  every knot with ESS ≥ 780 and r_hat ≤ 1.010, 31 minutes for both sexes.
+- **Main's Female chain is stuck.** Its draws have lag-1 autocorrelation 0.85–0.91, and its
+  `prevalence_any` has a bump at 70–75 and a dip at 80–85 that neither the refit nor a
+  converged chain of the old model (2026-10-15) shows. Male is stable: the refit is within
+  1–11% of main at ages 65–90.
+- **Rates the simulation uses (Female, 65–90):** `prevalence_any` and the S→BBBM hazard
+  move by 19% and 55% on average against main, almost all of it at 70–85. In a
+  2,000-simulant baseline smoke run (draw 0, 2022–2040) that gives 25% more new simulants,
+  22% more BBBM person-time and 17% more MCI person-time for Female, with dementia
+  person-time unchanged (+1%) because the fit is pinned to GBD dementia prevalence. Male
+  totals stay within 5%. See `artifact_comparisons/smoke/`.
+- **Ages 30 and 35** are written as zero prevalence and zero inflow. The archived USA
+  artifact sent 3 of 721,000 new BBBM entrants in below age 40, so the simulation does not
+  notice.
+- **Unchanged by any of this:** every fit sits 10–28% below GBD dementia prevalence at
+  ages 65–95 while matching incidence and excess mortality. That is a property of the
+  model (the consistency constraint plus fixed BBBM and MCI durations), not of the sampler.
 
 ## Earlier result (USA, archived model10.0 inputs vs a refit of them; written 2026-10-15)
 
