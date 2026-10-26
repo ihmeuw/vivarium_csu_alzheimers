@@ -21,14 +21,16 @@ md(
 Compares the `cause.alzheimers_consistent.*` keys (and the keys derived from them) between
 two artifacts for one location:
 
-- **old** — the archived model10.0 artifact: one NUTS chain, knots sampled on [0, 1],
-  500 consecutive iterations written as `draw_0..draw_499`, no convergence check.
+- **old** — the artifact that `main` builds today (PR #82, 250 draws): one NUTS chain,
+  knots sampled on [0, 1], 500 warmup iterations, then 250 consecutive iterations written
+  as `draw_0..draw_249`, no convergence check.
 - **new** — the same raw GBD inputs refit with the sampler on branch
   `abie/consistent-rates-sampler`: latent-scale knots, several chains, convergence gate,
   draws thinned across chains, `cause.alzheimers_consistent.mcmc_diagnostics` written.
 
-Optionally a third artifact (`EXTRA`) — e.g. the old sampler re-run with a different
-seed — to show what chain-to-chain variation looked like before.
+Optionally more artifacts (`EXTRA`) — by default the archived model10.0 artifact (old
+sampler, 500 draws, inputs pulled in January 2026), so that input drift and sampler
+change can be told apart.
 
 Modelled on the V&V notebooks in `vivarium_research_alzheimers/verification_and_validation`
 and on `generate_and_test_consistent_rates.ipynb`: age on the x-axis, one panel per sex,
@@ -62,21 +64,19 @@ code(
 
 REPO = Path.cwd().parent if Path.cwd().name == "notebooks" else Path.cwd()
 
-# Old: the archived artifact (git-lfs; `git lfs pull` if this is still a 130-byte pointer).
-OLD_ARTIFACT = REPO / "src/vivarium_csu_alzheimers/artifacts" / f"{LOCATION}.hdf"
-if OLD_ARTIFACT.stat().st_size < 10_000:  # LFS pointer, not the file
-    OLD_ARTIFACT = Path("/mnt/share/homes/abie/projects/2025/vivarium_csu_alzheimers") / f"{LOCATION}.hdf"
+# Old: an artifact built by `main` (one chain, 250 draws). The ten in artifact_comparisons/main250
+# were built 2026-10-23 from main at PR #82; see PROVENANCE.txt there. Kept out of git.
+OLD_ARTIFACT = REPO / "artifact_comparisons" / "main250" / f"{LOCATION}.hdf"
 
 # New: the same inputs refit with the new sampler. Produce it with
-#   python notebooks/refit_consistent_rates.py <old.hdf> artifact_comparisons/<LOCATION>.new_sampler.hdf
+#   python notebooks/refit_consistent_rates.py <old.hdf> artifact_comparisons/refit250/<LOCATION>.hdf
 # (see notebooks/README.md). Kept out of git.
-NEW_ARTIFACT = REPO / "artifact_comparisons" / f"{LOCATION}.new_sampler.hdf"
+NEW_ARTIFACT = REPO / "artifact_comparisons" / "refit250" / f"{LOCATION}.hdf"
 
 # Optional extra references, label -> path. Empty dict to skip.
+ARCHIVE_DIR = Path("/mnt/share/homes/abie/projects/2025/vivarium_csu_alzheimers")  # = git-lfs archive on main
 EXTRA = {
-    "old sampler, seed 1": Path(
-        "/mnt/share/homes/abie/projects/2026/vivarium_csu_alzheimers_audit_2026_10_15/mcmc/usa_seed1.hdf"
-    ),
+    "archive (model10.0)": ARCHIVE_DIR / f"{LOCATION}.hdf",
 }
 EXTRA = {k: v for k, v in EXTRA.items() if Path(v).exists()}
 
@@ -289,9 +289,8 @@ md(
     """## 4. Stratum means, old vs new
 
 Each point is one (sex, age) stratum's posterior mean. Points on the diagonal are
-unchanged; the extra reference (if any) shows how far two chains of the *old* sampler
-disagreed with each other, which is the yardstick for whether new-vs-old is a sampler
-artefact or a real change."""
+unchanged. The archive panel (if present) shows the old sampler on the January 2026
+inputs, so it mixes input drift with the old sampler's chain-to-chain noise."""
 )
 code(
     """keys_scatter = [k for k in CONSISTENT_KEYS if "ode_errors" not in k and "transition_count" not in k]
@@ -370,7 +369,11 @@ fig.tight_layout()"""
 )
 
 md(
-    """## Take-aways (USA, archived model10.0 inputs; written 2026-10-15)
+    """## Take-aways (USA, main's 250-draw inputs of 2026-10-23; written 2026-10-26)
+
+*(filled in after the refit ran; see the executed notebook)*
+
+## Earlier result (USA, archived model10.0 inputs vs a refit of them; written 2026-10-15)
 
 - **The archived Female chain never converged.** Its 500 draws have lag-1 autocorrelation
   ~0.9 and an effective sample size of 3–6 per knot, with 5 divergent transitions. The new
