@@ -222,7 +222,7 @@ hazard) is the inflow. Solid = refit, dashed = main, dotted = archive; one panel
 location, Female and Male in different colours. Shaded = ages 65–90."""
 )
 code(
-    """def grid(key, logy=False, gbd_key=None):
+    """def grid(key, logy=False, gbd_key=None, ymin=None):
     n = len(LOCATIONS)
     fig, axes = plt.subplots(2, (n + 1) // 2, figsize=(3.2 * ((n + 1) // 2), 6.2), sharey=True)
     for ax, loc in zip(axes.ravel(), LOCATIONS):
@@ -242,6 +242,8 @@ code(
         ax.axvspan(*AGES_OF_INTEREST, color="grey", alpha=0.07, lw=0)
         if logy:
             ax.set_yscale("log")
+        if ymin is not None:
+            ax.set_ylim(bottom=ymin)
     for ax in axes.ravel()[len(LOCATIONS):]:
         ax.axis("off")
     axes[0, 0].legend(fontsize=7)
@@ -250,8 +252,8 @@ code(
     return fig
 
 grid("cause.alzheimers_consistent.prevalence_any");
-grid("cause.alzheimers_consistent.population_incidence_any", logy=True);
-grid("cause.alzheimers_consistent.excess_mortality_rate", logy=True, gbd_key="cause.alzheimers.excess_mortality_rate");"""
+grid("cause.alzheimers_consistent.population_incidence_any", logy=True, ymin=1e-5);
+grid("cause.alzheimers_consistent.excess_mortality_rate", logy=True, gbd_key="cause.alzheimers.excess_mortality_rate", ymin=1e-2);"""
 )
 
 code(
