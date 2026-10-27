@@ -299,9 +299,27 @@ fig.suptitle("new BBBM entrants per year (sum over ages)"); fig.tight_layout()""
 )
 
 md(
-    """## Take-aways
+    """## Take-aways (written 2026-10-26)
 
-*(filled in after the refits ran; see the executed notebook)*"""
+- **Every location passed the gate at the first attempt.** All 20 fits ran at 63–85
+  leapfrog steps per iteration with no divergent transitions; the worst r_hat is 1.011
+  (UK Male) and the smallest ESS is 440 of 5,000 (Spain Female); 13–17 minutes per sex on
+  one core, 4.9 core-hours in all. The weakest knot is always the BBBM share at age 40, the
+  boundary knot the data pin least.
+- **Main's draws are consecutive MCMC iterations** (lag-1 autocorrelation 0.62–0.89); the
+  refit's are near-independent (−0.04 to 0.04), so `input_draw_number` picks genuinely
+  different posterior samples.
+- **Where main's one chain was stuck, the rates move.** Refit vs main at ages 65–90, Female:
+  any-AD prevalence differs by 1–23% (Japan 23, USA 19, Taiwan 15, China 14) and the S→BBBM
+  hazard by 7–70% (Japan 70, China 58, USA 55, Germany 47). Male differences are smaller
+  except for the hazard. Averaged over keys and sexes, refit vs main is 2–14% per location,
+  the same size as main vs archive (2–13%), which is the old sampler's own run-to-run noise
+  plus nine months of input drift. The refit sits 4–12% from the archive.
+- **The S→BBBM hazard is now a smooth function of age** in every location. The zigzag
+  between adjacent knots that main and the archive show (China 45–55, Israel 50, USA 70–80)
+  is gone, and its posterior band is several times narrower.
+- **Unchanged:** every fit, old or new, sits below the GBD dementia prevalence above age 80.
+  That is a property of the model, not of the sampler."""
 )
 
 nb["cells"] = cells
