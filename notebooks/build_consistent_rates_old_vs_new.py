@@ -129,7 +129,7 @@ def lag1_autocorr(df):
     return float(np.nanmedian(r)) if r else np.nan
 
 
-def age_panels(key, gbd=None, logy=False, title=None):
+def age_panels(key, gbd=None, logy=False, title=None, ymin=None):
     """One panel per sex: GBD input (black), each artifact's consistent key (band + line)."""
     fig, axes = plt.subplots(1, 2, figsize=(11, 3.6), sharey=True)
     for ax, sex in zip(axes, ["Male", "Female"]):
@@ -148,6 +148,8 @@ def age_panels(key, gbd=None, logy=False, title=None):
         ax.axvspan(*AGES_OF_INTEREST, color="grey", alpha=0.07, lw=0)
         if logy:
             ax.set_yscale("log")
+        if ymin is not None:
+            ax.set_ylim(bottom=ymin)
         ax.grid(alpha=0.3)
     axes[0].legend(fontsize=8)
     fig.suptitle(title or key.replace("cause.alzheimers_consistent.", "~."))
@@ -273,12 +275,12 @@ code(
 )
 code(
     """age_panels("cause.alzheimers_consistent.population_incidence_any",
-           gbd=draws(arts["old"], "cause.alzheimers.population_incidence_rate"), logy=True,
+           gbd=draws(arts["old"], "cause.alzheimers.population_incidence_rate"), logy=True, ymin=1e-5,
            title="S→BBBM hazard (population_incidence_any); GBD dementia incidence shown for scale");"""
 )
 code(
     """age_panels("cause.alzheimers_consistent.excess_mortality_rate",
-           gbd=draws(arts["old"], "cause.alzheimers.excess_mortality_rate"), logy=True,
+           gbd=draws(arts["old"], "cause.alzheimers.excess_mortality_rate"), logy=True, ymin=1e-2,
            title="Dementia excess mortality: GBD (DisMod) vs consistent");"""
 )
 code(
@@ -286,7 +288,7 @@ code(
 age_panels("cause.alzheimers_consistent.bbbm_conditional_prevalence")
 age_panels("cause.alzheimers_consistent.mci_conditional_prevalence")
 age_panels("cause.alzheimers_consistent.dementia_conditional_prevalence")
-age_panels("cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate", logy=True, title="Derived CSMR = EMR × prevalence_any × dementia share")
+age_panels("cause.alzheimers_disease_and_other_dementias.cause_specific_mortality_rate", logy=True, ymin=1e-7, title="Derived CSMR = EMR × prevalence_any × dementia share")
 age_panels("cause.alzheimers_consistent.ode_errors", title="ODE consistency error (log-ratio units; the penalty's scale is ODE_SIGMA)");"""
 )
 
