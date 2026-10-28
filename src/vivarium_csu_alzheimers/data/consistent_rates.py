@@ -25,15 +25,6 @@ from vivarium_csu_alzheimers.constants.data_values import (
 )
 
 # Sampler settings.
-#
-# The model10.0 artifacts were fit with one chain of 500 iterations whose consecutive
-# states were written straight into draw_0..draw_499, with no convergence check. On the
-# archived USA inputs that chain had lag-1 autocorrelation ~0.9 (ESS 25-45 of 500 for
-# Male, 3-6 for Female, with divergences) and hit the NUTS tree-depth cap on every
-# iteration. The settings below trade bit-reproducibility (never guaranteed across CPU
-# generations with XLA anyway) for statistical reproducibility: several chains, a
-# convergence gate that fails the build, and artifact draws that are near-independent
-# posterior samples.
 MCMC_SEED = 0
 NUM_CHAINS = 4
 NUM_WARMUP = 1000
