@@ -45,20 +45,6 @@ FRACTION_PRIOR = (0.0, 2.0)  # logit scale: median 0.5, 95% of mass in (0.02, 0.
 HAZARD_PRIOR = (math.log(INITIAL_RATE), 2.0)  # log scale: 95% of mass in (1e-3, 2.5)
 MCMC_DIAGNOSTICS_KEY = "cause.alzheimers_consistent.mcmc_diagnostics"
 
-# GBD reports no dementia below age 40: prevalence, incidence and excess mortality there
-# are exactly 0 in every draw. Fed to the likelihood with standard error 1e-8 they make a
-# hard wall that the fit can satisfy in two ways: no AD states at all, or AD states that
-# are all pre-dementia (dementia share 0). On the USA Female inputs one of four chains
-# sat on the second branch at the NUTS tree-depth cap, so the gate refused the fit, and the
-# consistency penalty between 35 and 40 dragged the age-40 knot 3.6 standard errors below
-# the GBD prevalence there. The knots now start at the youngest age with GBD dementia data
-# (``split_unmodelled_ages``), and the younger ages are written as zero AD prevalence and
-# zero inflow (``pad_unmodelled_ages``), which is what the old fits produced to within
-# 1e-7 anyway: the archived USA artifact sends 3 of 721,000 new BBBM entrants in below 40.
-# The S -> BBBM hazard is only seen through the ODE, so adjacent age knots can trade off
-# against each other in a zigzag that chains explore with opposite phase. A light penalty
-# on the second difference of the log rate removes that direction (first differences are
-# left free). Same values as the severity branch.
 AGE_SMOOTHNESS = {"h_S_to_BBBM": (10.0, 0.25)}  # name: (sigma on first, second differences)
 
 
