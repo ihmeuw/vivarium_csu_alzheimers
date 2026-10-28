@@ -36,10 +36,9 @@ MAX_DIVERGENCE_FRACTION = 0.01
 INITIAL_RATE = 0.05
 ODE_SIGMA = 0.02
 
-# Knots are sampled on an unbounded latent scale and mapped to rates: fractions
+# Knots are sampled on an unbounded latent scale and mapped as appropriate: fractions
 # (prevalence and the conditional state shares) through a logistic, hazards through an
-# exponential. The archived fit sampled the rates themselves from a normal truncated to
-# [0, 1], which NUTS cannot scale across knots that range from 1e-10 (age 30) to 0.5.
+# exponential.
 FRACTION_PARAMS = ("p", "delta_BBBM", "delta_MCI")
 HAZARD_PARAMS = ("h_S_to_BBBM", "i", "f", "m")
 FRACTION_PRIOR = (0.0, 2.0)  # logit scale: median 0.5, 95% of mass in (0.02, 0.98)
