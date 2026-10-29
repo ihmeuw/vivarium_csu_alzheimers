@@ -52,7 +52,9 @@ Homepage = "https://github.com/ihmeuw/vivarium_csu_alzheimers"
 make_artifacts = "vivarium_csu_alzheimers.tools.cli:make_artifacts"
 
 [tool.uv]
-override-dependencies = ["pandas<3.0.0", "sqlalchemy>=2.0.0,<3.0.0", "numpy<2.0.0"]
+# pyarrow 26 needs numpy 2 but does not declare it, so cap it while numpy<2 is here.
+# TODO: remove the pyarrow cap with numpy<2 once GBD siloing (MIC-7613) is merged.
+override-dependencies = ["pandas<3.0.0", "sqlalchemy>=2.0.0,<3.0.0", "numpy<2.0.0", "pyarrow<26.0.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
