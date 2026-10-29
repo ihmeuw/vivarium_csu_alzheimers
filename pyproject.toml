@@ -14,7 +14,7 @@ dependencies = [
     "vivarium-dependencies<2.0.0",
     "vivarium-dependencies[pandas,numpy,scipy,click,tables,loguru]",
     "vivarium-build-utils>=4.0.0,<5.0.0",
-    "vivarium-engine>=5.10.0,<6.0.0",
+    "vivarium-engine>=6.0.0,<7.0.0",
     "vivarium-public-health>=6.6.1,<7.0.0",
     "jinja2",
     "pyyaml",
@@ -22,8 +22,8 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["vivarium-dependencies[pytest]", "pytest-vivarium"]
-cluster = ["vivarium-cluster-tools[cluster]>=4.2.11,<5.0.0"]
-interactive = ["vivarium-dependencies[interactive]"]
+cluster = ["vivarium-cluster-tools[cluster]>=4.8.0,<5.0.0"]
+interactive = ["vivarium-dependencies[interactive]", "vivarium-interactive>=1.0.0,<2.0.0"]
 lint = ["vivarium-dependencies[lint]"]
 data = [
     "vivarium-inputs>=9.0.0,<10.0.0",
