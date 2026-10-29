@@ -51,9 +51,9 @@ configuration:
             - age_group
             - sex
             - event_year
-        # alzheimers_disease_and_other_dementias:
-        #     include:
-        #         - "treatment"
+        alzheimers_disease_and_other_dementias:
+            include:
+                - "treatment"
         baseline_testing:
             include:
                 - testing_state
