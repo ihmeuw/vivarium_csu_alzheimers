@@ -185,9 +185,9 @@ BBBM_TESTING_START_DATE = BBBM_TESTING_RATES[0][0]
 TIME_STEPS_UNTIL_NEXT_BBBM_TEST = [6.0, 7.0, 8.0, 9.0, 10.0]
 
 TREATMENT_PROBS_RAMP = [
-    (pd.Timestamp("2027-01-01"), 0.0),
-    (pd.Timestamp("2035-01-01") + pd.Timedelta(days=182), 0.3),
-    (pd.Timestamp("2100-01-01"), 0.8),
+    (pd.Timestamp("2028-01-01"), 0.25),  # step increase from 0
+    (pd.Timestamp("2035-01-01"), 0.35),
+    (pd.Timestamp("2100-01-01"), 0.8),  # plateaus from here on out
 ]
 
 DWELL_TIME_AWAITING_EFFECT_TIMESTEPS = 1  # 6 months
