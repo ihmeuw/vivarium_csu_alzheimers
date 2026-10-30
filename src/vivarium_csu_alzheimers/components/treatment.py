@@ -456,6 +456,9 @@ class TreatmentRiskEffect(RiskEffect):
         super().setup(builder)
         self.clock = builder.time.clock()
         self.step_size = builder.time.step_size()
+        self.scenario = scenarios.INTERVENTION_SCENARIOS[
+            builder.configuration.intervention.scenario
+        ]
 
     def get_distribution_type(self, builder: Builder) -> str:
         """Returns the type of distribution for the exposure.
@@ -480,9 +483,14 @@ class TreatmentRiskEffect(RiskEffect):
 
         The affected source should be between the relative risk loaded from the data
         and 1, depending on whether the simulant is in full effect, waning, or none.
+
+        All relative risks are 1 in scenarios with zero-impact treatment.
         """
 
         def generate_relative_risk(index: pd.Index) -> pd.Series:
+            if self.scenario.zero_impact_treatment:
+                return pd.Series(1.0, index=index)
+
             rr = self.relative_risk_table(index)
             if len(rr.unique()) != 1:
                 raise NotImplementedError("Only a single relative risk value is supported.")
