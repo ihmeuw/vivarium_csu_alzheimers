@@ -25,6 +25,7 @@ from vivarium_csu_alzheimers.constants.data_values import (
     DWELL_TIME_AWAITING_EFFECT_TIMESTEPS,
     DWELL_TIME_TREATMENT_EFFECT_TIMESTEPS,
     DWELL_TIME_WANING_EFFECT_TIMESTEPS,
+    STEP_SIZE_DAYS,
     TREATMENT_COMPLETION_PROBABILITY,
     TREATMENT_FULL_DURATION,
     TREATMENT_PROBS_RAMP,
@@ -103,7 +104,7 @@ class Treatment(Component):
 
     def __init__(self):
         super().__init__()
-        self.step_size = 182  # days
+        self.step_size = STEP_SIZE_DAYS
         self.disease_model = self._create_treatment_mode()
 
     def setup(self, builder) -> None:
@@ -455,6 +456,9 @@ class TreatmentRiskEffect(RiskEffect):
         super().setup(builder)
         self.clock = builder.time.clock()
         self.step_size = builder.time.step_size()
+        self.scenario = scenarios.INTERVENTION_SCENARIOS[
+            builder.configuration.intervention.scenario
+        ]
 
     def get_distribution_type(self, builder: Builder) -> str:
         """Returns the type of distribution for the exposure.
@@ -479,9 +483,14 @@ class TreatmentRiskEffect(RiskEffect):
 
         The affected source should be between the relative risk loaded from the data
         and 1, depending on whether the simulant is in full effect, waning, or none.
+
+        All relative risks are 1 in scenarios with zero-impact treatment.
         """
 
         def generate_relative_risk(index: pd.Index) -> pd.Series:
+            if self.scenario.zero_impact_treatment:
+                return pd.Series(1.0, index=index)
+
             rr = self.relative_risk_table(index)
             if len(rr.unique()) != 1:
                 raise NotImplementedError("Only a single relative risk value is supported.")
