@@ -25,6 +25,7 @@ from vivarium_csu_alzheimers.constants.data_values import (
     DWELL_TIME_AWAITING_EFFECT_TIMESTEPS,
     DWELL_TIME_TREATMENT_EFFECT_TIMESTEPS,
     DWELL_TIME_WANING_EFFECT_TIMESTEPS,
+    STEP_SIZE_DAYS,
     TREATMENT_COMPLETION_PROBABILITY,
     TREATMENT_FULL_DURATION,
     TREATMENT_PROBS_RAMP,
@@ -103,7 +104,7 @@ class Treatment(Component):
 
     def __init__(self):
         super().__init__()
-        self.step_size = 182  # days
+        self.step_size = STEP_SIZE_DAYS
         self.disease_model = self._create_treatment_mode()
 
     def setup(self, builder) -> None:
