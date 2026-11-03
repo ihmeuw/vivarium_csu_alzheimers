@@ -5,17 +5,21 @@ branches:
   - intervention:
       scenario:
         - baseline
-        - bbbm_testing
-        - bbbm_testing_and_treatment
+        - slow_testing_zero_impact_treatment
+        - intermediate_testing_zero_impact_treatment
+        - accelerated_testing_zero_impact_treatment
+        - slow_testing_with_treatment
+        - intermediate_testing_with_treatment
+        - accelerated_testing_with_treatment
     input_data:
       artifact_path:
         - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/united_states_of_america.hdf
         - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/china.hdf
         - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/brazil.hdf
-        # - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/germany.hdf
-        # - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/israel.hdf
-        # - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/japan.hdf
-        # - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/spain.hdf
-        # - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/sweden.hdf
-        # - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/taiwan.hdf
-        # - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/united_kingdom.hdf
+        - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/germany.hdf
+        - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/israel.hdf
+        - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/japan.hdf
+        - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/spain.hdf
+        - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/sweden.hdf
+        - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/taiwan.hdf
+        - /mnt/team/simulation_science/pub/models/vivarium_csu_alzheimers/artifacts/model13.0/united_kingdom.hdf

@@ -15,7 +15,6 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_POSITIVE_DIAGNOSIS_PROBABILITY,
     BBBM_TEST_RESULTS,
     BBBM_TESTING_RATES,
-    BBBM_TESTING_START_DATE,
     COLUMNS,
     TESTING_STATES,
     TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
@@ -50,6 +49,7 @@ class Testing(Component):
         self.scenario = scenarios.INTERVENTION_SCENARIOS[
             builder.configuration.intervention.scenario
         ]
+        self.bbbm_testing_rates = BBBM_TESTING_RATES.get(self.scenario.bbbm_testing_ramp)
         self.step_size = builder.configuration.time.step_size
         builder.population.register_initializer(
             initializer=self.initialize_testing,
@@ -203,17 +203,17 @@ class Testing(Component):
     def _get_bbbm_testing_rate(self, event_time: pd.Timestamp) -> float:
         """Gets the BBBM testing rate for a given timestamp using piecewise linear interpolation."""
 
-        if event_time < BBBM_TESTING_RATES[0][0]:
-            # Before the first defined time point, return 0
+        if not self.scenario.bbbm_testing or event_time < self.bbbm_testing_rates[0][0]:
+            # No BBBM testing, or before the first defined time point (allows for step increases)
             return 0.0
 
-        if event_time > BBBM_TESTING_RATES[-1][0]:
+        if event_time > self.bbbm_testing_rates[-1][0]:
             # Everything after the defined time point is a constant rate
-            return BBBM_TESTING_RATES[-1][1]
+            return self.bbbm_testing_rates[-1][1]
 
         # Linearly interpolate everything else
-        timestamps = [ts.value for ts, _ in BBBM_TESTING_RATES]
-        rates = [rate for _, rate in BBBM_TESTING_RATES]
+        timestamps = [ts.value for ts, _ in self.bbbm_testing_rates]
+        rates = [rate for _, rate in self.bbbm_testing_rates]
 
         return np.interp(event_time.value, timestamps, rates)
 
@@ -229,7 +229,7 @@ class Testing(Component):
         """
 
         test_dates = simulants[COLUMNS.NEXT_BBBM_TEST_DATE].copy()
-        if not self.scenario.bbbm_testing or time_of_event < BBBM_TESTING_START_DATE:
+        if not self.scenario.bbbm_testing or time_of_event < self.bbbm_testing_rates[0][0]:
             return test_dates
 
         time_steps_until_next_test = self.randomness.choice(

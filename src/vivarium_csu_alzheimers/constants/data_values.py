@@ -10,6 +10,12 @@ from vivarium_csu_alzheimers.constants.models import (
     TREATMENT_DISEASE_MODEL,
 )
 
+#########################
+# Simulation Parameters #
+#########################
+
+STEP_SIZE_DAYS = 182  # must match configuration.time.step_size in the model spec
+
 ############################
 # Disease Model Parameters #
 ############################
@@ -174,20 +180,35 @@ class __BBBMTestResults(NamedTuple):
 
 BBBM_TEST_RESULTS = __BBBMTestResults()
 
-# bbbm testing rates are piecewise-linear starting at 2027 and maxing out in 2045
-BBBM_TESTING_RATES = [
-    (pd.Timestamp("2027-01-01"), 0.0),  # step increase from 0 in 2027
-    (pd.Timestamp("2030-01-01") + pd.Timedelta(days=182), 0.1),
-    (pd.Timestamp("2045-01-01"), 0.5),
-    (pd.Timestamp("2055-01-01"), 0.6),  # plateaus from here on out
-]
-BBBM_TESTING_START_DATE = BBBM_TESTING_RATES[0][0]
+
+class __BBBMTestingRamps(NamedTuple):
+    SLOW: str = "slow"
+    INTERMEDIATE: str = "intermediate"
+    ACCELERATED: str = "accelerated"
+
+
+BBBM_TESTING_RAMPS = __BBBMTestingRamps()
+
+BBBM_TESTING_RATES = {
+    BBBM_TESTING_RAMPS.SLOW: [
+        (pd.Timestamp("2028-01-01"), 0.02),  # step increase from 0
+        (pd.Timestamp("2048-01-01"), 0.6),  # plateaus from here on out
+    ],
+    BBBM_TESTING_RAMPS.INTERMEDIATE: [
+        (pd.Timestamp("2028-01-01"), 0.02),  # step increase from 0
+        (pd.Timestamp("2043-01-01"), 0.6),  # plateaus from here on out
+    ],
+    BBBM_TESTING_RAMPS.ACCELERATED: [
+        (pd.Timestamp("2028-01-01"), 0.02),  # step increase from 0
+        (pd.Timestamp("2038-01-01"), 0.6),  # plateaus from here on out
+    ],
+}
 TIME_STEPS_UNTIL_NEXT_BBBM_TEST = [6.0, 7.0, 8.0, 9.0, 10.0]
 
 TREATMENT_PROBS_RAMP = [
-    (pd.Timestamp("2027-01-01"), 0.0),
-    (pd.Timestamp("2035-01-01") + pd.Timedelta(days=182), 0.3),
-    (pd.Timestamp("2100-01-01"), 0.8),
+    (pd.Timestamp("2028-01-01"), 0.25),  # step increase from 0
+    (pd.Timestamp("2035-01-01"), 0.35),
+    (pd.Timestamp("2100-01-01"), 0.8),  # plateaus from here on out
 ]
 
 DWELL_TIME_AWAITING_EFFECT_TIMESTEPS = 1  # 6 months
