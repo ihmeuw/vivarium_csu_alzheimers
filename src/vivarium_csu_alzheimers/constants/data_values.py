@@ -192,14 +192,20 @@ BBBM_TESTING_RAMPS = __BBBMTestingRamps()
 BBBM_TESTING_RATES = {
     BBBM_TESTING_RAMPS.SLOW: [
         (pd.Timestamp("2028-01-01"), 0.02),  # step increase from 0
+        (pd.Timestamp("2046-01-01"), 0.57),
+        (pd.Timestamp("2047-01-01"), 0.59),
         (pd.Timestamp("2048-01-01"), 0.6),  # plateaus from here on out
     ],
     BBBM_TESTING_RAMPS.INTERMEDIATE: [
         (pd.Timestamp("2028-01-01"), 0.02),  # step increase from 0
+        (pd.Timestamp("2041-01-01"), 0.56),
+        (pd.Timestamp("2042-01-01"), 0.59),
         (pd.Timestamp("2043-01-01"), 0.6),  # plateaus from here on out
     ],
     BBBM_TESTING_RAMPS.ACCELERATED: [
         (pd.Timestamp("2028-01-01"), 0.02),  # step increase from 0
+        (pd.Timestamp("2036-01-01"), 0.54),
+        (pd.Timestamp("2037-01-01"), 0.58),
         (pd.Timestamp("2038-01-01"), 0.6),  # plateaus from here on out
     ],
 }
