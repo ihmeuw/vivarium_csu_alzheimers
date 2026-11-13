@@ -11,13 +11,13 @@ components:
           - BBBMTestingObserver()
           - Treatment()
           - TreatmentObserver()
+          - AlzheimersDiseaseObserver()
           - TreatmentRiskEffect('cause.alzheimers_blood_based_biomarker_state_to_alzheimers_mild_cognitive_impairment_state.transition_rate')
             
     vivarium.public_health:
         results:
             - DisabilityObserver()
             - MortalityObserver()
-            - DiseaseObserver('alzheimers_disease_and_other_dementias')
 
 configuration:
     input_data:
@@ -52,6 +52,8 @@ configuration:
             - sex
             - event_year
         alzheimers_disease_and_other_dementias:
+            # NOTE: AlzheimersDiseaseObserver also stratifies transition counts
+            # (not person-time) by "nnt" in code.
             include:
                 - "treatment"
         baseline_testing:

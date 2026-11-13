@@ -100,11 +100,19 @@ class __Columns(NamedTuple):
     NO_EFFECT_NEVER_TREATED_EVENT_COUNT: str = (
         f"{TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE}_event_count"
     )
+    TREATMENT_EFFECT_EVENT_TIME: str = (
+        f"{TREATMENT_DISEASE_MODEL.TREATMENT_EFFECT}_event_time"
+    )
     TREATMENT_DURATION: str = "treatment_duration"
     NEXT_BBBM_TEST_DATE: str = "next_bbbm_test_date"
 
 
 COLUMNS = __Columns()
+
+# NNT stratification: cohorts of simulants by the year they start treatment
+NNT_STRATIFICATION_NAME = "nnt"
+NNT_COHORT_YEARS = [2040, 2050, 2060]
+NNT_OTHER_CATEGORY = "other"
 
 
 class __TestingStates(NamedTuple):
