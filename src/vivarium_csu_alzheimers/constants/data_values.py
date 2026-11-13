@@ -100,11 +100,19 @@ class __Columns(NamedTuple):
     NO_EFFECT_NEVER_TREATED_EVENT_COUNT: str = (
         f"{TREATMENT_DISEASE_MODEL.NO_EFFECT_NEVER_TREATED_STATE}_event_count"
     )
+    TREATMENT_EFFECT_EVENT_TIME: str = (
+        f"{TREATMENT_DISEASE_MODEL.TREATMENT_EFFECT}_event_time"
+    )
     TREATMENT_DURATION: str = "treatment_duration"
     NEXT_BBBM_TEST_DATE: str = "next_bbbm_test_date"
 
 
 COLUMNS = __Columns()
+
+# NNT stratification: cohorts of simulants by the year they start treatment
+NNT_STRATIFICATION_NAME = "nnt"
+NNT_COHORT_YEARS = [2040, 2050, 2060]
+NNT_OTHER_CATEGORY = "other"
 
 
 class __TestingStates(NamedTuple):
@@ -192,14 +200,20 @@ BBBM_TESTING_RAMPS = __BBBMTestingRamps()
 BBBM_TESTING_RATES = {
     BBBM_TESTING_RAMPS.SLOW: [
         (pd.Timestamp("2028-01-01"), 0.02),  # step increase from 0
+        (pd.Timestamp("2046-01-01"), 0.57),
+        (pd.Timestamp("2047-01-01"), 0.59),
         (pd.Timestamp("2048-01-01"), 0.6),  # plateaus from here on out
     ],
     BBBM_TESTING_RAMPS.INTERMEDIATE: [
         (pd.Timestamp("2028-01-01"), 0.02),  # step increase from 0
+        (pd.Timestamp("2041-01-01"), 0.56),
+        (pd.Timestamp("2042-01-01"), 0.59),
         (pd.Timestamp("2043-01-01"), 0.6),  # plateaus from here on out
     ],
     BBBM_TESTING_RAMPS.ACCELERATED: [
         (pd.Timestamp("2028-01-01"), 0.02),  # step increase from 0
+        (pd.Timestamp("2036-01-01"), 0.54),
+        (pd.Timestamp("2037-01-01"), 0.58),
         (pd.Timestamp("2038-01-01"), 0.6),  # plateaus from here on out
     ],
 }
