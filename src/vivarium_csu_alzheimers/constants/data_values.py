@@ -109,10 +109,10 @@ class __Columns(NamedTuple):
 
 COLUMNS = __Columns()
 
-# NNT stratification: cohorts of simulants by the year they start treatment
-NNT_STRATIFICATION_NAME = "nnt"
-NNT_COHORT_YEARS = [2040, 2050, 2060]
-NNT_OTHER_CATEGORY = "other"
+# Treatment initiation year stratification: cohorts of simulants by the year they start treatment
+TREATMENT_INITIATION_YEAR_STRATIFICATION_NAME = "treatment_initiation_year"
+TREATMENT_INITIATION_YEARS = [2040, 2050, 2060]
+TREATMENT_INITIATION_YEAR_OTHER_CATEGORY = "other"
 
 
 class __TestingStates(NamedTuple):
