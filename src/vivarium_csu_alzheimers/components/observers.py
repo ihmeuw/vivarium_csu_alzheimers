@@ -11,6 +11,9 @@ from vivarium_csu_alzheimers.constants.data_values import (
     BBBM_AGE_MIN,
     BBBM_TEST_RESULTS,
     COLUMNS,
+    NNT_COHORT_YEARS,
+    NNT_OTHER_CATEGORY,
+    NNT_STRATIFICATION_NAME,
     TESTING_STATES,
     TIME_STEPS_UNTIL_NEXT_BBBM_TEST,
 )
@@ -57,6 +60,19 @@ class ResultsStratifier(ResultsStratifier_):
         durations = durations.astype(int).squeeze(axis=1)
         return durations
 
+    def map_nnt_cohort(self, pop: pd.DataFrame) -> pd.Series:
+        """Map each simulant to the NNT cohort of the year it started treatment.
+
+        A simulant starts treatment when it enters the treatment effect state.
+        Simulants that started treatment in any non-cohort year or never started
+        treatment at all are in the 'other' category.
+        """
+        start_year = pop.squeeze(axis=1).dt.year
+        cohorts = pd.Series(NNT_OTHER_CATEGORY, index=pop.index)
+        in_cohort = start_year.isin(NNT_COHORT_YEARS)
+        cohorts[in_cohort] = start_year[in_cohort].astype(int).astype(str)
+        return cohorts
+
     def register_stratifications(self, builder):
         super().register_stratifications(builder)
         builder.results.register_stratification(
@@ -82,6 +98,13 @@ class ResultsStratifier(ResultsStratifier_):
             mapper=self.map_treatment_durations,
             is_vectorized=True,
             requires_attributes=[COLUMNS.TREATMENT_DURATION],
+        )
+        builder.results.register_stratification(
+            name=NNT_STRATIFICATION_NAME,
+            categories=[str(year) for year in NNT_COHORT_YEARS] + [NNT_OTHER_CATEGORY],
+            mapper=self.map_nnt_cohort,
+            is_vectorized=True,
+            requires_attributes=[COLUMNS.TREATMENT_EFFECT_EVENT_TIME],
         )
 
 
@@ -284,6 +307,30 @@ class BBBMTestingObserver(PublicHealthObserver):
 
     def get_entity_column(self, measure: str, results: pd.DataFrame) -> pd.Series:
         return pd.Series("bbbm_testing", index=results.index)
+
+
+class AlzheimersDiseaseObserver(DiseaseObserver):
+    """Disease observer for Alzheimer's that adds the NNT stratification.
+
+    The NNT stratification applies to transition counts only. Person-time keeps
+    the stratifications from the configuration.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(ALZHEIMERS_DISEASE_MODEL.NAME)
+
+    def register_transition_count_observation(
+        self, builder: Builder, pop_filter: str
+    ) -> None:
+        """Register a transition count observation that is also stratified by NNT."""
+        self.register_adding_observation(
+            builder=builder,
+            name=f"transition_count_{self.disease}",
+            pop_filter=pop_filter,
+            additional_stratifications=self.configuration.include
+            + [self.transition_stratification_name, NNT_STRATIFICATION_NAME],
+            excluded_stratifications=self.configuration.exclude,
+        )
 
 
 class TreatmentObserver(DiseaseObserver):
