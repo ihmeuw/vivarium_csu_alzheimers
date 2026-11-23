@@ -10,26 +10,27 @@ requires-python = ">=3.11"
 license = {text = "BSD-3-Clause"}
 authors = [{name = "The vivarium developers", email = "vivarium.dev@gmail.com"}]
 dynamic = ["version"]
+# This model is no longer under active development. Its vivarium packages are pinned
+# to the versions that resolved when it was frozen (MIC-7783), so new releases cannot
+# change or break its environment. Re-run the model before loosening these pins.
 dependencies = [
-    "vivarium-dependencies<2.0.0",
-    "vivarium-dependencies[pandas,numpy,scipy,click,tables,loguru]",
-    "vivarium-build-utils>=4.0.0,<5.0.0",
-    "vivarium-engine>=6.0.0,<7.0.0",
-    "vivarium-public-health>=6.6.1,<7.0.0",
+    "vivarium-dependencies[pandas,numpy,scipy,click,tables,loguru]==1.3.1",
+    "vivarium-build-utils==4.14.2",
+    "vivarium-engine==6.0.2",
+    "vivarium-public-health==6.8.1",
     "jinja2",
     "pyyaml",
 ]
 
 [project.optional-dependencies]
-test = ["vivarium-dependencies[pytest]", "pytest-vivarium"]
-cluster = ["vivarium-cluster-tools[cluster]>=4.8.0,<5.0.0"]
-interactive = ["vivarium-dependencies[interactive]", "vivarium-interactive>=1.0.0,<2.0.0"]
-lint = ["vivarium-dependencies[lint]"]
+test = ["vivarium-dependencies[pytest]==1.3.1", "pytest-vivarium==0.3.1"]
+cluster = ["vivarium-cluster-tools[cluster]==4.10.0"]
+interactive = ["vivarium-dependencies[interactive]==1.3.1", "vivarium-interactive==1.0.1"]
+lint = ["vivarium-dependencies[lint]==1.3.1"]
 data = [
-    "vivarium-inputs>=9.0.0,<10.0.0",
-    "vivarium-gbd-access>=7.0.0,<8.0.0",
-    # Capped below v7 by vivarium-inputs, which requires <7.0.0
-    "vivarium-gbd-mapping>=6.0.0,<7.0.0",
+    "vivarium-inputs==9.1.3",
+    "vivarium-gbd-access==7.0.1",
+    "vivarium-gbd-mapping==6.0.7",
     "xarray",
     # Required by vivarium_csu_alzheimers.data.forecasts
     "netcdf4",
@@ -53,7 +54,8 @@ make_artifacts = "vivarium_csu_alzheimers.tools.cli:make_artifacts"
 
 [tool.uv]
 # pyarrow 26 needs numpy 2 but does not declare it, so cap it while numpy<2 is here.
-# TODO: remove the pyarrow cap with numpy<2 once GBD siloing (MIC-7613) is merged.
+# This model stays on the pre-MIC-7613 GBD stack (vivarium-gbd-access 7), so these
+# overrides stay too.
 override-dependencies = ["pandas<3.0.0", "sqlalchemy>=2.0.0,<3.0.0", "numpy<2.0.0", "pyarrow<26.0.0"]
 
 [tool.setuptools.packages.find]
