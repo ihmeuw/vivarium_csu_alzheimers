@@ -51,11 +51,11 @@ configuration:
             - age_group
             - sex
             - event_year
-        alzheimers_disease_and_other_dementias:
-            # NOTE: AlzheimersDiseaseObserver also stratifies transition counts
-            # (not person-time) by "nnt" in code.
-            include:
-                - "treatment"
+        # NOTE: AlzheimersDiseaseObserver stratifies transition counts (not
+        # person-time) by "treatment_initiation_year" in code.
+        # alzheimers_disease_and_other_dementias:
+        #     include:
+        #         - "treatment"
         baseline_testing:
             include:
                 - testing_state
